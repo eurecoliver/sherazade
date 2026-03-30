@@ -90,6 +90,11 @@ IMPORTANTE: Al termine di ogni task, prima di considerarlo completato, aggiorna 
 - `next.config.mjs` con `output: 'standalone'` per Docker ottimizzato
 - docker-compose.yml orientato allo sviluppo locale (runserver Django, next dev); produzione usa le stesse immagini con variabili diverse
 
+### Permessi entrypoint.sh (30 marzo 2026)
+- `.gitattributes` nella radice garantisce `eol=lf` per `backend/entrypoint.sh` (Git non preserva il bit di esecuzione su Windows/Linux)
+- `Dockerfile` usa `chmod +x /app/entrypoint.sh` con path assoluto dopo `COPY . .`
+- Shebang `#!/bin/bash` invece di `#!/bin/sh` per compatibilità con le funzionalità bash usate
+
 ### Migrazione users.User (30 marzo 2026)
 - `INSTALLED_APPS = LOCAL_APPS + DJANGO_APPS + THIRD_PARTY_APPS` — apps.users deve precedere django.contrib.admin per AUTH_USER_MODEL
 - Migrazione iniziale `0001_initial.py` scritta a mano e committata nel repo (non generata a runtime)
@@ -97,10 +102,10 @@ IMPORTANTE: Al termine di ogni task, prima di considerarlo completato, aggiorna 
 
 ## Ultimo Aggiornamento
 Data: 30 marzo 2026
-Completato: Fix bug critico — migrazione iniziale users.User mancante causava crash loop "relation users_user does not exist"
+Completato: Fix permessi entrypoint.sh — bit esecuzione non preservato da Git su Linux/Docker
 File creati/modificati:
-- backend/apps/users/migrations/__init__.py (nuovo)
-- backend/apps/users/migrations/0001_initial.py (nuovo)
-- backend/sherazade/settings/base.py (ordine INSTALLED_APPS corretto)
-- backend/entrypoint.sh (aggiunto makemigrations users prima di migrate)
+- .gitattributes (nuovo — eol=lf per entrypoint.sh)
+- backend/Dockerfile (chmod +x con path assoluto /app/entrypoint.sh)
+- backend/entrypoint.sh (shebang #!/bin/bash)
+- CLAUDE.md aggiornato
 Prossimo task: Test avvio locale con Docker Compose
