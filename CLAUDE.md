@@ -32,7 +32,7 @@ Nome interno: Sherazade.
 6. Genitore
 
 ## Funzionalità MVP (ordine di sviluppo)
-1. [ ] Autenticazione multi-ruolo (Auth + JWT + 2FA)
+1. [x] Autenticazione multi-ruolo (Auth + JWT + 2FA)
 2. [ ] Anagrafica bambini e famiglie
 3. [ ] Consensi fotografici digitali (GDPR compliant)
 4. [ ] Diario del bambino (foto/video giornalieri)
@@ -90,6 +90,15 @@ IMPORTANTE: Al termine di ogni task, prima di considerarlo completato, aggiorna 
 - `next.config.mjs` con `output: 'standalone'` per Docker ottimizzato
 - docker-compose.yml orientato allo sviluppo locale (runserver Django, next dev); produzione usa le stesse immagini con variabili diverse
 
+### Autenticazione JWT (30 marzo 2026)
+- Login via email (non username) — backend cerca User per email__iexact, autentica via username internamente
+- Token JWT contiene il campo `role` nel payload per evitare lookup aggiuntivi
+- Frontend: Next.js API routes proxy le chiamate a Django e impostano httpOnly cookies (`access_token`, `refresh_token`)
+- `BACKEND_URL=http://backend:8000` usato dalle API routes server-side in Docker; `NEXT_PUBLIC_API_URL` rimane per chiamate client-side future
+- Redirect post-login basato su ruolo: admin/direttrice→/dashboard/admin, coordinatrice/insegnante→/dashboard/staff, cuoca→/dashboard/cuoca, genitore→/dashboard/genitore
+- Middleware Next.js controlla cookie `access_token` per proteggere tutte le route `/dashboard/*`
+- Nessuna dipendenza da Auth.js: autenticazione custom con JWT simplejwt + httpOnly cookies
+
 ### Permessi entrypoint.sh (30 marzo 2026)
 - `.gitattributes` nella radice garantisce `eol=lf` per `backend/entrypoint.sh` (Git non preserva il bit di esecuzione su Windows/Linux)
 - `Dockerfile` usa `chmod +x /app/entrypoint.sh` con path assoluto dopo `COPY . .`
@@ -103,8 +112,19 @@ IMPORTANTE: Al termine di ogni task, prima di considerarlo completato, aggiorna 
 
 ## Ultimo Aggiornamento
 Data: 30 marzo 2026
-Completato: Fix definitivo permessi entrypoint.sh — docker-compose sovrascrive command con chmod + exec
+Completato: Feature autenticazione multi-ruolo (MVP #1)
 File creati/modificati:
-- docker-compose.yml (command backend: bash -c "chmod +x ... && entrypoint.sh runserver")
-- CLAUDE.md aggiornato
-Prossimo task: Test avvio locale con Docker Compose
+- backend/apps/users/views.py (LoginView, LogoutView, MeView)
+- backend/apps/users/urls.py (login/, logout/, refresh/, me/)
+- frontend/src/app/api/auth/login/route.ts (proxy → Django, setta httpOnly cookies)
+- frontend/src/app/api/auth/logout/route.ts (blacklist token, cancella cookies)
+- frontend/src/app/api/auth/me/route.ts (profilo utente autenticato)
+- frontend/src/app/[locale]/login/page.tsx (form email+password, design caldo mobile-first)
+- frontend/src/app/[locale]/dashboard/admin/page.tsx
+- frontend/src/app/[locale]/dashboard/staff/page.tsx
+- frontend/src/app/[locale]/dashboard/cuoca/page.tsx
+- frontend/src/app/[locale]/dashboard/genitore/page.tsx
+- frontend/src/middleware.ts (protezione route /dashboard/*)
+- frontend/messages/it.json + en.json (traduzioni login e dashboard)
+- docker-compose.yml (BACKEND_URL=http://backend:8000 per frontend server-side)
+Prossimo task: Anagrafica bambini e famiglie (MVP #2)

@@ -2,5 +2,34 @@
   "HomePage": {
     "title": "Benvenuti su Sherazade",
     "description": "Portale scolastico del tuo asilo nido"
+  },
+  "LoginPage": {
+    "title": "Sherazade",
+    "subtitle": "Portale Scolastico",
+    "emailLabel": "Email",
+    "emailPlaceholder": "la.tua@email.it",
+    "passwordLabel": "Password",
+    "passwordPlaceholder": "••••••••",
+    "submitButton": "Accedi",
+    "loading": "Accesso in corso...",
+    "errorInvalid": "Email o password non validi.",
+    "errorGeneric": "Errore durante il login. Riprova."
+  },
+  "Dashboard": {
+    "welcome": "Benvenuto",
+    "logout": "Esci",
+    "loading": "Caricamento...",
+    "adminTitle": "Dashboard Amministrazione",
+    "staffTitle": "Dashboard Staff",
+    "cuocaTitle": "Dashboard Cucina",
+    "genitoreTitle": "Dashboard Genitore",
+    "roles": {
+      "admin": "Amministratore",
+      "direttrice": "Direttrice",
+      "coordinatrice": "Coordinatrice",
+      "insegnante": "Insegnante",
+      "cuoca": "Cuoca",
+      "genitore": "Genitore"
+    }
   }
 }
