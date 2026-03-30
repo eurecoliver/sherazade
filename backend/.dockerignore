@@ -1,0 +1,15 @@
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+.git
+.env*
+!.env.example
+*.sqlite3
+.venv
+venv
+media/
+staticfiles/
+.dockerignore
+Dockerfile
