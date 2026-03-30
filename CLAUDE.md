@@ -34,7 +34,7 @@ Nome interno: Sherazade.
 ## Funzionalità MVP (ordine di sviluppo)
 1. [x] Autenticazione multi-ruolo (Auth + JWT + 2FA)
 2. [x] Anagrafica bambini e famiglie
-3. [ ] Consensi fotografici digitali (GDPR compliant)
+3. [x] Consensi fotografici digitali (GDPR compliant)
 4. [ ] Diario del bambino (foto/video giornalieri)
 5. [ ] Diario alimentare (foglio pappe + allergie)
 6. [ ] Registro presenze/assenze
@@ -118,9 +118,21 @@ IMPORTANTE: Al termine di ogni task, prima di considerarlo completato, aggiorna 
 - Migrazione iniziale `0001_initial.py` scritta a mano e committata nel repo (non generata a runtime)
 - `entrypoint.sh` esegue `makemigrations users --noinput` prima di `migrate` come guardia per ambienti di sviluppo
 
+### Consensi fotografici GDPR (30 marzo 2026)
+- App Django `apps.consents` con modello `ConsensoFotografico`: bambino, finalita (3 valori TextChoices), consenso_genitore1/2, data_consenso_genitore1/2, revocato, data_revoca
+- `unique_together = [('bambino', 'finalita')]` — un solo record per coppia bambino+finalità
+- Campo `non_fotografabile` aggiunto a `Bambino` (migration 0002) — override assoluto su tutti i consensi
+- Property `.stato` su ConsensoFotografico: calcola semaforo `non_fotografabile|revocato|completo|parziale|nessuno`
+- Action `miei` (genitore): restituisce figli con campo `is_genitore2` e `mio_consenso`/`mia_data_consenso` specifici per il genitore autenticato
+- Actions `dai_consenso`/`revoca_consenso`: comportamento differenziato per ruolo — genitore aggiorna solo il proprio campo, admin aggiorna entrambi
+- Frontend admin: tabella semaforo (🟢🟡🔴⚫) per bambino×finalità, modal gestione con toggle per-genitore, revoca per-finalità, revoca tutti
+- Frontend genitore: card per figlio con toggle consenso per finalità, testo GDPR, timestamps, stati revocato/non-configurato
+- Permessi: Admin/Direttrice CRUD, Coordinatrice/Insegnante read-only, Genitore read+dai/revoca_consenso+miei, Cuoca nessun accesso
+
 ## Ultimo Aggiornamento
 Data: 30 marzo 2026
-Data: 30 marzo 2026
-Completato: feature/anagrafica — lista bambini, card, modal dettaglio, famiglia e deleghe di ritiro
-Branch: mergiato su develop
-Prossimo task: feature/consensi — gestione consensi fotografici GDPR
+Completato: feature/consensi — gestione consensi fotografici GDPR con semaforo admin, toggle genitore, revoca, compliance GDPR
+Branch: feature/consensi
+File creati: backend/apps/consents/ (8 file), backend/apps/children/migrations/0002_bambino_non_fotografabile.py, frontend/src/app/api/consensi/ (7 route), frontend/src/app/[locale]/dashboard/admin/consensi/page.tsx, frontend/src/app/[locale]/dashboard/genitore/consensi/page.tsx
+File modificati: CLAUDE.md, frontend/messages/it.json, frontend/messages/en.json, backend/apps/children/models.py, backend/sherazade/settings/base.py, backend/sherazade/urls.py, frontend/src/app/[locale]/dashboard/admin/page.tsx, frontend/src/app/[locale]/dashboard/genitore/page.tsx
+Prossimo task: feature/diario — diario del bambino con foto/video giornalieri

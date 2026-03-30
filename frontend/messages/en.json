@@ -25,6 +25,37 @@
     "active": "Active",
     "inactive": "Inactive"
   },
+  "Consensi": {
+    "title": "Photo consents",
+    "loading": "Loading...",
+    "backToDashboard": "← Dashboard",
+    "subtitle": "Manage photo authorizations",
+    "gdprNotice": "Your GDPR rights: You can give or withdraw consent at any time. Withdrawal has no retroactive effect on photos already taken.",
+    "noChildren": "No children found. Contact the school to link your account.",
+    "parent1": "You are parent 1",
+    "parent2": "You are parent 2",
+    "nonFotografabile": "This child is marked as non-photographable by the school.",
+    "consentGiven": "✓ Consent given",
+    "giveConsent": "○ Give consent",
+    "revoked": "🔴 Revoked",
+    "notConfigured": "Not configured",
+    "consentGivenOn": "Consent given on",
+    "revokedOn": "Revoked on",
+    "notConfiguredYet": "The registry for this purpose has not yet been configured by the school.",
+    "adminTitle": "Photo consent management",
+    "adminSubtitle": "Consent status for all children",
+    "allConsents": "All consents",
+    "manage": "Manage",
+    "createRegistry": "Create registry",
+    "revokeAll": "Revoke all",
+    "revokeAllConfirm": "Revoke ALL consents for this child?",
+    "pdfExport": "PDF",
+    "finalita": {
+      "uso_interno": "Internal use",
+      "genitori_diretti": "Direct parents",
+      "newsletter_scolastica": "Newsletter"
+    }
+  },
   "Dashboard": {
     "welcome": "Welcome",
     "logout": "Sign Out",

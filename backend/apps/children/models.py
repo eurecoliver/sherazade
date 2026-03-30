@@ -13,6 +13,7 @@ class Bambino(models.Model):
     data_fine_iscrizione = models.DateField(null=True, blank=True)
     note_mediche = models.TextField(blank=True)
     attivo = models.BooleanField(default=True)
+    non_fotografabile = models.BooleanField(default=False, verbose_name='Non fotografabile')
     creato_il = models.DateTimeField(auto_now_add=True)
     aggiornato_il = models.DateTimeField(auto_now=True)
 

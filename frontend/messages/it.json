@@ -25,6 +25,37 @@
     "active": "Attivi",
     "inactive": "Non attivi"
   },
+  "Consensi": {
+    "title": "Consensi fotografici",
+    "loading": "Caricamento...",
+    "backToDashboard": "← Dashboard",
+    "subtitle": "Gestisci le autorizzazioni fotografiche",
+    "gdprNotice": "I tuoi diritti GDPR: Puoi dare o revocare il consenso in qualsiasi momento. La revoca non ha effetto retroattivo sulle foto già scattate.",
+    "noChildren": "Nessun figlio trovato. Contatta la scuola per associare il tuo account.",
+    "parent1": "Sei il genitore 1",
+    "parent2": "Sei il genitore 2",
+    "nonFotografabile": "Questo bambino è marcato come non fotografabile dalla scuola.",
+    "consentGiven": "✓ Consenso dato",
+    "giveConsent": "○ Do il consenso",
+    "revoked": "🔴 Revocato",
+    "notConfigured": "Non configurato",
+    "consentGivenOn": "Consenso dato il",
+    "revokedOn": "Revocato il",
+    "notConfiguredYet": "Il registro per questa finalità non è ancora stato configurato dalla scuola.",
+    "adminTitle": "Gestione consensi fotografici",
+    "adminSubtitle": "Stato consensi per tutti i bambini",
+    "allConsents": "Tutti i consensi",
+    "manage": "Gestisci",
+    "createRegistry": "Crea registro",
+    "revokeAll": "Revoca tutti",
+    "revokeAllConfirm": "Revocare TUTTI i consensi di questo bambino?",
+    "pdfExport": "PDF",
+    "finalita": {
+      "uso_interno": "Uso interno",
+      "genitori_diretti": "Genitori diretti",
+      "newsletter_scolastica": "Newsletter"
+    }
+  },
   "Dashboard": {
     "welcome": "Benvenuto",
     "logout": "Esci",
