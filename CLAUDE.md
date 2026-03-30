@@ -94,6 +94,7 @@ IMPORTANTE: Al termine di ogni task, prima di considerarlo completato, aggiorna 
 - `.gitattributes` nella radice garantisce `eol=lf` per `backend/entrypoint.sh` (Git non preserva il bit di esecuzione su Windows/Linux)
 - `Dockerfile` usa `chmod +x /app/entrypoint.sh` con path assoluto dopo `COPY . .`
 - Shebang `#!/bin/bash` invece di `#!/bin/sh` per compatibilità con le funzionalità bash usate
+- `docker-compose.yml` sovrascrive il command del backend con `bash -c "chmod +x /app/entrypoint.sh && /app/entrypoint.sh python manage.py runserver 0.0.0.0:8000"` — soluzione definitiva ai permessi E garantisce che le migrazioni girino anche in locale (il precedente `command: python manage.py runserver` bypassava completamente entrypoint.sh)
 
 ### Migrazione users.User (30 marzo 2026)
 - `INSTALLED_APPS = LOCAL_APPS + DJANGO_APPS + THIRD_PARTY_APPS` — apps.users deve precedere django.contrib.admin per AUTH_USER_MODEL
@@ -102,10 +103,8 @@ IMPORTANTE: Al termine di ogni task, prima di considerarlo completato, aggiorna 
 
 ## Ultimo Aggiornamento
 Data: 30 marzo 2026
-Completato: Fix permessi entrypoint.sh — bit esecuzione non preservato da Git su Linux/Docker
+Completato: Fix definitivo permessi entrypoint.sh — docker-compose sovrascrive command con chmod + exec
 File creati/modificati:
-- .gitattributes (nuovo — eol=lf per entrypoint.sh)
-- backend/Dockerfile (chmod +x con path assoluto /app/entrypoint.sh)
-- backend/entrypoint.sh (shebang #!/bin/bash)
+- docker-compose.yml (command backend: bash -c "chmod +x ... && entrypoint.sh runserver")
 - CLAUDE.md aggiornato
 Prossimo task: Test avvio locale con Docker Compose

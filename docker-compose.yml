@@ -33,7 +33,7 @@ services:
       - .env
     environment:
       - DJANGO_SETTINGS_MODULE=sherazade.settings.local
-    command: python manage.py runserver 0.0.0.0:8000
+    command: bash -c "chmod +x /app/entrypoint.sh && /app/entrypoint.sh python manage.py runserver 0.0.0.0:8000"
     depends_on:
       db:
         condition: service_healthy
