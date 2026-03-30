@@ -131,8 +131,6 @@ IMPORTANTE: Al termine di ogni task, prima di considerarlo completato, aggiorna 
 
 ## Ultimo Aggiornamento
 Data: 30 marzo 2026
-Completato: feature/consensi — gestione consensi fotografici GDPR con semaforo admin, toggle genitore, revoca, compliance GDPR
-Branch: feature/consensi
-File creati: backend/apps/consents/ (8 file), backend/apps/children/migrations/0002_bambino_non_fotografabile.py, frontend/src/app/api/consensi/ (7 route), frontend/src/app/[locale]/dashboard/admin/consensi/page.tsx, frontend/src/app/[locale]/dashboard/genitore/consensi/page.tsx
-File modificati: CLAUDE.md, frontend/messages/it.json, frontend/messages/en.json, backend/apps/children/models.py, backend/sherazade/settings/base.py, backend/sherazade/urls.py, frontend/src/app/[locale]/dashboard/admin/page.tsx, frontend/src/app/[locale]/dashboard/genitore/page.tsx
-Prossimo task: feature/diario — diario del bambino con foto/video giornalieri
+Completato: feature/consensi — semaforo consensi, gestione per finalità, vista genitore, flag non fotografabile
+Branch: mergiato su develop
+Prossimo task: feature/diario — diario del bambino con foto e video giornalieri
