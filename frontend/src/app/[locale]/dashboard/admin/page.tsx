@@ -77,6 +77,25 @@ export default function AdminDashboard() {
           </p>
         </div>
 
+        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
+          <button
+            onClick={() => router.push(`/${locale}/dashboard/admin/bambini`)}
+            style={{
+              padding: '0.75rem 1.25rem',
+              background: '#F3F0FF',
+              color: '#6C5CE7',
+              border: '2px solid #D6CCFF',
+              borderRadius: '10px',
+              fontSize: '0.875rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+              fontFamily: 'inherit',
+            }}
+          >
+            👶 Bambini
+          </button>
+        </div>
+
         <button
           onClick={handleLogout}
           style={{

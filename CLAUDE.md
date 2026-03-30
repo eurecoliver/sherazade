@@ -33,7 +33,7 @@ Nome interno: Sherazade.
 
 ## Funzionalità MVP (ordine di sviluppo)
 1. [x] Autenticazione multi-ruolo (Auth + JWT + 2FA)
-2. [ ] Anagrafica bambini e famiglie
+2. [x] Anagrafica bambini e famiglie
 3. [ ] Consensi fotografici digitali (GDPR compliant)
 4. [ ] Diario del bambino (foto/video giornalieri)
 5. [ ] Diario alimentare (foglio pappe + allergie)
@@ -90,6 +90,14 @@ IMPORTANTE: Al termine di ogni task, prima di considerarlo completato, aggiorna 
 - `next.config.mjs` con `output: 'standalone'` per Docker ottimizzato
 - docker-compose.yml orientato allo sviluppo locale (runserver Django, next dev); produzione usa le stesse immagini con variabili diverse
 
+### Anagrafica bambini e famiglie (30 marzo 2026)
+- App Django `apps.children` con modelli: Bambino, Famiglia, DelegaRitiro
+- Login famiglia accetta email dei genitori (FamigliaCreateSerializer risolve email → User)
+- Permessi granulari: Admin/Direttrice CRUD, Coordinatrice/Insegnante read+note, Genitore solo propri figli, Cuoca campi limitati (BambinoCuocaSerializer)
+- `entrypoint.sh` ora esegue `makemigrations` (senza app specifica) per coprire tutte le app
+- Frontend: pagina `/dashboard/admin/bambini` con lista card, filtri sezione/stato/ricerca, modal "Nuovo bambino", modal dettaglio con gestione famiglia e deleghe di ritiro inline
+- API routes Next.js: /api/bambini, /api/bambini/[id], /api/famiglie, /api/deleghe
+
 ### Autenticazione JWT (30 marzo 2026)
 - Login via email (non username) — backend cerca User per email__iexact, autentica via username internamente
 - Token JWT contiene il campo `role` nel payload per evitare lookup aggiuntivi
@@ -113,6 +121,6 @@ IMPORTANTE: Al termine di ogni task, prima di considerarlo completato, aggiorna 
 ## Ultimo Aggiornamento
 Data: 30 marzo 2026
 Data: 30 marzo 2026
-Completato: feature/auth — pagina login, JWT, redirect per ruolo, dashboard placeholder per tutti i ruoli
-Branch: mergiato su develop
-Prossimo task: feature/anagrafica — gestione bambini e famiglie
+Completato: feature/anagrafica — modelli Bambino/Famiglia/DelegaRitiro, API REST con permessi per ruolo, pagina bambini con cards/filtri/modal
+Branch: feature/anagrafica
+Prossimo task: feature/consensi — consensi fotografici digitali (GDPR)

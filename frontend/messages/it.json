@@ -15,6 +15,16 @@
     "errorInvalid": "Email o password non validi.",
     "errorGeneric": "Errore durante il login. Riprova."
   },
+  "Bambini": {
+    "title": "Bambini",
+    "newChild": "+ Nuovo bambino",
+    "noResults": "Nessun bambino trovato.",
+    "loading": "Caricamento...",
+    "allSections": "Tutte le sezioni",
+    "allStatus": "Tutti",
+    "active": "Attivi",
+    "inactive": "Non attivi"
+  },
   "Dashboard": {
     "welcome": "Benvenuto",
     "logout": "Esci",
