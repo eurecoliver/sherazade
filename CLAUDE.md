@@ -112,19 +112,7 @@ IMPORTANTE: Al termine di ogni task, prima di considerarlo completato, aggiorna 
 
 ## Ultimo Aggiornamento
 Data: 30 marzo 2026
-Completato: Feature autenticazione multi-ruolo (MVP #1)
-File creati/modificati:
-- backend/apps/users/views.py (LoginView, LogoutView, MeView)
-- backend/apps/users/urls.py (login/, logout/, refresh/, me/)
-- frontend/src/app/api/auth/login/route.ts (proxy → Django, setta httpOnly cookies)
-- frontend/src/app/api/auth/logout/route.ts (blacklist token, cancella cookies)
-- frontend/src/app/api/auth/me/route.ts (profilo utente autenticato)
-- frontend/src/app/[locale]/login/page.tsx (form email+password, design caldo mobile-first)
-- frontend/src/app/[locale]/dashboard/admin/page.tsx
-- frontend/src/app/[locale]/dashboard/staff/page.tsx
-- frontend/src/app/[locale]/dashboard/cuoca/page.tsx
-- frontend/src/app/[locale]/dashboard/genitore/page.tsx
-- frontend/src/middleware.ts (protezione route /dashboard/*)
-- frontend/messages/it.json + en.json (traduzioni login e dashboard)
-- docker-compose.yml (BACKEND_URL=http://backend:8000 per frontend server-side)
-Prossimo task: Anagrafica bambini e famiglie (MVP #2)
+Data: 30 marzo 2026
+Completato: feature/auth — pagina login, JWT, redirect per ruolo, dashboard placeholder per tutti i ruoli
+Branch: mergiato su develop
+Prossimo task: feature/anagrafica — gestione bambini e famiglie
