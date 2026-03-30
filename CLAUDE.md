@@ -120,7 +120,7 @@ IMPORTANTE: Al termine di ogni task, prima di considerarlo completato, aggiorna 
 
 ## Ultimo Aggiornamento
 Data: 30 marzo 2026
-Data: 30 marzo 2026
-Completato: feature/anagrafica — modelli Bambino/Famiglia/DelegaRitiro, API REST con permessi per ruolo, pagina bambini con cards/filtri/modal
-Branch: feature/anagrafica
-Prossimo task: feature/consensi — consensi fotografici digitali (GDPR)
+Data: 31 marzo 2026
+Completato: feature/anagrafica — lista bambini, card, modal dettaglio, famiglia e deleghe di ritiro
+Branch: mergiato su develop
+Prossimo task: feature/consensi — gestione consensi fotografici GDPR
