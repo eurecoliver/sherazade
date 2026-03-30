@@ -2,6 +2,7 @@
 set -e
 
 echo "Running database migrations..."
+python manage.py makemigrations users --noinput
 python manage.py migrate --noinput
 
 if [ "$DJANGO_DEBUG" = "False" ]; then

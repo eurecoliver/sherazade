@@ -90,9 +90,17 @@ IMPORTANTE: Al termine di ogni task, prima di considerarlo completato, aggiorna 
 - `next.config.mjs` con `output: 'standalone'` per Docker ottimizzato
 - docker-compose.yml orientato allo sviluppo locale (runserver Django, next dev); produzione usa le stesse immagini con variabili diverse
 
+### Migrazione users.User (30 marzo 2026)
+- `INSTALLED_APPS = LOCAL_APPS + DJANGO_APPS + THIRD_PARTY_APPS` — apps.users deve precedere django.contrib.admin per AUTH_USER_MODEL
+- Migrazione iniziale `0001_initial.py` scritta a mano e committata nel repo (non generata a runtime)
+- `entrypoint.sh` esegue `makemigrations users --noinput` prima di `migrate` come guardia per ambienti di sviluppo
+
 ## Ultimo Aggiornamento
 Data: 30 marzo 2026
-Completato: Struttura progetto Next.js + Django + Docker Compose inizializzata
-File creati: docker-compose.yml, .env.example, .gitignore, frontend (13 file), backend (21 file)
-Decisioni tecniche: AUTH_USER_MODEL = users.User - non modificare dopo primo deploy
+Completato: Fix bug critico — migrazione iniziale users.User mancante causava crash loop "relation users_user does not exist"
+File creati/modificati:
+- backend/apps/users/migrations/__init__.py (nuovo)
+- backend/apps/users/migrations/0001_initial.py (nuovo)
+- backend/sherazade/settings/base.py (ordine INSTALLED_APPS corretto)
+- backend/entrypoint.sh (aggiunto makemigrations users prima di migrate)
 Prossimo task: Test avvio locale con Docker Compose
