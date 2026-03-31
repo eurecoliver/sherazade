@@ -89,7 +89,7 @@ IMPORTANTE: Al termine di ogni task, prima di considerarlo completato, aggiorna 
 - JWT con `ROTATE_REFRESH_TOKENS=True` e blacklist attiva per sicurezza
 - Frontend usa Next.js App Router con `[locale]` dynamic segment (next-intl v3)
 - `next.config.mjs` con `output: 'standalone'` per Docker ottimizzato
-- docker-compose.yml orientato allo sviluppo locale (runserver Django, next dev); produzione usa le stesse immagini con variabili diverse
+- docker-compose.yml usa Gunicorn (backend, 2 workers, --reload) e Next.js standalone runner (frontend, target: runner) per performance migliori anche in locale; `docker-compose build frontend` necessario ad ogni modifica frontend
 
 ### Anagrafica bambini e famiglie (30 marzo 2026)
 - App Django `apps.children` con modelli: Bambino, Famiglia, DelegaRitiro
@@ -189,3 +189,4 @@ Branch: feature/utenti
 File creati: backend/apps/config/ (8 file: models, permissions, serializers, views, urls, admin, migrations), backend/apps/children/migrations/0003_bambino_gruppo_orario_uscita.py, frontend/src/app/api/config/gruppi/, frontend/src/app/api/config/orari/, frontend/src/app/api/utenti/, frontend/src/app/[locale]/dashboard/admin/utenti/page.tsx, frontend/src/app/[locale]/dashboard/admin/impostazioni/page.tsx
 File modificati: CLAUDE.md, backend/apps/children/models.py, backend/apps/children/serializers.py, backend/apps/children/views.py, backend/apps/children/admin.py, backend/apps/attendance/views.py+admin.py, backend/apps/diary/views.py, backend/apps/meals/views.py, backend/apps/users/serializers.py+views.py+urls.py, backend/sherazade/settings/base.py, backend/sherazade/urls.py, frontend/src/app/[locale]/dashboard/admin/bambini/page.tsx, frontend/src/app/[locale]/dashboard/admin/page.tsx
 Prossimo task: calendario scolastico o messaggistica broadcast (v2)
+Note infra: frontend ora usa target runner (standalone build); dopo ogni modifica frontend eseguire `docker-compose build frontend && docker-compose up -d frontend` (v2)
