@@ -170,8 +170,7 @@ IMPORTANTE: Al termine di ogni task, prima di considerarlo completato, aggiorna 
 
 ## Ultimo Aggiornamento
 Data: 31 marzo 2026
-Completato: feature/presenze — registro presenze/assenze (ultima feature MVP)
-Branch: feature/presenze
-File creati: backend/apps/attendance/ (9 file + migration), frontend/src/app/api/presenze/ (8 route), frontend/src/app/[locale]/dashboard/staff/presenze/page.tsx, frontend/src/app/[locale]/dashboard/admin/presenze/page.tsx, frontend/src/app/[locale]/dashboard/genitore/presenze/page.tsx
-File modificati: CLAUDE.md, backend/sherazade/settings/base.py, backend/sherazade/urls.py, frontend/src/app/[locale]/dashboard/cuoca/page.tsx, frontend/src/app/[locale]/dashboard/staff/page.tsx, frontend/src/app/[locale]/dashboard/admin/page.tsx, frontend/src/app/[locale]/dashboard/genitore/page.tsx
-Prossimo task: MVP completato — deploy su Hetzner, DPIA, test end-to-end
+Completato: feature/presenze — registro presenze, comunicazione assenze genitore, vista direttrice, contatore cuoca
+Branch: mergiato su develop
+🎉 MVP COMPLETATO — tutte e 6 le funzionalità core sono operative
+Prossimo task: demo alla direttrice + raccolta feedback per v2
