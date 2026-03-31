@@ -142,8 +142,6 @@ IMPORTANTE: Al termine di ogni task, prima di considerarlo completato, aggiorna 
 
 ## Ultimo Aggiornamento
 Data: 31 marzo 2026
-Completato: feature/diario — diario giornaliero bambino, upload foto/video con verifica GDPR, vista staff e genitore
-Branch: feature/diario
-File creati: backend/apps/diary/ (9 file), frontend/src/app/api/diario/ (6 route), frontend/src/app/[locale]/dashboard/staff/diario/page.tsx, frontend/src/app/[locale]/dashboard/genitore/diario/page.tsx
-File modificati: CLAUDE.md, backend/sherazade/settings/base.py, backend/sherazade/urls.py, frontend/messages/it.json, frontend/messages/en.json, frontend/src/app/[locale]/dashboard/staff/page.tsx, frontend/src/app/[locale]/dashboard/genitore/page.tsx
-Prossimo task: feature/diario-alimentare — foglio pappe e allergie
+Completato: feature/diario — diario giornaliero, upload foto/video, vista insegnante e genitore, controllo consensi GDPR
+Branch: mergiato su develop
+Prossimo task: feature/pappe — diario alimentare e gestione allergie
