@@ -20,21 +20,16 @@ export default function CuocaDashboard() {
   const [presentiOggi, setPresentiOggi] = useState<number | null>(null)
 
   useEffect(() => {
-    fetch('/api/auth/me')
-      .then(res => {
-        if (res.ok) return res.json()
-        throw new Error()
+    Promise.all([
+      fetch('/api/auth/me').then(res => res.ok ? res.json() : Promise.reject()),
+      fetch('/api/presenze/presenti-oggi').then(res => res.ok ? res.json() : null),
+    ])
+      .then(([me, presenze]) => {
+        setUser(me)
+        if (presenze) setPresentiOggi(presenze.presenti)
       })
-      .then(setUser)
       .catch(() => router.push(`/${locale}/login`))
   }, [locale, router])
-
-  useEffect(() => {
-    fetch('/api/presenze/presenti-oggi')
-      .then(res => res.ok ? res.json() : null)
-      .then(data => { if (data) setPresentiOggi(data.presenti) })
-      .catch(() => null)
-  }, [])
 
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' })

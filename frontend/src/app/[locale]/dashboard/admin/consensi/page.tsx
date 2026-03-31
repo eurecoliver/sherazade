@@ -98,15 +98,19 @@ export default function AdminConsensiPage() {
   useEffect(() => { fetchStato() }, [fetchStato])
 
   const refresh = async () => {
-    await fetchStato()
-    if (selected) {
-      // Aggiorna i dati del bambino selezionato
+    setError('')
+    try {
       const res = await fetch('/api/consensi/stato')
-      if (res.ok) {
-        const all: BambinoStato[] = await res.json()
+      if (res.status === 401) { router.push(`/${locale}/login`); return }
+      if (!res.ok) throw new Error()
+      const all: BambinoStato[] = await res.json()
+      setBambini(all)
+      if (selected) {
         const updated = all.find(b => b.id === selected.id)
         if (updated) setSelected(updated)
       }
+    } catch {
+      setError('Errore nel caricamento. Riprova.')
     }
   }
 
