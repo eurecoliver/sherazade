@@ -25,6 +25,28 @@
     "active": "Active",
     "inactive": "Inactive"
   },
+  "Diario": {
+    "title": "Child diary",
+    "loading": "Loading...",
+    "backToDashboard": "← Dashboard",
+    "staffTitle": "Daily diary",
+    "genitoreTitle": "Diary of",
+    "genitoreSubtitle": "Relive the school days",
+    "noRegistri": "No diary entries yet.",
+    "noRegistriSub": "Teachers will start filling in the diary soon.",
+    "umore": {
+      "felice": "Happy",
+      "sereno": "Calm",
+      "stanco": "Tired",
+      "agitato": "Restless",
+      "triste": "Sad"
+    },
+    "attivita": "Activities",
+    "notePerVoi": "Notes for you",
+    "compilatoDa": "Filled in by",
+    "consensoWarning": "Warning: no active photo consent.",
+    "nonFotografabile": "Child cannot be photographed"
+  },
   "Consensi": {
     "title": "Photo consents",
     "loading": "Loading...",

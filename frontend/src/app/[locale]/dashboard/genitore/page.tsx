@@ -84,6 +84,12 @@ export default function GenitoreDashboard() {
           >
             📷 I miei consensi
           </button>
+          <button
+            onClick={() => router.push(`/${locale}/dashboard/genitore/diario`)}
+            style={{ padding: '0.75rem 1.25rem', background: '#FFF3EE', color: '#E17055', border: '2px solid #FFD4B3', borderRadius: '10px', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
+          >
+            📖 Diario
+          </button>
         </div>
 
         <button

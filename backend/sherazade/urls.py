@@ -8,6 +8,7 @@ urlpatterns = [
     path('api/v1/auth/', include('apps.users.urls')),
     path('api/v1/', include('apps.children.urls')),
     path('api/v1/', include('apps.consents.urls')),
+    path('api/v1/', include('apps.diary.urls')),
 ]
 
 if settings.DEBUG:

@@ -35,7 +35,7 @@ Nome interno: Sherazade.
 1. [x] Autenticazione multi-ruolo (Auth + JWT + 2FA)
 2. [x] Anagrafica bambini e famiglie
 3. [x] Consensi fotografici digitali (GDPR compliant)
-4. [ ] Diario del bambino (foto/video giornalieri)
+4. [x] Diario del bambino (foto/video giornalieri)
 5. [ ] Diario alimentare (foglio pappe + allergie)
 6. [ ] Registro presenze/assenze
 
@@ -129,8 +129,21 @@ IMPORTANTE: Al termine di ogni task, prima di considerarlo completato, aggiorna 
 - Frontend genitore: card per figlio con toggle consenso per finalità, testo GDPR, timestamps, stati revocato/non-configurato
 - Permessi: Admin/Direttrice CRUD, Coordinatrice/Insegnante read-only, Genitore read+dai/revoca_consenso+miei, Cuoca nessun accesso
 
+### Diario del bambino (31 marzo 2026)
+- App Django `apps.diary` con modelli `RegistroDiario` (bambino, data, autore, umore, testi) e `MediaDiario` (file, tipo foto/video, thumbnail, visibile_a_genitori)
+- `unique_together = [('bambino', 'data')]` — un registro per bambino per giorno
+- Vincolo GDPR: prima di ogni upload media, verifica consenso attivo per `uso_interno` E `genitori_diretti`; blocca con errore esplicito se mancante o revocato
+- Action `giornata`: vista staff per data — lista bambini con registro del giorno e flag consenso_ok per ogni bambino
+- Action `mio_figlio`: feed cronologico genitore — solo media `visibile_a_genitori=True`, verifica proprietà prima dell'accesso
+- Permessi: Admin/Direttrice/Coordinatrice CRUD, Insegnante CRUD, Genitore read-only propri figli, Cuoca nessun accesso
+- Upload media via `MultiPartParser` (FormData), path dinamico `diario/{bambino_id}/{data}/{filename}`
+- Frontend staff: vista giornaliera con BambinoCard espandibile (form umore+testi+upload), filtro data e sezione, contatore compilati
+- Frontend genitore: feed con RegistroCard (emoji umore, attività, note, griglia foto/video), lightbox con download, selettore figlio se più figli
+
 ## Ultimo Aggiornamento
-Data: 30 marzo 2026
-Completato: feature/consensi — semaforo consensi, gestione per finalità, vista genitore, flag non fotografabile
-Branch: mergiato su develop
-Prossimo task: feature/diario — diario del bambino con foto e video giornalieri
+Data: 31 marzo 2026
+Completato: feature/diario — diario giornaliero bambino, upload foto/video con verifica GDPR, vista staff e genitore
+Branch: feature/diario
+File creati: backend/apps/diary/ (9 file), frontend/src/app/api/diario/ (6 route), frontend/src/app/[locale]/dashboard/staff/diario/page.tsx, frontend/src/app/[locale]/dashboard/genitore/diario/page.tsx
+File modificati: CLAUDE.md, backend/sherazade/settings/base.py, backend/sherazade/urls.py, frontend/messages/it.json, frontend/messages/en.json, frontend/src/app/[locale]/dashboard/staff/page.tsx, frontend/src/app/[locale]/dashboard/genitore/page.tsx
+Prossimo task: feature/diario-alimentare — foglio pappe e allergie

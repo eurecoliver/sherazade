@@ -25,6 +25,28 @@
     "active": "Attivi",
     "inactive": "Non attivi"
   },
+  "Diario": {
+    "title": "Diario del bambino",
+    "loading": "Caricamento...",
+    "backToDashboard": "← Dashboard",
+    "staffTitle": "Diario del giorno",
+    "genitoreTitle": "Diario di",
+    "genitoreSubtitle": "Rivivi le giornate alla scuola",
+    "noRegistri": "Nessuna giornata registrata ancora.",
+    "noRegistriSub": "Le insegnanti inizieranno a compilare il diario prossimamente.",
+    "umore": {
+      "felice": "Felice",
+      "sereno": "Sereno",
+      "stanco": "Stanco",
+      "agitato": "Agitato",
+      "triste": "Triste"
+    },
+    "attivita": "Attività",
+    "notePerVoi": "Note per voi",
+    "compilatoDa": "Compilato da",
+    "consensoWarning": "Attenzione: nessun consenso fotografico attivo.",
+    "nonFotografabile": "Bambino non fotografabile"
+  },
   "Consensi": {
     "title": "Consensi fotografici",
     "loading": "Caricamento...",
