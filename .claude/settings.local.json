@@ -3,7 +3,9 @@
     "allow": [
       "Bash(git add:*)",
       "Bash(git commit:*)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "Bash(mkdir -p \"/Users/oliver/repos/sherazade/frontend/src/app/api/diario/registri/[id]\")",
+      "Bash(mkdir -p \"/Users/oliver/repos/sherazade/frontend/src/app/api/diario/media/[id]\")"
     ]
   }
 }
