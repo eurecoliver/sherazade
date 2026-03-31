@@ -17,6 +17,7 @@ export default function CuocaDashboard() {
   const router = useRouter()
   const locale = useLocale()
   const [user, setUser] = useState<User | null>(null)
+  const [presentiOggi, setPresentiOggi] = useState<number | null>(null)
 
   useEffect(() => {
     fetch('/api/auth/me')
@@ -27,6 +28,13 @@ export default function CuocaDashboard() {
       .then(setUser)
       .catch(() => router.push(`/${locale}/login`))
   }, [locale, router])
+
+  useEffect(() => {
+    fetch('/api/presenze/presenti-oggi')
+      .then(res => res.ok ? res.json() : null)
+      .then(data => { if (data) setPresentiOggi(data.presenti) })
+      .catch(() => null)
+  }, [])
 
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' })
@@ -67,7 +75,7 @@ export default function CuocaDashboard() {
           background: '#EAFAF1',
           borderRadius: '12px',
           padding: '1.25rem',
-          marginBottom: '2rem',
+          marginBottom: '1.5rem',
         }}>
           <p style={{ margin: 0, color: '#555' }}>
             {t('welcome')},{' '}
@@ -75,6 +83,31 @@ export default function CuocaDashboard() {
               {user.first_name || user.email}
             </strong>
           </p>
+        </div>
+
+        {/* Contatore presenti oggi */}
+        <div style={{
+          background: presentiOggi !== null ? '#F0FFF4' : '#F7FAFC',
+          border: `2px solid ${presentiOggi !== null ? '#68D391' : '#E2E8F0'}`,
+          borderRadius: '14px',
+          padding: '1rem 1.25rem',
+          marginBottom: '1.5rem',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.875rem',
+        }}>
+          <span style={{ fontSize: '1.75rem' }}>🧒</span>
+          <div>
+            <p style={{ margin: 0, fontSize: '0.78rem', fontWeight: 700, color: '#38A169', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+              Bambini presenti oggi
+            </p>
+            <p style={{ margin: '0.1rem 0 0', fontSize: '1.5rem', fontWeight: 800, color: '#2F855A', lineHeight: 1 }}>
+              {presentiOggi !== null ? presentiOggi : '—'}
+            </p>
+            <p style={{ margin: '0.1rem 0 0', fontSize: '0.75rem', color: '#888' }}>
+              {presentiOggi !== null ? 'calibra le porzioni di conseguenza' : 'caricamento...'}
+            </p>
+          </div>
         </div>
 
         <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1.5rem' }}>

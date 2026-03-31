@@ -10,6 +10,7 @@ urlpatterns = [
     path('api/v1/', include('apps.consents.urls')),
     path('api/v1/', include('apps.diary.urls')),
     path('api/v1/', include('apps.meals.urls')),
+    path('api/v1/', include('apps.attendance.urls')),
 ]
 
 if settings.DEBUG:

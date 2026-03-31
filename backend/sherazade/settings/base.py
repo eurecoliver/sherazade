@@ -30,6 +30,7 @@ LOCAL_APPS = [
     'apps.consents',
     'apps.diary',
     'apps.meals',
+    'apps.attendance',
 ]
 
 INSTALLED_APPS = LOCAL_APPS + DJANGO_APPS + THIRD_PARTY_APPS

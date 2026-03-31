@@ -79,6 +79,12 @@ export default function StaffDashboard() {
 
         <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
           <button
+            onClick={() => router.push(`/${locale}/dashboard/staff/presenze`)}
+            style={{ padding: '0.75rem 1.25rem', background: '#EAF4FF', color: '#0984E3', border: '2px solid #BDE0FF', borderRadius: '10px', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
+          >
+            ✅ Presenze
+          </button>
+          <button
             onClick={() => router.push(`/${locale}/dashboard/staff/diario`)}
             style={{ padding: '0.75rem 1.25rem', background: '#EAF4FF', color: '#0984E3', border: '2px solid #BDE0FF', borderRadius: '10px', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
           >

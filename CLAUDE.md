@@ -37,7 +37,7 @@ Nome interno: Sherazade.
 3. [x] Consensi fotografici digitali (GDPR compliant)
 4. [x] Diario del bambino (foto/video giornalieri)
 5. [x] Diario alimentare (foglio pappe + allergie)
-6. [ ] Registro presenze/assenze
+6. [x] Registro presenze/assenze
 
 ## Funzionalità Post-MVP
 - Calendario scolastico ed eventi
@@ -140,6 +140,22 @@ IMPORTANTE: Al termine di ogni task, prima di considerarlo completato, aggiorna 
 - Frontend staff: vista giornaliera con BambinoCard espandibile (form umore+testi+upload), filtro data e sezione, contatore compilati
 - Frontend genitore: feed con RegistroCard (emoji umore, attività, note, griglia foto/video), lightbox con download, selettore figlio se più figli
 
+### Registro presenze/assenze (31 marzo 2026)
+- App Django `apps.attendance` con modello `Presenza`: bambino, data, presente (bool), ora_arrivo/uscita, assenza_comunicata, motivo_assenza (TextChoices: malattia/famiglia/vacanza/altro), note, registrato_da
+- `UniqueConstraint(fields=['bambino', 'data'])` — un registro per bambino per giorno
+- Action `giornata`: staff/admin — lista bambini con presenza del giorno, opz. sezione
+- Action `salva_giornata`: bulk `update_or_create` per salvare tutti i bambini in un POST
+- Action `non_arrivati`: admin/direttrice — bambini attivi senza registro per la data indicata (alert mattutino)
+- Action `report_mensile`: admin — report bambino per bambino con %presenza, base per export PDF
+- Action `presenti_oggi`: cuoca — contatore bambini presenti per calibrare porzioni
+- Action `comunica_assenza`: genitore — crea/aggiorna presenza con presente=False, assenza_comunicata=True
+- Action `mio_figlio`: genitore — storico presenze + statistiche mese corrente
+- Permessi: Admin/Direttrice/Coordinatrice CRUD + report; Insegnante CRUD; Cuoca read + presenti_oggi; Genitore read propri figli + comunica_assenza + mio_figlio
+- Frontend staff: lista bambini con toggle Sì/No a un tap, campo ora_arrivo se presente, dropdown motivo se assente, checkbox "genitore ha avvisato", contatori presenti/assenti/da fare, bottone Salva fisso in basso
+- Frontend admin: tab "Riepilogo giornaliero" (contatori globali + alert non arrivati in rosso + riepilogo per sezione) e "Report mensile" (tabella con barra % presenza + bottone Stampa/PDF)
+- Frontend genitore: card stato di oggi, bottone "Comunica assenza" con form motivo, statistiche mese, storico recente 20 giorni
+- Dashboard cuoca aggiornata: contatore "Bambini presenti oggi" visibile subito all'apertura
+
 ### Diario alimentare / foglio pappe (31 marzo 2026)
 - App Django `apps.meals` con 3 modelli: `AllergiaIntolleranza` (tipo, gravita, note_mediche), `MenuGiornaliero` (portate + sezione, unique_together data+sezione), `RegistroPasto` (5 portate con quantità, unique_together bambino+data)
 - Enum `Quantita`: tutto/meta/poco/nulla — usato in tutti i campi portata
@@ -154,6 +170,8 @@ IMPORTANTE: Al termine di ogni task, prima di considerarlo completato, aggiorna 
 
 ## Ultimo Aggiornamento
 Data: 31 marzo 2026
-Completato: feature/pappe — menu giornaliero, registro pasti per bambino, vista cuoca con allergie, vista genitore
-Branch: mergiato su develop
-Prossimo task: feature/presenze — registro presenze e assenze
+Completato: feature/presenze — registro presenze/assenze (ultima feature MVP)
+Branch: feature/presenze
+File creati: backend/apps/attendance/ (9 file + migration), frontend/src/app/api/presenze/ (8 route), frontend/src/app/[locale]/dashboard/staff/presenze/page.tsx, frontend/src/app/[locale]/dashboard/admin/presenze/page.tsx, frontend/src/app/[locale]/dashboard/genitore/presenze/page.tsx
+File modificati: CLAUDE.md, backend/sherazade/settings/base.py, backend/sherazade/urls.py, frontend/src/app/[locale]/dashboard/cuoca/page.tsx, frontend/src/app/[locale]/dashboard/staff/page.tsx, frontend/src/app/[locale]/dashboard/admin/page.tsx, frontend/src/app/[locale]/dashboard/genitore/page.tsx
+Prossimo task: MVP completato — deploy su Hetzner, DPIA, test end-to-end

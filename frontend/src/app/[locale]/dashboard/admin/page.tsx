@@ -90,6 +90,12 @@ export default function AdminDashboard() {
           >
             📷 Consensi
           </button>
+          <button
+            onClick={() => router.push(`/${locale}/dashboard/admin/presenze`)}
+            style={{ padding: '0.75rem 1.25rem', background: '#F0FFF4', color: '#38A169', border: '2px solid #9AE6B4', borderRadius: '10px', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
+          >
+            ✅ Presenze
+          </button>
         </div>
 
         <button

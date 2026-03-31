@@ -96,6 +96,12 @@ export default function GenitoreDashboard() {
           >
             🥣 Pappe
           </button>
+          <button
+            onClick={() => router.push(`/${locale}/dashboard/genitore/presenze`)}
+            style={{ padding: '0.75rem 1.25rem', background: '#F0F4FF', color: '#6C63FF', border: '2px solid #C5BFFF', borderRadius: '10px', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
+          >
+            📅 Presenze
+          </button>
         </div>
 
         <button
