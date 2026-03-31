@@ -230,17 +230,49 @@ class RegistroPastoViewSet(viewsets.ModelViewSet):
             return Response({'detail': 'Riservato ai genitori.'}, status=status.HTTP_403_FORBIDDEN)
 
         bambino_id = request.query_params.get('bambino')
-        if not bambino_id:
-            return Response({'detail': 'Parametro "bambino" obbligatorio.'}, status=status.HTTP_400_BAD_REQUEST)
-
         user = request.user
+
+        # Se bambino_id non è fornito → fallback: tutti i pasti dei bambini visibili al genitore
+        if not bambino_id:
+            registri = (
+                RegistroPasto.objects
+                .filter(
+                    Q(bambino__famiglia__genitore1=user)
+                    | Q(bambino__famiglia__genitore2=user)
+                )
+                .select_related('compilato_da')
+                .order_by('-data')
+            )
+            return Response(RegistroPastoSerializer(registri, many=True).data)
+
         try:
-            bambino = Bambino.objects.select_related('famiglia').get(id=bambino_id)
-            if bambino.famiglia.genitore1 != user and bambino.famiglia.genitore2 != user:
-                return Response({'detail': 'Non autorizzato.'}, status=status.HTTP_403_FORBIDDEN)
+            bambino = Bambino.objects.select_related(
+                'famiglia__genitore1', 'famiglia__genitore2'
+            ).get(id=bambino_id)
         except Bambino.DoesNotExist:
             return Response({'detail': 'Bambino non trovato.'}, status=status.HTTP_404_NOT_FOUND)
+
+        # Verifica autorizzazione tramite Famiglia
+        try:
+            famiglia = bambino.famiglia
+            autorizzato = (
+                famiglia.genitore1_id == user.pk
+                or famiglia.genitore2_id == user.pk
+            )
         except Exception:
+            # Bambino senza Famiglia: fallback sui pasti di tutti i bambini visibili al genitore
+            registri = (
+                RegistroPasto.objects
+                .filter(
+                    Q(bambino__famiglia__genitore1=user)
+                    | Q(bambino__famiglia__genitore2=user)
+                )
+                .select_related('compilato_da')
+                .order_by('-data')
+            )
+            return Response(RegistroPastoSerializer(registri, many=True).data)
+
+        if not autorizzato:
             return Response({'detail': 'Non autorizzato.'}, status=status.HTTP_403_FORBIDDEN)
 
         registri = (

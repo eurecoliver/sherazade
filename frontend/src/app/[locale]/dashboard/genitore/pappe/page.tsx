@@ -208,12 +208,29 @@ export default function GenitorePappePage() {
     }
   }, [])
 
+  // Fallback: se non ci sono figli collegati via Famiglia, carica tutti i pasti visibili
+  const fetchPastiFallback = useCallback(async () => {
+    setLoadingPasti(true)
+    setError('')
+    try {
+      const res = await fetch('/api/meals/pasti/mio-figlio')
+      if (!res.ok) throw new Error()
+      setRegistri(await res.json())
+    } catch {
+      setError('Errore nel caricamento dei pasti.')
+    } finally {
+      setLoadingPasti(false)
+    }
+  }, [])
+
   useEffect(() => {
     if (selectedFiglio !== null) {
       const figlio = figli.find(f => f.id === selectedFiglio)
       fetchPasti(selectedFiglio, figlio?.sezione ?? '')
+    } else if (!loading && figli.length === 0) {
+      fetchPastiFallback()
     }
-  }, [selectedFiglio, figli, fetchPasti])
+  }, [selectedFiglio, figli, loading, fetchPasti, fetchPastiFallback])
 
   const figlioSelezionato = figli.find(f => f.id === selectedFiglio)
 
@@ -281,7 +298,7 @@ export default function GenitorePappePage() {
           </div>
         )}
 
-        {selectedFiglio === null ? (
+        {selectedFiglio === null && figli.length > 0 ? (
           <div style={{ textAlign: 'center', padding: '3rem', background: 'white', borderRadius: '16px', color: '#aaa' }}>
             <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>👆</div>
             <p style={{ margin: 0 }}>Seleziona un bambino.</p>
