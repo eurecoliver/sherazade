@@ -90,6 +90,12 @@ export default function GenitoreDashboard() {
           >
             📖 Diario
           </button>
+          <button
+            onClick={() => router.push(`/${locale}/dashboard/genitore/pappe`)}
+            style={{ padding: '0.75rem 1.25rem', background: '#FFF3EE', color: '#E17055', border: '2px solid #FFD4B3', borderRadius: '10px', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
+          >
+            🥣 Pappe
+          </button>
         </div>
 
         <button

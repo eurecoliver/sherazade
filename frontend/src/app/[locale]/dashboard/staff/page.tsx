@@ -84,6 +84,12 @@ export default function StaffDashboard() {
           >
             📖 Diario del giorno
           </button>
+          <button
+            onClick={() => router.push(`/${locale}/dashboard/staff/pappe`)}
+            style={{ padding: '0.75rem 1.25rem', background: '#EAF4FF', color: '#0984E3', border: '2px solid #BDE0FF', borderRadius: '10px', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
+          >
+            🥣 Foglio pappe
+          </button>
         </div>
 
         <button

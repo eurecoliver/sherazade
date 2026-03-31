@@ -36,7 +36,7 @@ Nome interno: Sherazade.
 2. [x] Anagrafica bambini e famiglie
 3. [x] Consensi fotografici digitali (GDPR compliant)
 4. [x] Diario del bambino (foto/video giornalieri)
-5. [ ] Diario alimentare (foglio pappe + allergie)
+5. [x] Diario alimentare (foglio pappe + allergie)
 6. [ ] Registro presenze/assenze
 
 ## Funzionalità Post-MVP
@@ -140,8 +140,22 @@ IMPORTANTE: Al termine di ogni task, prima di considerarlo completato, aggiorna 
 - Frontend staff: vista giornaliera con BambinoCard espandibile (form umore+testi+upload), filtro data e sezione, contatore compilati
 - Frontend genitore: feed con RegistroCard (emoji umore, attività, note, griglia foto/video), lightbox con download, selettore figlio se più figli
 
+### Diario alimentare / foglio pappe (31 marzo 2026)
+- App Django `apps.meals` con 3 modelli: `AllergiaIntolleranza` (tipo, gravita, note_mediche), `MenuGiornaliero` (portate + sezione, unique_together data+sezione), `RegistroPasto` (5 portate con quantità, unique_together bambino+data)
+- Enum `Quantita`: tutto/meta/poco/nulla — usato in tutti i campi portata
+- Action `per_sezione`: lista bambini con allergie attive per vista mattutina cuoca; flag `ha_allergie_gravi` per alert immediato
+- Action `giornata`: staff view — bambini con allergie + registro pasto del giorno
+- Action `salva_sezione`: bulk `update_or_create` per salvare tutti i pasti della sezione in un unico POST
+- Action `mio_figlio`: genitore vede feed storico pasti propri figli
+- Permessi: Cuoca CRUD menu + read allergie; Insegnante CRUD registri pasto; Admin/Direttrice/Coordinatrice CRUD completo; Genitore read-only
+- Frontend cuoca: alert rosso per allergie gravi/anafilassi, lista allergie moderate, form menu del giorno con 6 portate
+- Frontend staff: tabella foglio pappe con dropdown colorati per quantità (verde/giallo/arancione/rosso), allergie come badge colorati per gravità, salvataggio sezione in un click
+- Frontend genitore: PastoCard con icone quantità (🍽️/🥄/❌), menu sezione abbinato, storico pasti
+
 ## Ultimo Aggiornamento
 Data: 31 marzo 2026
-Completato: feature/diario — diario giornaliero, upload foto/video, vista insegnante e genitore, controllo consensi GDPR
-Branch: mergiato su develop
-Prossimo task: feature/pappe — diario alimentare e gestione allergie
+Completato: feature/pappe — foglio pappe, gestione allergie, menu giornaliero, vista cuoca/insegnante/genitore
+Branch: feature/pappe
+File creati: backend/apps/meals/ (8 file), frontend/src/app/api/meals/ (11 route), frontend/src/app/[locale]/dashboard/cuoca/pappe/page.tsx, frontend/src/app/[locale]/dashboard/staff/pappe/page.tsx, frontend/src/app/[locale]/dashboard/genitore/pappe/page.tsx
+File modificati: CLAUDE.md, backend/sherazade/settings/base.py, backend/sherazade/urls.py, frontend/src/app/[locale]/dashboard/cuoca/page.tsx, frontend/src/app/[locale]/dashboard/staff/page.tsx, frontend/src/app/[locale]/dashboard/genitore/page.tsx
+Prossimo task: feature/presenze — registro presenze e assenze giornaliero
