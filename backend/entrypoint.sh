@@ -11,4 +11,4 @@ if [ "$DJANGO_DEBUG" = "False" ]; then
 fi
 
 echo "Starting application..."
-exec "$@"
+exec gunicorn sherazade.wsgi:application --bind 0.0.0.0:8000 --workers 2 --reload
