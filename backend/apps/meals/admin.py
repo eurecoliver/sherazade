@@ -19,6 +19,6 @@ class MenuGiornalieroAdmin(admin.ModelAdmin):
 @admin.register(RegistroPasto)
 class RegistroPastoAdmin(admin.ModelAdmin):
     list_display = ('bambino', 'data', 'primo_quantita', 'secondo_quantita', 'compilato_da')
-    list_filter = ('data', 'bambino__sezione')
+    list_filter = ('data', 'bambino__gruppo')
     search_fields = ('bambino__nome', 'bambino__cognome')
     readonly_fields = ('compilato_da', 'creato_at', 'aggiornato_at')

@@ -11,7 +11,7 @@ class MediaDiarioInline(admin.TabularInline):
 @admin.register(RegistroDiario)
 class RegistroDiarioAdmin(admin.ModelAdmin):
     list_display = ('bambino', 'data', 'umore', 'autore', 'creato_at')
-    list_filter = ('data', 'umore', 'bambino__sezione')
+    list_filter = ('data', 'umore', 'bambino__gruppo')
     search_fields = ('bambino__nome', 'bambino__cognome')
     inlines = [MediaDiarioInline]
     readonly_fields = ('creato_at', 'aggiornato_at')
