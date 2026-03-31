@@ -154,14 +154,6 @@ IMPORTANTE: Al termine di ogni task, prima di considerarlo completato, aggiorna 
 
 ## Ultimo Aggiornamento
 Data: 31 marzo 2026
-Completato: bugfix — genitore non vedeva i pasti nella pagina /dashboard/genitore/pappe
-Branch: feature/pappe
-Bug risolto:
-- `mio_figlio` usava `select_related('famiglia')` (un livello) poi confrontava oggetti User anziché PK → lazy load rischioso
-- Se il bambino non aveva un record Famiglia, `bambino.famiglia` sollevava `RelatedObjectDoesNotExist` catturato dall'`except Exception` generico → 403 silenziosa
-- Fix backend: `select_related('famiglia__genitore1', 'famiglia__genitore2')` + confronto via `famiglia.genitore1_id == user.pk`; fallback su tutti i bambini visibili al genitore quando la Famiglia manca
-- Fix frontend: se `figli` è vuoto (nessuna Famiglia collegata), chiama `mio_figlio` senza bambino_id per il fallback; il render mostra "Seleziona un bambino" solo se ci sono effettivamente figli da selezionare
-File modificati: backend/apps/meals/views.py, frontend/src/app/[locale]/dashboard/genitore/pappe/page.tsx, CLAUDE.md
-Prossimo task: feature/presenze — registro presenze e assenze giornaliero
-File modificati: CLAUDE.md, backend/sherazade/settings/base.py, backend/sherazade/urls.py, frontend/src/app/[locale]/dashboard/cuoca/page.tsx, frontend/src/app/[locale]/dashboard/staff/page.tsx, frontend/src/app/[locale]/dashboard/genitore/page.tsx
-Prossimo task: feature/presenze — registro presenze e assenze giornaliero
+Completato: feature/pappe — menu giornaliero, registro pasti per bambino, vista cuoca con allergie, vista genitore
+Branch: mergiato su develop
+Prossimo task: feature/presenze — registro presenze e assenze
