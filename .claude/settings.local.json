@@ -5,7 +5,8 @@
       "Bash(git commit:*)",
       "Bash(git checkout:*)",
       "Bash(mkdir -p \"/Users/oliver/repos/sherazade/frontend/src/app/api/diario/registri/[id]\")",
-      "Bash(mkdir -p \"/Users/oliver/repos/sherazade/frontend/src/app/api/diario/media/[id]\")"
+      "Bash(mkdir -p \"/Users/oliver/repos/sherazade/frontend/src/app/api/diario/media/[id]\")",
+      "Bash(grep -n \"sezione\\\\|SEZIONI\" /Users/oliver/repos/sherazade/frontend/src/app/[locale]/dashboard/admin/bambini/page.tsx)"
     ]
   }
 }
