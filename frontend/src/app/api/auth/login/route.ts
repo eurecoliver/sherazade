@@ -30,10 +30,9 @@ export async function POST(request: NextRequest) {
     user: data.user,
   })
 
-  const isProduction = process.env.NODE_ENV === 'production'
   const cookieBase = {
     httpOnly: true,
-    secure: isProduction,
+    secure: false, // HTTP deployment — sicurezza garantita da httpOnly + sameSite
     sameSite: 'lax' as const,
     path: '/',
   }
