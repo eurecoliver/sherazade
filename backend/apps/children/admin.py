@@ -14,8 +14,8 @@ class DelegaRitiroInline(admin.TabularInline):
 
 @admin.register(Bambino)
 class BambinoAdmin(admin.ModelAdmin):
-    list_display = ('cognome', 'nome', 'sezione', 'data_nascita', 'attivo')
-    list_filter = ('sezione', 'attivo')
+    list_display = ('cognome', 'nome', 'gruppo', 'data_nascita', 'attivo')
+    list_filter = ('gruppo', 'attivo')
     search_fields = ('nome', 'cognome', 'codice_fiscale')
     inlines = [FamigliaInline, DelegaRitiroInline]
 

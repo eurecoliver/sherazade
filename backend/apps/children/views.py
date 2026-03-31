@@ -20,7 +20,7 @@ class BambinoViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, BambinoPermission]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['nome', 'cognome', 'codice_fiscale']
-    ordering_fields = ['cognome', 'nome', 'data_nascita', 'sezione']
+    ordering_fields = ['cognome', 'nome', 'data_nascita', 'gruppo__nome']
     ordering = ['cognome', 'nome']
 
     def get_queryset(self):
@@ -41,9 +41,9 @@ class BambinoViewSet(viewsets.ModelViewSet):
             return qs.none()
 
         # Filtri query string
-        sezione = self.request.query_params.get('sezione')
-        if sezione:
-            qs = qs.filter(sezione=sezione)
+        gruppo = self.request.query_params.get('gruppo')
+        if gruppo:
+            qs = qs.filter(gruppo_id=gruppo)
 
         attivo = self.request.query_params.get('attivo')
         if attivo is not None:

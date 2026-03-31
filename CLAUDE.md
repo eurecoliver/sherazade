@@ -40,6 +40,7 @@ Nome interno: Sherazade.
 6. [x] Registro presenze/assenze
 
 ## Funzionalità Post-MVP
+- [x] Gestione utenti e gruppi configurabili (feature/utenti)
 - Calendario scolastico ed eventi
 - Messaggistica broadcast (circolari)
 - Gestione menu settimanale
@@ -156,6 +157,19 @@ IMPORTANTE: Al termine di ogni task, prima di considerarlo completato, aggiorna 
 - Frontend genitore: card stato di oggi, bottone "Comunica assenza" con form motivo, statistiche mese, storico recente 20 giorni
 - Dashboard cuoca aggiornata: contatore "Bambini presenti oggi" visibile subito all'apertura
 
+### Gestione utenti e gruppi configurabili (31 marzo 2026)
+- Nuova app Django `apps.config` con modelli `Gruppo` (nome, colore hex, ordine, attivo, creato_da FK) e `OrarioUscita` (etichetta, orario, ordine, attivo)
+- `apps.config` aggiunta in LOCAL_APPS prima di `apps.children` per rispettare la dipendenza FK
+- `Bambino.sezione` CharField rimosso, sostituito da `gruppo = FK(config.Gruppo)` e `orario_uscita = FK(config.OrarioUscita)`, entrambi null/blank
+- Property `sezione` aggiunta a Bambino per backward-compat Python (ritorna `gruppo.nome` o `''`) — i filtri ORM usano `bambino__gruppo_id=<id>` non la property
+- Ordering `order_by('sezione', ...)` → `order_by('gruppo__ordine', ...)` in tutti i viewset
+- Filtro API cambiato da `?sezione=Gialli` (string) a `?gruppo=3` (ID intero) — frontend aggiornato di conseguenza
+- `UserAdminSerializer` con password write-only e `is_active` writable; `UserAdminViewSet` protetto da `IsAdminOrDirettrice`
+- `UserAdminViewSet` registrato nel router in `apps/users/urls.py` — esposto su `/api/v1/auth/utenti/`
+- Frontend: `/dashboard/admin/utenti` — lista per ruolo, toggle attivo/disabilitato, form nuovo/modifica utente con password opzionale
+- Frontend: `/dashboard/admin/impostazioni` — tab Gruppi (CRUD + color picker), tab Orari uscita (CRUD)
+- Frontend bambini: dropdown gruppi caricato da API, dropdown orari uscita, colore avatar dinamico da `gruppo_colore`
+
 ### Diario alimentare / foglio pappe (31 marzo 2026)
 - App Django `apps.meals` con 3 modelli: `AllergiaIntolleranza` (tipo, gravita, note_mediche), `MenuGiornaliero` (portate + sezione, unique_together data+sezione), `RegistroPasto` (5 portate con quantità, unique_together bambino+data)
 - Enum `Quantita`: tutto/meta/poco/nulla — usato in tutti i campi portata
@@ -170,7 +184,8 @@ IMPORTANTE: Al termine di ogni task, prima di considerarlo completato, aggiorna 
 
 ## Ultimo Aggiornamento
 Data: 31 marzo 2026
-Completato: feature/presenze — registro presenze, comunicazione assenze genitore, vista direttrice, contatore cuoca
-Branch: mergiato su develop
-🎉 MVP COMPLETATO — tutte e 6 le funzionalità core sono operative
-Prossimo task: demo alla direttrice + raccolta feedback per v2
+Completato: feature/utenti — gestione utenti (CRUD admin), gruppi configurabili con colore/ordine, orari uscita configurabili; migrazione sezione CharField → gruppo FK su tutti i modelli e viste
+Branch: feature/utenti
+File creati: backend/apps/config/ (8 file: models, permissions, serializers, views, urls, admin, migrations), backend/apps/children/migrations/0003_bambino_gruppo_orario_uscita.py, frontend/src/app/api/config/gruppi/, frontend/src/app/api/config/orari/, frontend/src/app/api/utenti/, frontend/src/app/[locale]/dashboard/admin/utenti/page.tsx, frontend/src/app/[locale]/dashboard/admin/impostazioni/page.tsx
+File modificati: CLAUDE.md, backend/apps/children/models.py, backend/apps/children/serializers.py, backend/apps/children/views.py, backend/apps/children/admin.py, backend/apps/attendance/views.py+admin.py, backend/apps/diary/views.py, backend/apps/meals/views.py, backend/apps/users/serializers.py+views.py+urls.py, backend/sherazade/settings/base.py, backend/sherazade/urls.py, frontend/src/app/[locale]/dashboard/admin/bambini/page.tsx, frontend/src/app/[locale]/dashboard/admin/page.tsx
+Prossimo task: calendario scolastico o messaggistica broadcast (v2)

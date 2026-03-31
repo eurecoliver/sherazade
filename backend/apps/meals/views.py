@@ -42,20 +42,21 @@ class AllergiaIntolleranzaViewSet(viewsets.ModelViewSet):
         Cuoca/Staff: lista bambini attivi con le loro allergie attive, raggruppati per sezione.
         Utile per la vista mattutina prima di preparare i pasti.
         """
-        sezione = request.query_params.get('sezione', '')
+        gruppo = request.query_params.get('gruppo', '')
         bambini_qs = (
             Bambino.objects
             .filter(attivo=True)
+            .select_related('gruppo')
             .prefetch_related(
                 Prefetch(
                     'allergie',
                     queryset=AllergiaIntolleranza.objects.filter(attivo=True).order_by('-gravita'),
                 )
             )
-            .order_by('sezione', 'cognome', 'nome')
+            .order_by('gruppo__ordine', 'cognome', 'nome')
         )
-        if sezione:
-            bambini_qs = bambini_qs.filter(sezione=sezione)
+        if gruppo:
+            bambini_qs = bambini_qs.filter(gruppo_id=gruppo)
 
         result = []
         for b in bambini_qs:
@@ -128,8 +129,8 @@ class RegistroPastoViewSet(viewsets.ModelViewSet):
             qs = qs.filter(bambino_id=bambino_id)
         if data := params.get('data'):
             qs = qs.filter(data=data)
-        if sezione := params.get('sezione'):
-            qs = qs.filter(bambino__sezione=sezione)
+        if gruppo := params.get('gruppo'):
+            qs = qs.filter(bambino__gruppo_id=gruppo)
         return qs
 
     def perform_create(self, serializer):
@@ -142,21 +143,22 @@ class RegistroPastoViewSet(viewsets.ModelViewSet):
         Parametri: data (default oggi), sezione (opzionale).
         """
         data_str = request.query_params.get('data', str(date.today()))
-        sezione = request.query_params.get('sezione', '')
+        gruppo = request.query_params.get('gruppo', '')
 
         bambini_qs = (
             Bambino.objects
             .filter(attivo=True)
+            .select_related('gruppo')
             .prefetch_related(
                 Prefetch(
                     'allergie',
                     queryset=AllergiaIntolleranza.objects.filter(attivo=True).order_by('-gravita'),
                 )
             )
-            .order_by('sezione', 'cognome', 'nome')
+            .order_by('gruppo__ordine', 'cognome', 'nome')
         )
-        if sezione:
-            bambini_qs = bambini_qs.filter(sezione=sezione)
+        if gruppo:
+            bambini_qs = bambini_qs.filter(gruppo_id=gruppo)
 
         registri = {
             r.bambino_id: r

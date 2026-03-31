@@ -61,6 +61,9 @@ class BambinoSerializer(serializers.ModelSerializer):
     famiglia = FamigliaSerializer(read_only=True)
     deleghe_ritiro = DelegaRitiroSerializer(many=True, read_only=True)
     eta = serializers.SerializerMethodField()
+    gruppo_nome = serializers.SerializerMethodField()
+    gruppo_colore = serializers.SerializerMethodField()
+    orario_uscita_label = serializers.SerializerMethodField()
 
     class Meta:
         model = Bambino
@@ -70,19 +73,38 @@ class BambinoSerializer(serializers.ModelSerializer):
         today = date.today()
         return (today - obj.data_nascita).days // 365
 
+    def get_gruppo_nome(self, obj):
+        return obj.gruppo.nome if obj.gruppo_id and obj.gruppo else ''
+
+    def get_gruppo_colore(self, obj):
+        return obj.gruppo.colore if obj.gruppo_id and obj.gruppo else '#6B7280'
+
+    def get_orario_uscita_label(self, obj):
+        if obj.orario_uscita_id and obj.orario_uscita:
+            return f'{obj.orario_uscita.etichetta} ({obj.orario_uscita.orario})'
+        return ''
+
 
 class BambinoNoteSerializer(serializers.ModelSerializer):
     """Solo note_mediche è scrivibile — per Coordinatrice/Insegnante."""
+    gruppo_nome = serializers.SerializerMethodField()
 
     class Meta:
         model = Bambino
-        fields = ['id', 'nome', 'cognome', 'sezione', 'attivo', 'note_mediche', 'data_nascita']
-        read_only_fields = ['nome', 'cognome', 'sezione', 'attivo', 'data_nascita']
+        fields = ['id', 'nome', 'cognome', 'gruppo', 'gruppo_nome', 'attivo', 'note_mediche', 'data_nascita']
+        read_only_fields = ['nome', 'cognome', 'gruppo', 'attivo', 'data_nascita']
+
+    def get_gruppo_nome(self, obj):
+        return obj.gruppo.nome if obj.gruppo_id and obj.gruppo else ''
 
 
 class BambinoCuocaSerializer(serializers.ModelSerializer):
-    """Campi limitati per la Cuoca: nome, sezione, note mediche/allergie."""
+    """Campi limitati per la Cuoca: nome, gruppo, note mediche/allergie."""
+    gruppo_nome = serializers.SerializerMethodField()
 
     class Meta:
         model = Bambino
-        fields = ['id', 'nome', 'cognome', 'sezione', 'note_mediche', 'attivo']
+        fields = ['id', 'nome', 'cognome', 'gruppo', 'gruppo_nome', 'note_mediche', 'attivo']
+
+    def get_gruppo_nome(self, obj):
+        return obj.gruppo.nome if obj.gruppo_id and obj.gruppo else ''

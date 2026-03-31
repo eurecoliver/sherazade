@@ -83,8 +83,8 @@ class RegistroDiarioViewSet(viewsets.ModelViewSet):
             qs = qs.filter(bambino_id=bambino_id)
         if data := params.get('data'):
             qs = qs.filter(data=data)
-        if sezione := params.get('sezione'):
-            qs = qs.filter(bambino__sezione=sezione)
+        if gruppo := params.get('gruppo'):
+            qs = qs.filter(bambino__gruppo_id=gruppo)
 
         return qs
 
@@ -100,17 +100,17 @@ class RegistroDiarioViewSet(viewsets.ModelViewSet):
         """
         from datetime import date
         data_str = request.query_params.get('data', str(date.today()))
-        sezione = request.query_params.get('sezione', '')
+        gruppo = request.query_params.get('gruppo', '')
 
         bambini_qs = (
             Bambino.objects
             .filter(attivo=True)
-            .select_related('famiglia__genitore1', 'famiglia__genitore2')
+            .select_related('famiglia__genitore1', 'famiglia__genitore2', 'gruppo')
             .prefetch_related('consensi')
-            .order_by('sezione', 'cognome', 'nome')
+            .order_by('gruppo__ordine', 'cognome', 'nome')
         )
-        if sezione:
-            bambini_qs = bambini_qs.filter(sezione=sezione)
+        if gruppo:
+            bambini_qs = bambini_qs.filter(gruppo_id=gruppo)
 
         # Registri del giorno indicizzati per bambino_id
         registri = {

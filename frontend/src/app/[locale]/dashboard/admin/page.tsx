@@ -96,6 +96,18 @@ export default function AdminDashboard() {
           >
             ✅ Presenze
           </button>
+          <button
+            onClick={() => router.push(`/${locale}/dashboard/admin/utenti`)}
+            style={{ padding: '0.75rem 1.25rem', background: '#EBF8FF', color: '#2B6CB0', border: '2px solid #90CDF4', borderRadius: '10px', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
+          >
+            👥 Utenti
+          </button>
+          <button
+            onClick={() => router.push(`/${locale}/dashboard/admin/impostazioni`)}
+            style={{ padding: '0.75rem 1.25rem', background: '#F3F0FF', color: '#6C5CE7', border: '2px solid #D6CCFF', borderRadius: '10px', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
+          >
+            ⚙️ Impostazioni
+          </button>
         </div>
 
         <button

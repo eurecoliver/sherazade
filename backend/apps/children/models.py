@@ -8,7 +8,20 @@ class Bambino(models.Model):
     data_nascita = models.DateField()
     codice_fiscale = models.CharField(max_length=16, unique=True, blank=True)
     foto_profilo = models.ImageField(upload_to='bambini/foto/', blank=True, null=True)
-    sezione = models.CharField(max_length=50, blank=True)
+    gruppo = models.ForeignKey(
+        'config.Gruppo',
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='bambini',
+    )
+    orario_uscita = models.ForeignKey(
+        'config.OrarioUscita',
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name='bambini',
+    )
     data_iscrizione = models.DateField()
     data_fine_iscrizione = models.DateField(null=True, blank=True)
     note_mediche = models.TextField(blank=True)
@@ -21,6 +34,10 @@ class Bambino(models.Model):
         verbose_name = 'Bambino'
         verbose_name_plural = 'Bambini'
         ordering = ['cognome', 'nome']
+
+    @property
+    def sezione(self):
+        return self.gruppo.nome if self.gruppo_id and self.gruppo else ''
 
     def __str__(self):
         return f'{self.cognome} {self.nome}'

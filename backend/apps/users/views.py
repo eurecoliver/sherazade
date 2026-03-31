@@ -1,12 +1,21 @@
 from django.contrib.auth import authenticate
-from rest_framework import generics, permissions, status
+from rest_framework import generics, permissions, status, viewsets, filters
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.exceptions import TokenError
 
-from .models import User
-from .serializers import UserSerializer
+from .models import User, Role
+from .serializers import UserSerializer, UserAdminSerializer
+
+
+class IsAdminOrDirettrice(permissions.BasePermission):
+    def has_permission(self, request, view):
+        return (
+            request.user
+            and request.user.is_authenticated
+            and request.user.role in (Role.ADMIN, Role.DIRETTRICE)
+        )
 
 
 class LoginView(APIView):
@@ -83,3 +92,22 @@ class ProfileView(generics.RetrieveUpdateAPIView):
 
     def get_object(self):
         return self.request.user
+
+
+class UserAdminViewSet(viewsets.ModelViewSet):
+    serializer_class = UserAdminSerializer
+    permission_classes = [permissions.IsAuthenticated, IsAdminOrDirettrice]
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['username', 'email', 'first_name', 'last_name']
+    ordering_fields = ['last_name', 'first_name', 'role', 'email']
+    ordering = ['last_name', 'first_name']
+
+    def get_queryset(self):
+        qs = User.objects.all()
+        role = self.request.query_params.get('role')
+        if role:
+            qs = qs.filter(role=role)
+        attivo = self.request.query_params.get('attivo')
+        if attivo is not None:
+            qs = qs.filter(is_active=attivo.lower() == 'true')
+        return qs

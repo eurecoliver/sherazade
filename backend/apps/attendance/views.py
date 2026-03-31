@@ -39,8 +39,8 @@ class PresenzaViewSet(viewsets.ModelViewSet):
             qs = qs.filter(bambino_id=bambino_id)
         if data_param := params.get('data'):
             qs = qs.filter(data=data_param)
-        if sezione := params.get('sezione'):
-            qs = qs.filter(bambino__sezione=sezione)
+        if gruppo := params.get('gruppo'):
+            qs = qs.filter(bambino__gruppo_id=gruppo)
         return qs
 
     def perform_create(self, serializer):
@@ -58,15 +58,16 @@ class PresenzaViewSet(viewsets.ModelViewSet):
         Parametri: data (default oggi), sezione (opzionale).
         """
         data_str = request.query_params.get('data', str(date.today()))
-        sezione = request.query_params.get('sezione', '')
+        gruppo = request.query_params.get('gruppo', '')
 
         bambini_qs = (
             Bambino.objects
             .filter(attivo=True)
-            .order_by('sezione', 'cognome', 'nome')
+            .select_related('gruppo')
+            .order_by('gruppo__ordine', 'cognome', 'nome')
         )
-        if sezione:
-            bambini_qs = bambini_qs.filter(sezione=sezione)
+        if gruppo:
+            bambini_qs = bambini_qs.filter(gruppo_id=gruppo)
 
         presenze = {
             p.bambino_id: p
@@ -139,11 +140,15 @@ class PresenzaViewSet(viewsets.ModelViewSet):
             return Response({'detail': 'Non autorizzato.'}, status=status.HTTP_403_FORBIDDEN)
 
         data_str = request.query_params.get('data', str(date.today()))
-        sezione = request.query_params.get('sezione', '')
+        gruppo = request.query_params.get('gruppo', '')
 
-        bambini_qs = Bambino.objects.filter(attivo=True).order_by('sezione', 'cognome', 'nome')
-        if sezione:
-            bambini_qs = bambini_qs.filter(sezione=sezione)
+        bambini_qs = (
+            Bambino.objects.filter(attivo=True)
+            .select_related('gruppo')
+            .order_by('gruppo__ordine', 'cognome', 'nome')
+        )
+        if gruppo:
+            bambini_qs = bambini_qs.filter(gruppo_id=gruppo)
 
         bambini_con_registro = set(
             Presenza.objects.filter(data=data_str).values_list('bambino_id', flat=True)
@@ -175,11 +180,15 @@ class PresenzaViewSet(viewsets.ModelViewSet):
         oggi = date.today()
         anno = int(request.query_params.get('anno', oggi.year))
         mese = int(request.query_params.get('mese', oggi.month))
-        sezione = request.query_params.get('sezione', '')
+        gruppo = request.query_params.get('gruppo', '')
 
-        bambini_qs = Bambino.objects.filter(attivo=True).order_by('sezione', 'cognome', 'nome')
-        if sezione:
-            bambini_qs = bambini_qs.filter(sezione=sezione)
+        bambini_qs = (
+            Bambino.objects.filter(attivo=True)
+            .select_related('gruppo')
+            .order_by('gruppo__ordine', 'cognome', 'nome')
+        )
+        if gruppo:
+            bambini_qs = bambini_qs.filter(gruppo_id=gruppo)
 
         presenze_mese = Presenza.objects.filter(data__year=anno, data__month=mese)
         mappa: dict[int, list] = {}
@@ -217,10 +226,10 @@ class PresenzaViewSet(viewsets.ModelViewSet):
     def presenti_oggi(self, request):
         """Cuoca: contatore bambini presenti oggi per calibrare le porzioni."""
         oggi = date.today()
-        sezione = request.query_params.get('sezione', '')
+        gruppo = request.query_params.get('gruppo', '')
         qs = Presenza.objects.filter(data=oggi, presente=True)
-        if sezione:
-            qs = qs.filter(bambino__sezione=sezione)
+        if gruppo:
+            qs = qs.filter(bambino__gruppo_id=gruppo)
         return Response({'data': str(oggi), 'presenti': qs.count()})
 
     # ─── Genitore ─────────────────────────────────────────────────────────────

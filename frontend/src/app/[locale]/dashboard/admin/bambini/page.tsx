@@ -35,7 +35,11 @@ interface Bambino {
   data_nascita: string
   codice_fiscale: string
   foto_profilo: string | null
-  sezione: string
+  gruppo: number | null
+  gruppo_nome: string
+  gruppo_colore: string
+  orario_uscita: number | null
+  orario_uscita_label: string
   data_iscrizione: string
   note_mediche: string
   attivo: boolean
@@ -44,20 +48,19 @@ interface Bambino {
   deleghe_ritiro: Delega[]
 }
 
-// ─── Constants ────────────────────────────────────────────────────────────────
-
-const SEZIONI = ['Gialli', 'Rossi', 'Blu', 'Verdi']
-
-const SEZIONE_COLOR: Record<string, string> = {
-  Gialli: '#F7B731',
-  Rossi: '#FC5C65',
-  Blu: '#45AAF2',
-  Verdi: '#26DE81',
+interface Gruppo {
+  id: number
+  nome: string
+  colore: string
 }
 
-function sezioneColor(s: string) {
-  return SEZIONE_COLOR[s] ?? '#A29BFE'
+interface OrarioUscita {
+  id: number
+  etichetta: string
+  orario: string
 }
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function initials(nome: string, cognome: string) {
   return `${nome.charAt(0)}${cognome.charAt(0)}`.toUpperCase()
@@ -87,7 +90,8 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 
 const EMPTY_BAMBINO = {
   nome: '', cognome: '', data_nascita: '', codice_fiscale: '',
-  sezione: '', data_iscrizione: new Date().toISOString().split('T')[0], note_mediche: '',
+  gruppo: '', orario_uscita: '',
+  data_iscrizione: new Date().toISOString().split('T')[0], note_mediche: '',
 }
 
 const EMPTY_FAMIGLIA = {
@@ -104,11 +108,15 @@ export default function BambiniPage() {
   const router = useRouter()
   const locale = useLocale()
 
+  // Config data
+  const [gruppi, setGruppi] = useState<Gruppo[]>([])
+  const [orari, setOrari] = useState<OrarioUscita[]>([])
+
   // List state
   const [bambini, setBambini] = useState<Bambino[]>([])
   const [loading, setLoading] = useState(true)
   const [listError, setListError] = useState('')
-  const [filterSezione, setFilterSezione] = useState('')
+  const [filterGruppo, setFilterGruppo] = useState('')
   const [filterAttivo, setFilterAttivo] = useState<'all' | 'true' | 'false'>('all')
   const [search, setSearch] = useState('')
 
@@ -133,13 +141,24 @@ export default function BambiniPage() {
   const [delLoading, setDelLoading] = useState(false)
   const [delError, setDelError] = useState('')
 
+  // ── Load config ─────────────────────────────────────────────────────────────
+
+  useEffect(() => {
+    fetch('/api/config/gruppi').then(r => r.ok ? r.json() : []).then(data => {
+      setGruppi(Array.isArray(data) ? data : (data.results ?? []))
+    })
+    fetch('/api/config/orari').then(r => r.ok ? r.json() : []).then(data => {
+      setOrari(Array.isArray(data) ? data : (data.results ?? []))
+    })
+  }, [])
+
   // ── Fetch ──────────────────────────────────────────────────────────────────
 
   const fetchBambini = useCallback(async () => {
     setListError('')
     try {
       const params = new URLSearchParams()
-      if (filterSezione) params.set('sezione', filterSezione)
+      if (filterGruppo) params.set('gruppo', filterGruppo)
       if (filterAttivo !== 'all') params.set('attivo', filterAttivo)
       if (search) params.set('search', search)
       const res = await fetch(`/api/bambini?${params}`)
@@ -153,7 +172,7 @@ export default function BambiniPage() {
     } finally {
       setLoading(false)
     }
-  }, [filterSezione, filterAttivo, search, locale, router])
+  }, [filterGruppo, filterAttivo, search, locale, router])
 
   useEffect(() => { fetchBambini() }, [fetchBambini])
 
@@ -164,17 +183,19 @@ export default function BambiniPage() {
     setAddLoading(true)
     setAddError('')
     try {
+      const payload: Record<string, unknown> = { ...addForm }
+      if (!payload.gruppo) delete payload.gruppo
+      if (!payload.orario_uscita) delete payload.orario_uscita
       const res = await fetch('/api/bambini', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(addForm),
+        body: JSON.stringify(payload),
       })
       const data = await res.json()
       if (!res.ok) { setAddError(formatErrors(data)); return }
       setShowAdd(false)
       setAddForm(EMPTY_BAMBINO)
       await fetchBambini()
-      // Open detail modal for the new bambino
       setSelected(data)
     } catch { setAddError('Errore durante il salvataggio.') }
     finally { setAddLoading(false) }
@@ -198,7 +219,6 @@ export default function BambiniPage() {
       setShowFamForm(false)
       setFamForm(EMPTY_FAMIGLIA)
       await fetchBambini()
-      // Refresh selected bambino with updated data
       const updated = await fetch(`/api/bambini/${selected.id}`)
       if (updated.ok) setSelected(await updated.json())
     } catch { setFamError('Errore durante il salvataggio.') }
@@ -288,11 +308,11 @@ export default function BambiniPage() {
             style={{ flex: '1 1 200px', padding: '0.625rem 0.875rem', border: '2px solid #FFD4B3', borderRadius: '10px', fontSize: '0.875rem', outline: 'none', fontFamily: 'inherit' }}
           />
           <select
-            value={filterSezione} onChange={e => setFilterSezione(e.target.value)}
+            value={filterGruppo} onChange={e => setFilterGruppo(e.target.value)}
             style={{ padding: '0.625rem 0.875rem', border: '2px solid #FFD4B3', borderRadius: '10px', fontSize: '0.875rem', outline: 'none', fontFamily: 'inherit', background: 'white', cursor: 'pointer' }}
           >
-            <option value="">Tutte le sezioni</option>
-            {SEZIONI.map(s => <option key={s} value={s}>{s}</option>)}
+            <option value="">Tutti i gruppi</option>
+            {gruppi.map(g => <option key={g.id} value={String(g.id)}>{g.nome}</option>)}
           </select>
           <select
             value={filterAttivo} onChange={e => setFilterAttivo(e.target.value as typeof filterAttivo)}
@@ -351,16 +371,22 @@ export default function BambiniPage() {
               </Field>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-              <Field label="Sezione">
-                <select value={addForm.sezione} onChange={e => setAddForm(p => ({ ...p, sezione: e.target.value }))} style={{ ...inputSt, background: 'white' }}>
-                  <option value="">— Seleziona —</option>
-                  {SEZIONI.map(s => <option key={s} value={s}>{s}</option>)}
+              <Field label="Gruppo">
+                <select value={addForm.gruppo} onChange={e => setAddForm(p => ({ ...p, gruppo: e.target.value }))} style={{ ...inputSt, background: 'white' }}>
+                  <option value="">— Nessun gruppo —</option>
+                  {gruppi.map(g => <option key={g.id} value={String(g.id)}>{g.nome}</option>)}
                 </select>
               </Field>
-              <Field label="Data iscrizione *">
-                <input type="date" required value={addForm.data_iscrizione} onChange={e => setAddForm(p => ({ ...p, data_iscrizione: e.target.value }))} style={inputSt} />
+              <Field label="Orario uscita">
+                <select value={addForm.orario_uscita} onChange={e => setAddForm(p => ({ ...p, orario_uscita: e.target.value }))} style={{ ...inputSt, background: 'white' }}>
+                  <option value="">— Standard —</option>
+                  {orari.map(o => <option key={o.id} value={String(o.id)}>{o.etichetta} ({o.orario})</option>)}
+                </select>
               </Field>
             </div>
+            <Field label="Data iscrizione *">
+              <input type="date" required value={addForm.data_iscrizione} onChange={e => setAddForm(p => ({ ...p, data_iscrizione: e.target.value }))} style={inputSt} />
+            </Field>
             <Field label="Note mediche / allergie">
               <textarea rows={3} value={addForm.note_mediche} onChange={e => setAddForm(p => ({ ...p, note_mediche: e.target.value }))} style={{ ...inputSt, resize: 'vertical' }} />
             </Field>
@@ -384,8 +410,11 @@ export default function BambiniPage() {
 
           {/* Info base */}
           <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1.25rem' }}>
-            {selected.sezione && (
-              <Badge color={sezioneColor(selected.sezione)}>{selected.sezione}</Badge>
+            {selected.gruppo_nome && (
+              <Badge color={selected.gruppo_colore || '#A29BFE'}>{selected.gruppo_nome}</Badge>
+            )}
+            {selected.orario_uscita_label && (
+              <Badge color="#6C5CE7">🕐 {selected.orario_uscita_label}</Badge>
             )}
             <Badge color={selected.attivo ? '#27AE60' : '#E67E22'}>
               {selected.attivo ? 'Attivo' : 'Non attivo'}
@@ -502,7 +531,7 @@ export default function BambiniPage() {
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 function BambinoCard({ bambino, onClick }: { bambino: Bambino; onClick: () => void }) {
-  const color = sezioneColor(bambino.sezione)
+  const color = bambino.gruppo_colore || '#A29BFE'
   const ini = initials(bambino.nome, bambino.cognome)
   return (
     <div
@@ -530,7 +559,7 @@ function BambinoCard({ bambino, onClick }: { bambino: Bambino; onClick: () => vo
           {bambino.nome} {bambino.cognome}
         </p>
         <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', marginTop: '0.375rem' }}>
-          {bambino.sezione && <Badge color={color}>{bambino.sezione}</Badge>}
+          {bambino.gruppo_nome && <Badge color={color}>{bambino.gruppo_nome}</Badge>}
           <Badge color={bambino.attivo ? '#27AE60' : '#E67E22'}>
             {bambino.attivo ? 'Attivo' : 'Non attivo'}
           </Badge>
@@ -538,6 +567,7 @@ function BambinoCard({ bambino, onClick }: { bambino: Bambino; onClick: () => vo
         <p style={{ margin: '0.375rem 0 0', color: '#aaa', fontSize: '0.775rem' }}>
           {bambino.eta} anni · {bambino.data_nascita}
           {bambino.famiglia ? ' · 👨‍👩‍👧' : ''}
+          {bambino.orario_uscita_label ? ` · 🕐 ${bambino.orario_uscita_label}` : ''}
         </p>
       </div>
     </div>
