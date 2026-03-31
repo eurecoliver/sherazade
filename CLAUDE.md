@@ -78,6 +78,7 @@ IMPORTANTE: Al termine di ogni task, prima di considerarlo completato, aggiorna 
 ## Comandi Utili
 - Avviare il progetto in locale: docker-compose up
 - Accedere al server: ssh root@159.69.9.230
+- Deploy sul server: cd /var/www/sherazade && bash deploy.sh
 - Avviare Claude Code: cd ~/repos/sherazade && claude
 
 ## Decisioni Tecniche

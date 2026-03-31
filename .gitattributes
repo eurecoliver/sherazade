@@ -1,1 +1,2 @@
 backend/entrypoint.sh text eol=lf
+deploy.sh text eol=lf
