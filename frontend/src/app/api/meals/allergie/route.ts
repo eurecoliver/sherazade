@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 
 const BACKEND_URL = process.env.BACKEND_URL ?? 'http://localhost:8000'
 
-function auth(req: NextRequest) {
+function auth(req: NextRequest): Record<string, string> {
   const token = req.cookies.get('access_token')?.value
   return token ? { Authorization: `Bearer ${token}` } : {}
 }
