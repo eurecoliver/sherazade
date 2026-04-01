@@ -1,4 +1,5 @@
 from django.contrib.auth import authenticate
+from ratelimit.decorators import ratelimit
 from rest_framework import generics, permissions, status, viewsets, filters
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -21,7 +22,14 @@ class IsAdminOrDirettrice(permissions.BasePermission):
 class LoginView(APIView):
     permission_classes = [permissions.AllowAny]
 
+    @ratelimit(key='ip', rate='5/5m', method='POST', block=False)
     def post(self, request):
+        if getattr(request, 'limited', False):
+            return Response(
+                {'detail': 'Troppi tentativi di accesso. Riprova tra 5 minuti.'},
+                status=status.HTTP_429_TOO_MANY_REQUESTS,
+            )
+
         email = request.data.get('email', '').strip().lower()
         password = request.data.get('password', '')
 

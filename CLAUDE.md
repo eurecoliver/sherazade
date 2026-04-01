@@ -199,13 +199,14 @@ IMPORTANTE: Al termine di ogni task, prima di considerarlo completato, aggiorna 
 ### Completato
 - UFW firewall attivo con porte 22, 80, 443 aperte e 5432 bloccata
 - PostgreSQL non esposto pubblicamente (rimossa porta dal docker-compose)
+- Rate limiting login: max 5 tentativi/IP ogni 5 minuti (django-ratelimit), DRF throttling 100/h anon + 1000/h user
 
 ### Da fare
 1. Docker + UFW bypass — configurare /etc/docker/daemon.json per rispettare UFW (iptables=false)
 2. Porte Docker — verificare che nessuna porta sensibile sia raggiungibile dall'esterno nonostante UFW
 3. SSH hardening — disabilitare root login, usare solo chiave SSH
 4. HTTPS — configurare SSL/TLS con Let's Encrypt + Nginx reverse proxy
-5. Rate limiting — limitare tentativi di login su Django
+5. ~~Rate limiting — limitare tentativi di login su Django~~ ✓ completato
 6. Secrets management — proteggere .env con permessi corretti
 7. Backup automatico — configurare backup automatico PostgreSQL su storage esterno
 8. Fail2ban — installare per bloccare IP dopo tentativi falliti
