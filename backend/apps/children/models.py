@@ -26,6 +26,8 @@ class Bambino(models.Model):
     data_fine_iscrizione = models.DateField(null=True, blank=True)
     note_mediche = models.TextField(blank=True)
     attivo = models.BooleanField(default=True)
+    alias_nome = models.CharField(max_length=100, blank=True, verbose_name='Nome alias/soprannome')
+    alias_attivo = models.BooleanField(default=False, verbose_name='Mostra alias ai genitori')
     non_fotografabile = models.BooleanField(default=False, verbose_name='Non fotografabile')
     creato_il = models.DateTimeField(auto_now_add=True)
     aggiornato_il = models.DateTimeField(auto_now=True)
@@ -61,6 +63,10 @@ class Famiglia(models.Model):
         null=True,
         blank=True,
     )
+    genitore1_codice_fiscale = models.CharField(max_length=16, blank=True)
+    genitore1_indirizzo = models.TextField(blank=True)
+    genitore2_codice_fiscale = models.CharField(max_length=16, blank=True)
+    genitore2_indirizzo = models.TextField(blank=True)
     indirizzo = models.TextField(blank=True)
     telefono_emergenza = models.CharField(max_length=20)
     medico_base = models.CharField(max_length=200, blank=True)

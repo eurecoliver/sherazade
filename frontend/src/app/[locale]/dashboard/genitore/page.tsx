@@ -12,19 +12,35 @@ interface User {
   role: string
 }
 
+interface Bambino {
+  id: number
+  nome: string
+  cognome: string
+  alias_nome: string
+  alias_attivo: boolean
+  foto_profilo: string | null
+  gruppo_nome: string
+  gruppo_colore: string
+  eta: number
+}
+
 export default function GenitoreDashboard() {
   const t = useTranslations('Dashboard')
   const router = useRouter()
   const locale = useLocale()
   const [user, setUser] = useState<User | null>(null)
+  const [bambini, setBambini] = useState<Bambino[]>([])
 
   useEffect(() => {
-    fetch('/api/auth/me')
-      .then(res => {
-        if (res.ok) return res.json()
-        throw new Error()
+    Promise.all([
+      fetch('/api/auth/me').then(r => r.ok ? r.json() : Promise.reject()),
+      fetch('/api/bambini').then(r => r.ok ? r.json() : []),
+    ])
+      .then(([meData, bambiniData]) => {
+        setUser(meData)
+        const list = Array.isArray(bambiniData) ? bambiniData : (bambiniData.results ?? [])
+        setBambini(list)
       })
-      .then(setUser)
       .catch(() => router.push(`/${locale}/login`))
   }, [locale, router])
 
@@ -67,7 +83,7 @@ export default function GenitoreDashboard() {
           background: '#FFF3EE',
           borderRadius: '12px',
           padding: '1.25rem',
-          marginBottom: '2rem',
+          marginBottom: bambini.length > 0 ? '1.25rem' : '2rem',
         }}>
           <p style={{ margin: 0, color: '#555' }}>
             {t('welcome')},{' '}
@@ -76,6 +92,46 @@ export default function GenitoreDashboard() {
             </strong>
           </p>
         </div>
+
+        {/* Figli registrati con alias */}
+        {bambini.length > 0 && (
+          <div style={{ marginBottom: '2rem' }}>
+            <p style={{ margin: '0 0 0.75rem', fontSize: '0.8rem', fontWeight: 700, color: '#888', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              {bambini.length === 1 ? 'Tuo figlio' : 'I tuoi figli'}
+            </p>
+            {bambini.map(b => {
+              const nomeMostrato = b.alias_attivo && b.alias_nome ? b.alias_nome : b.nome
+              const colore = b.gruppo_colore || '#E17055'
+              const ini = `${nomeMostrato.charAt(0)}${b.cognome.charAt(0)}`.toUpperCase()
+              return (
+                <div key={b.id} style={{
+                  display: 'flex', alignItems: 'center', gap: '0.875rem',
+                  padding: '0.75rem', borderRadius: '12px',
+                  background: '#FFF3EE', marginBottom: '0.5rem',
+                }}>
+                  <div style={{
+                    width: 44, height: 44, borderRadius: '50%', background: colore,
+                    overflow: 'hidden', flexShrink: 0,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    color: 'white', fontWeight: 700, fontSize: '0.95rem',
+                  }}>
+                    {b.foto_profilo
+                      ? <img src={b.foto_profilo} alt={ini} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      : ini}
+                  </div>
+                  <div>
+                    <p style={{ margin: 0, fontWeight: 700, color: '#333' }}>
+                      {nomeMostrato} {b.cognome}
+                    </p>
+                    {b.gruppo_nome && (
+                      <p style={{ margin: 0, fontSize: '0.8rem', color: '#888' }}>{b.gruppo_nome} · {b.eta} anni</p>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
 
         <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
           <button

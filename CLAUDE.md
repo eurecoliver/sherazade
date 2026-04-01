@@ -184,8 +184,17 @@ IMPORTANTE: Al termine di ogni task, prima di considerarlo completato, aggiorna 
 - Frontend staff: tabella foglio pappe con dropdown colorati per quantità (verde/giallo/arancione/rosso), allergie come badge colorati per gravità, salvataggio sezione in un click
 - Frontend genitore: PastoCard con icone quantità (🍽️/🥄/❌), menu sezione abbinato, storico pasti
 
+### Anagrafica v2 — espansione campi bambini/famiglie (1 aprile 2026)
+- `Bambino`: aggiunti `alias_nome` (CharField) e `alias_attivo` (BooleanField) — solo nella dashboard genitore, se alias_attivo=True viene mostrato alias invece del nome reale
+- `Famiglia`: aggiunti `genitore1_codice_fiscale`, `genitore1_indirizzo`, `genitore2_codice_fiscale`, `genitore2_indirizzo` — CF e indirizzo per-genitore separati dall'indirizzo famiglia; nome/cognome/email/telefono restano su User FK
+- API Next.js `/api/bambini`: supporto multipart/form-data per upload foto profilo (POST e PATCH)
+- API Next.js `/api/famiglie/[id]`: aggiunto GET e PATCH
+- Frontend admin bambini: upload foto con preview, campo alias + toggle, form famiglia espanso con CF/indirizzo per-genitore e toggle genitore2, badge "alias" su card
+- Frontend genitore: mostra alias_nome se alias_attivo=True, con foto profilo e gruppo del figlio in dashboard
+- Migration: `children/0004_anagrafica_v2.py`
+
 ## Ultimo Aggiornamento
-Data: 31 marzo 2026
-Completato: feature/utenti — gestione utenti CRUD, gruppi configurabili, orari uscita, Next.js in produzione, deploy.sh automatico
-Branch: mergiato su develop
-Prossimo task: feature/anagrafica-v2
+Data: 1 aprile 2026
+Completato: feature/anagrafica-v2 — espansione anagrafica bambini (alias, foto) e famiglie (CF, indirizzi per-genitore)
+Branch: feature/anagrafica-v2
+Prossimo task: feature/calendario

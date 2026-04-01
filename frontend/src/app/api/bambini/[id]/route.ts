@@ -23,15 +23,24 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const body = await request.json()
+  const contentType = request.headers.get('content-type') ?? ''
   try {
+    if (contentType.includes('multipart/form-data')) {
+      const formData = await request.formData()
+      const res = await fetch(`${BACKEND_URL}/api/v1/bambini/${id}/`, {
+        method: 'PATCH',
+        headers: authHeaders(request),
+        body: formData,
+      })
+      return NextResponse.json(await res.json(), { status: res.status })
+    }
+    const body = await request.json()
     const res = await fetch(`${BACKEND_URL}/api/v1/bambini/${id}/`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', ...authHeaders(request) },
       body: JSON.stringify(body),
     })
-    const data = await res.json()
-    return NextResponse.json(data, { status: res.status })
+    return NextResponse.json(await res.json(), { status: res.status })
   } catch {
     return NextResponse.json({ detail: 'Errore server.' }, { status: 503 })
   }

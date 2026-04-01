@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { useLocale } from 'next-intl'
 import { useRouter } from 'next/navigation'
 
@@ -20,9 +20,15 @@ interface Famiglia {
   genitore1: number
   genitore1_email: string
   genitore1_nome: string
+  genitore1_telefono: string
+  genitore1_codice_fiscale: string
+  genitore1_indirizzo: string
   genitore2: number | null
   genitore2_email: string | null
   genitore2_nome: string | null
+  genitore2_telefono: string | null
+  genitore2_codice_fiscale: string
+  genitore2_indirizzo: string
   indirizzo: string
   telefono_emergenza: string
   medico_base: string
@@ -32,6 +38,8 @@ interface Bambino {
   id: number
   nome: string
   cognome: string
+  alias_nome: string
+  alias_attivo: boolean
   data_nascita: string
   codice_fiscale: string
   foto_profilo: string | null
@@ -86,17 +94,26 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   )
 }
 
-// ─── Page ─────────────────────────────────────────────────────────────────────
+// ─── Constants ────────────────────────────────────────────────────────────────
 
 const EMPTY_BAMBINO = {
   nome: '', cognome: '', data_nascita: '', codice_fiscale: '',
+  alias_nome: '', alias_attivo: false,
   gruppo: '', orario_uscita: '',
-  data_iscrizione: new Date().toISOString().split('T')[0], note_mediche: '',
+  data_iscrizione: new Date().toISOString().split('T')[0],
+  note_mediche: '',
 }
 
 const EMPTY_FAMIGLIA = {
-  genitore1_email: '', genitore2_email: '',
-  indirizzo: '', telefono_emergenza: '', medico_base: '',
+  genitore1_email: '',
+  genitore1_codice_fiscale: '',
+  genitore1_indirizzo: '',
+  genitore2_email: '',
+  genitore2_codice_fiscale: '',
+  genitore2_indirizzo: '',
+  telefono_emergenza: '',
+  medico_base: '',
+  indirizzo: '',
 }
 
 const EMPTY_DELEGA = {
@@ -104,15 +121,15 @@ const EMPTY_DELEGA = {
   documento_identita: '', rapporto_familiare: '',
 }
 
+// ─── Page ─────────────────────────────────────────────────────────────────────
+
 export default function BambiniPage() {
   const router = useRouter()
   const locale = useLocale()
 
-  // Config data
   const [gruppi, setGruppi] = useState<Gruppo[]>([])
   const [orari, setOrari] = useState<OrarioUscita[]>([])
 
-  // List state
   const [bambini, setBambini] = useState<Bambino[]>([])
   const [loading, setLoading] = useState(true)
   const [listError, setListError] = useState('')
@@ -123,19 +140,23 @@ export default function BambiniPage() {
   // Add bambino modal
   const [showAdd, setShowAdd] = useState(false)
   const [addForm, setAddForm] = useState(EMPTY_BAMBINO)
+  const [photoFile, setPhotoFile] = useState<File | null>(null)
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null)
   const [addLoading, setAddLoading] = useState(false)
   const [addError, setAddError] = useState('')
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Detail modal
   const [selected, setSelected] = useState<Bambino | null>(null)
 
-  // Add famiglia form (inside detail modal)
+  // Family form (inside detail modal)
   const [showFamForm, setShowFamForm] = useState(false)
   const [famForm, setFamForm] = useState(EMPTY_FAMIGLIA)
+  const [hasGenitore2, setHasGenitore2] = useState(false)
   const [famLoading, setFamLoading] = useState(false)
   const [famError, setFamError] = useState('')
 
-  // Add delega form (inside detail modal)
+  // Add delega form
   const [showDelForm, setShowDelForm] = useState(false)
   const [delForm, setDelForm] = useState(EMPTY_DELEGA)
   const [delLoading, setDelLoading] = useState(false)
@@ -165,8 +186,7 @@ export default function BambiniPage() {
       if (res.status === 401) { router.push(`/${locale}/login`); return }
       if (!res.ok) throw new Error()
       const data = await res.json()
-      const list: Bambino[] = Array.isArray(data) ? data : (data.results ?? [])
-      setBambini(list)
+      setBambini(Array.isArray(data) ? data : (data.results ?? []))
     } catch {
       setListError('Errore nel caricamento. Riprova.')
     } finally {
@@ -176,6 +196,22 @@ export default function BambiniPage() {
 
   useEffect(() => { fetchBambini() }, [fetchBambini])
 
+  // ── Photo handling ─────────────────────────────────────────────────────────
+
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setPhotoFile(file)
+    const url = URL.createObjectURL(file)
+    setPhotoPreview(url)
+  }
+
+  const clearPhoto = () => {
+    setPhotoFile(null)
+    setPhotoPreview(null)
+    if (fileInputRef.current) fileInputRef.current.value = ''
+  }
+
   // ── Add bambino ────────────────────────────────────────────────────────────
 
   const handleAddSubmit = async (e: React.FormEvent) => {
@@ -183,18 +219,38 @@ export default function BambiniPage() {
     setAddLoading(true)
     setAddError('')
     try {
-      const payload: Record<string, unknown> = { ...addForm }
-      if (!payload.gruppo) delete payload.gruppo
-      if (!payload.orario_uscita) delete payload.orario_uscita
-      const res = await fetch('/api/bambini', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      })
+      let body: BodyInit
+      const headers: Record<string, string> = {}
+
+      if (photoFile) {
+        const fd = new FormData()
+        fd.append('nome', addForm.nome)
+        fd.append('cognome', addForm.cognome)
+        fd.append('data_nascita', addForm.data_nascita)
+        if (addForm.codice_fiscale) fd.append('codice_fiscale', addForm.codice_fiscale)
+        if (addForm.alias_nome) fd.append('alias_nome', addForm.alias_nome)
+        fd.append('alias_attivo', String(addForm.alias_attivo))
+        if (addForm.gruppo) fd.append('gruppo', addForm.gruppo)
+        if (addForm.orario_uscita) fd.append('orario_uscita', addForm.orario_uscita)
+        fd.append('data_iscrizione', addForm.data_iscrizione)
+        if (addForm.note_mediche) fd.append('note_mediche', addForm.note_mediche)
+        fd.append('foto_profilo', photoFile)
+        body = fd
+      } else {
+        const payload: Record<string, unknown> = { ...addForm }
+        if (!payload.gruppo) delete payload.gruppo
+        if (!payload.orario_uscita) delete payload.orario_uscita
+        if (!payload.alias_nome) delete payload.alias_nome
+        headers['Content-Type'] = 'application/json'
+        body = JSON.stringify(payload)
+      }
+
+      const res = await fetch('/api/bambini', { method: 'POST', headers, body })
       const data = await res.json()
       if (!res.ok) { setAddError(formatErrors(data)); return }
       setShowAdd(false)
       setAddForm(EMPTY_BAMBINO)
+      clearPhoto()
       await fetchBambini()
       setSelected(data)
     } catch { setAddError('Errore durante il salvataggio.') }
@@ -209,15 +265,23 @@ export default function BambiniPage() {
     setFamLoading(true)
     setFamError('')
     try {
+      const payload = {
+        ...famForm,
+        bambino: selected.id,
+        genitore2_email: hasGenitore2 ? famForm.genitore2_email : '',
+        genitore2_codice_fiscale: hasGenitore2 ? famForm.genitore2_codice_fiscale : '',
+        genitore2_indirizzo: hasGenitore2 ? famForm.genitore2_indirizzo : '',
+      }
       const res = await fetch('/api/famiglie', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...famForm, bambino: selected.id }),
+        body: JSON.stringify(payload),
       })
       const data = await res.json()
       if (!res.ok) { setFamError(formatErrors(data)); return }
       setShowFamForm(false)
       setFamForm(EMPTY_FAMIGLIA)
+      setHasGenitore2(false)
       await fetchBambini()
       const updated = await fetch(`/api/bambini/${selected.id}`)
       if (updated.ok) setSelected(await updated.json())
@@ -281,7 +345,7 @@ export default function BambiniPage() {
               </p>
             </div>
             <button
-              onClick={() => { setShowAdd(true); setAddError('') }}
+              onClick={() => { setShowAdd(true); setAddError(''); clearPhoto() }}
               style={{
                 background: 'white', color: '#E8562A', border: 'none',
                 borderRadius: '12px', padding: '0.75rem 1.25rem',
@@ -351,9 +415,38 @@ export default function BambiniPage() {
 
       {/* ── Modal: Nuovo bambino ─────────────────────────────────────────────── */}
       {showAdd && (
-        <Overlay onClose={() => setShowAdd(false)}>
-          <ModalHeader title="👶 Nuovo bambino" onClose={() => setShowAdd(false)} />
+        <Overlay onClose={() => { setShowAdd(false); clearPhoto() }}>
+          <ModalHeader title="👶 Nuovo bambino" onClose={() => { setShowAdd(false); clearPhoto() }} />
           <form onSubmit={handleAddSubmit}>
+
+            {/* Foto profilo */}
+            <Field label="Foto profilo">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <div style={{
+                  width: 64, height: 64, borderRadius: '50%',
+                  background: '#FFD4B3', overflow: 'hidden', flexShrink: 0,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  color: '#E8562A', fontWeight: 700, fontSize: '1.25rem',
+                }}>
+                  {photoPreview
+                    ? <img src={photoPreview} alt="preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    : '📷'}
+                </div>
+                <div style={{ flex: 1 }}>
+                  <input ref={fileInputRef} type="file" accept="image/*" onChange={handlePhotoChange} style={{ display: 'none' }} />
+                  <button type="button" onClick={() => fileInputRef.current?.click()}
+                    style={{ ...secondaryBtn, marginBottom: 0, marginRight: '0.5rem' }}>
+                    Scegli foto
+                  </button>
+                  {photoPreview && (
+                    <button type="button" onClick={clearPhoto} style={{ ...secondaryBtn, marginBottom: 0, color: '#C0392B', borderColor: '#FADBD8' }}>
+                      Rimuovi
+                    </button>
+                  )}
+                </div>
+              </div>
+            </Field>
+
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
               <Field label="Nome *">
                 <input type="text" required value={addForm.nome} onChange={e => setAddForm(p => ({ ...p, nome: e.target.value }))} style={inputSt} />
@@ -362,6 +455,21 @@ export default function BambiniPage() {
                 <input type="text" required value={addForm.cognome} onChange={e => setAddForm(p => ({ ...p, cognome: e.target.value }))} style={inputSt} />
               </Field>
             </div>
+
+            {/* Alias */}
+            <div style={{ background: '#FFF8F4', borderRadius: '10px', padding: '0.75rem', marginBottom: '0.75rem', border: '1px solid #FFD4B3' }}>
+              <Field label="Nome alias / soprannome">
+                <input type="text" value={addForm.alias_nome}
+                  onChange={e => setAddForm(p => ({ ...p, alias_nome: e.target.value }))}
+                  style={inputSt} placeholder="Es. Lilli, Teo..." />
+              </Field>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.85rem', color: '#555' }}>
+                <input type="checkbox" checked={addForm.alias_attivo}
+                  onChange={e => setAddForm(p => ({ ...p, alias_attivo: e.target.checked }))} />
+                Mostra alias ai genitori (nasconde il nome reale nella dashboard genitore)
+              </label>
+            </div>
+
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
               <Field label="Data di nascita *">
                 <input type="date" required value={addForm.data_nascita} onChange={e => setAddForm(p => ({ ...p, data_nascita: e.target.value }))} style={inputSt} />
@@ -391,11 +499,7 @@ export default function BambiniPage() {
               <textarea rows={3} value={addForm.note_mediche} onChange={e => setAddForm(p => ({ ...p, note_mediche: e.target.value }))} style={{ ...inputSt, resize: 'vertical' }} />
             </Field>
             {addError && <ErrorBox>{addError}</ErrorBox>}
-            <ModalActions
-              onCancel={() => setShowAdd(false)}
-              loading={addLoading}
-              submitLabel="Salva bambino"
-            />
+            <ModalActions onCancel={() => { setShowAdd(false); clearPhoto() }} loading={addLoading} submitLabel="Salva bambino" />
           </form>
         </Overlay>
       )}
@@ -408,18 +512,35 @@ export default function BambiniPage() {
             onClose={() => setSelected(null)}
           />
 
-          {/* Info base */}
-          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1.25rem' }}>
-            {selected.gruppo_nome && (
-              <Badge color={selected.gruppo_colore || '#A29BFE'}>{selected.gruppo_nome}</Badge>
-            )}
-            {selected.orario_uscita_label && (
-              <Badge color="#6C5CE7">🕐 {selected.orario_uscita_label}</Badge>
-            )}
-            <Badge color={selected.attivo ? '#27AE60' : '#E67E22'}>
-              {selected.attivo ? 'Attivo' : 'Non attivo'}
-            </Badge>
-            <Badge color="#888">{selected.eta} anni · {selected.data_nascita}</Badge>
+          {/* Avatar + Info base */}
+          <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start', marginBottom: '1.25rem' }}>
+            <div style={{
+              width: 64, height: 64, borderRadius: '50%',
+              background: selected.gruppo_colore || '#A29BFE',
+              overflow: 'hidden', flexShrink: 0,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: 'white', fontWeight: 700, fontSize: '1.25rem',
+            }}>
+              {selected.foto_profilo
+                ? <img src={selected.foto_profilo} alt={initials(selected.nome, selected.cognome)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                : initials(selected.nome, selected.cognome)}
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                {selected.gruppo_nome && <Badge color={selected.gruppo_colore || '#A29BFE'}>{selected.gruppo_nome}</Badge>}
+                {selected.orario_uscita_label && <Badge color="#6C5CE7">🕐 {selected.orario_uscita_label}</Badge>}
+                <Badge color={selected.attivo ? '#27AE60' : '#E67E22'}>{selected.attivo ? 'Attivo' : 'Non attivo'}</Badge>
+                <Badge color="#888">{selected.eta} anni · {selected.data_nascita}</Badge>
+              </div>
+              {selected.alias_nome && (
+                <p style={{ margin: '0.5rem 0 0', fontSize: '0.8rem', color: '#888' }}>
+                  Alias: <strong>{selected.alias_nome}</strong>
+                  {selected.alias_attivo
+                    ? <span style={{ color: '#27AE60', marginLeft: '0.4rem' }}>✓ attivo</span>
+                    : <span style={{ color: '#aaa', marginLeft: '0.4rem' }}>non attivo</span>}
+                </p>
+              )}
+            </div>
           </div>
 
           {selected.note_mediche && (
@@ -432,15 +553,34 @@ export default function BambiniPage() {
           <SectionTitle>👨‍👩‍👧 Famiglia</SectionTitle>
           {selected.famiglia ? (
             <div style={{ background: '#F8F9FA', borderRadius: '10px', padding: '1rem', marginBottom: '1rem', fontSize: '0.875rem' }}>
-              <p style={{ margin: '0 0 0.25rem' }}><strong>Genitore 1:</strong> {selected.famiglia.genitore1_nome} ({selected.famiglia.genitore1_email})</p>
+              <GenitoreInfo
+                label="Genitore 1"
+                nome={selected.famiglia.genitore1_nome}
+                email={selected.famiglia.genitore1_email}
+                telefono={selected.famiglia.genitore1_telefono}
+                cf={selected.famiglia.genitore1_codice_fiscale}
+                indirizzo={selected.famiglia.genitore1_indirizzo}
+              />
               {selected.famiglia.genitore2_email && (
-                <p style={{ margin: '0 0 0.25rem' }}><strong>Genitore 2:</strong> {selected.famiglia.genitore2_nome} ({selected.famiglia.genitore2_email})</p>
+                <GenitoreInfo
+                  label="Genitore 2"
+                  nome={selected.famiglia.genitore2_nome ?? ''}
+                  email={selected.famiglia.genitore2_email}
+                  telefono={selected.famiglia.genitore2_telefono ?? ''}
+                  cf={selected.famiglia.genitore2_codice_fiscale}
+                  indirizzo={selected.famiglia.genitore2_indirizzo}
+                />
               )}
               {selected.famiglia.telefono_emergenza && (
-                <p style={{ margin: '0 0 0.25rem' }}><strong>Emergenza:</strong> {selected.famiglia.telefono_emergenza}</p>
+                <p style={{ margin: '0.5rem 0 0', paddingTop: '0.5rem', borderTop: '1px solid #E9ECEF' }}>
+                  <strong>📞 Emergenza:</strong> {selected.famiglia.telefono_emergenza}
+                </p>
               )}
               {selected.famiglia.medico_base && (
-                <p style={{ margin: 0 }}><strong>Medico:</strong> {selected.famiglia.medico_base}</p>
+                <p style={{ margin: '0.25rem 0 0' }}><strong>🩺 Medico:</strong> {selected.famiglia.medico_base}</p>
+              )}
+              {selected.famiglia.indirizzo && (
+                <p style={{ margin: '0.25rem 0 0' }}><strong>🏠 Indirizzo famiglia:</strong> {selected.famiglia.indirizzo}</p>
               )}
             </div>
           ) : (
@@ -453,25 +593,76 @@ export default function BambiniPage() {
 
           {showFamForm && (
             <form onSubmit={handleFamSubmit} style={{ background: '#FFF8F4', borderRadius: '12px', padding: '1rem', marginBottom: '1rem' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-                <Field label="Email genitore 1 *">
-                  <input type="email" required value={famForm.genitore1_email} onChange={e => setFamForm(p => ({ ...p, genitore1_email: e.target.value }))} style={inputSt} placeholder="genitore@email.it" />
-                </Field>
-                <Field label="Email genitore 2">
-                  <input type="email" value={famForm.genitore2_email} onChange={e => setFamForm(p => ({ ...p, genitore2_email: e.target.value }))} style={inputSt} placeholder="opzionale" />
-                </Field>
-              </div>
-              <Field label="Telefono emergenza *">
-                <input type="tel" required value={famForm.telefono_emergenza} onChange={e => setFamForm(p => ({ ...p, telefono_emergenza: e.target.value }))} style={inputSt} placeholder="+39 333..." />
+              <p style={{ margin: '0 0 0.75rem', fontWeight: 700, fontSize: '0.85rem', color: '#E8562A' }}>Genitore 1</p>
+              <Field label="Email genitore 1 *">
+                <input type="email" required value={famForm.genitore1_email}
+                  onChange={e => setFamForm(p => ({ ...p, genitore1_email: e.target.value }))}
+                  style={inputSt} placeholder="genitore@email.it" />
               </Field>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-                <Field label="Medico di base">
-                  <input type="text" value={famForm.medico_base} onChange={e => setFamForm(p => ({ ...p, medico_base: e.target.value }))} style={inputSt} />
+                <Field label="Codice fiscale">
+                  <input type="text" maxLength={16} value={famForm.genitore1_codice_fiscale}
+                    onChange={e => setFamForm(p => ({ ...p, genitore1_codice_fiscale: e.target.value.toUpperCase() }))}
+                    style={inputSt} placeholder="RSSMRA..." />
                 </Field>
                 <Field label="Indirizzo">
-                  <input type="text" value={famForm.indirizzo} onChange={e => setFamForm(p => ({ ...p, indirizzo: e.target.value }))} style={inputSt} />
+                  <input type="text" value={famForm.genitore1_indirizzo}
+                    onChange={e => setFamForm(p => ({ ...p, genitore1_indirizzo: e.target.value }))}
+                    style={inputSt} />
                 </Field>
               </div>
+
+              {/* Toggle genitore 2 */}
+              <div style={{ margin: '0.75rem 0', borderTop: '1px solid #FFD4B3', paddingTop: '0.75rem' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.875rem', color: '#555', fontWeight: 600 }}>
+                  <input type="checkbox" checked={hasGenitore2} onChange={e => setHasGenitore2(e.target.checked)} />
+                  Aggiungi secondo genitore
+                </label>
+              </div>
+
+              {hasGenitore2 && (
+                <>
+                  <p style={{ margin: '0 0 0.75rem', fontWeight: 700, fontSize: '0.85rem', color: '#E8562A' }}>Genitore 2</p>
+                  <Field label="Email genitore 2 *">
+                    <input type="email" required={hasGenitore2} value={famForm.genitore2_email}
+                      onChange={e => setFamForm(p => ({ ...p, genitore2_email: e.target.value }))}
+                      style={inputSt} placeholder="genitore2@email.it" />
+                  </Field>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                    <Field label="Codice fiscale">
+                      <input type="text" maxLength={16} value={famForm.genitore2_codice_fiscale}
+                        onChange={e => setFamForm(p => ({ ...p, genitore2_codice_fiscale: e.target.value.toUpperCase() }))}
+                        style={inputSt} placeholder="RSSMRA..." />
+                    </Field>
+                    <Field label="Indirizzo">
+                      <input type="text" value={famForm.genitore2_indirizzo}
+                        onChange={e => setFamForm(p => ({ ...p, genitore2_indirizzo: e.target.value }))}
+                        style={inputSt} />
+                    </Field>
+                  </div>
+                </>
+              )}
+
+              <div style={{ borderTop: '1px solid #FFD4B3', paddingTop: '0.75rem', marginTop: '0.25rem' }}>
+                <Field label="Telefono emergenza *">
+                  <input type="tel" required value={famForm.telefono_emergenza}
+                    onChange={e => setFamForm(p => ({ ...p, telefono_emergenza: e.target.value }))}
+                    style={inputSt} placeholder="+39 333..." />
+                </Field>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                  <Field label="Medico di base">
+                    <input type="text" value={famForm.medico_base}
+                      onChange={e => setFamForm(p => ({ ...p, medico_base: e.target.value }))}
+                      style={inputSt} />
+                  </Field>
+                  <Field label="Indirizzo famiglia">
+                    <input type="text" value={famForm.indirizzo}
+                      onChange={e => setFamForm(p => ({ ...p, indirizzo: e.target.value }))}
+                      style={inputSt} />
+                  </Field>
+                </div>
+              </div>
+
               {famError && <ErrorBox>{famError}</ErrorBox>}
               <ModalActions onCancel={() => setShowFamForm(false)} loading={famLoading} submitLabel="Salva famiglia" />
             </form>
@@ -530,6 +721,20 @@ export default function BambiniPage() {
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
+function GenitoreInfo({ label, nome, email, telefono, cf, indirizzo }: {
+  label: string; nome: string; email: string; telefono: string; cf: string; indirizzo: string
+}) {
+  return (
+    <div style={{ marginBottom: '0.75rem', paddingBottom: '0.75rem', borderBottom: '1px solid #E9ECEF' }}>
+      <p style={{ margin: '0 0 0.25rem', fontWeight: 700, color: '#555', fontSize: '0.8rem', textTransform: 'uppercase' }}>{label}</p>
+      <p style={{ margin: '0 0 0.15rem' }}>{nome} — <a href={`mailto:${email}`} style={{ color: '#E8562A', textDecoration: 'none' }}>{email}</a></p>
+      {telefono && <p style={{ margin: '0 0 0.15rem', color: '#666' }}>📱 {telefono}</p>}
+      {cf && <p style={{ margin: '0 0 0.15rem', color: '#666' }}>CF: {cf}</p>}
+      {indirizzo && <p style={{ margin: 0, color: '#666' }}>🏠 {indirizzo}</p>}
+    </div>
+  )
+}
+
 function BambinoCard({ bambino, onClick }: { bambino: Bambino; onClick: () => void }) {
   const color = bambino.gruppo_colore || '#A29BFE'
   const ini = initials(bambino.nome, bambino.cognome)
@@ -563,6 +768,7 @@ function BambinoCard({ bambino, onClick }: { bambino: Bambino; onClick: () => vo
           <Badge color={bambino.attivo ? '#27AE60' : '#E67E22'}>
             {bambino.attivo ? 'Attivo' : 'Non attivo'}
           </Badge>
+          {bambino.alias_attivo && <Badge color="#6C5CE7">alias</Badge>}
         </div>
         <p style={{ margin: '0.375rem 0 0', color: '#aaa', fontSize: '0.775rem' }}>
           {bambino.eta} anni · {bambino.data_nascita}
@@ -580,7 +786,7 @@ function Overlay({ children, onClose }: { children: React.ReactNode; onClose: ()
       style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}
       onClick={e => { if (e.target === e.currentTarget) onClose() }}
     >
-      <div style={{ background: 'white', borderRadius: '20px', padding: '2rem', width: '100%', maxWidth: '520px', maxHeight: '90vh', overflowY: 'auto' }}>
+      <div style={{ background: 'white', borderRadius: '20px', padding: '2rem', width: '100%', maxWidth: '560px', maxHeight: '90vh', overflowY: 'auto' }}>
         {children}
       </div>
     </div>

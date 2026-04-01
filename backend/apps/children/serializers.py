@@ -15,19 +15,28 @@ class DelegaRitiroSerializer(serializers.ModelSerializer):
 class FamigliaSerializer(serializers.ModelSerializer):
     genitore1_email = serializers.EmailField(source='genitore1.email', read_only=True)
     genitore1_nome = serializers.CharField(source='genitore1.get_full_name', read_only=True)
+    genitore1_telefono = serializers.CharField(source='genitore1.phone', read_only=True)
     genitore2_email = serializers.EmailField(source='genitore2.email', read_only=True, allow_null=True)
     genitore2_nome = serializers.CharField(source='genitore2.get_full_name', read_only=True, allow_null=True)
+    genitore2_telefono = serializers.SerializerMethodField()
 
     class Meta:
         model = Famiglia
         fields = '__all__'
+
+    def get_genitore2_telefono(self, obj):
+        return obj.genitore2.phone if obj.genitore2_id and obj.genitore2 else None
 
 
 class FamigliaCreateSerializer(serializers.Serializer):
     """Crea una Famiglia accettando email dei genitori invece degli ID."""
     bambino = serializers.PrimaryKeyRelatedField(queryset=Bambino.objects.all())
     genitore1_email = serializers.EmailField()
+    genitore1_codice_fiscale = serializers.CharField(required=False, allow_blank=True, default='')
+    genitore1_indirizzo = serializers.CharField(required=False, allow_blank=True, default='')
     genitore2_email = serializers.EmailField(required=False, allow_blank=True, default='')
+    genitore2_codice_fiscale = serializers.CharField(required=False, allow_blank=True, default='')
+    genitore2_indirizzo = serializers.CharField(required=False, allow_blank=True, default='')
     indirizzo = serializers.CharField(required=False, allow_blank=True, default='')
     telefono_emergenza = serializers.CharField()
     medico_base = serializers.CharField(required=False, allow_blank=True, default='')
@@ -50,7 +59,11 @@ class FamigliaCreateSerializer(serializers.Serializer):
         return Famiglia.objects.create(
             bambino=validated_data['bambino'],
             genitore1=validated_data['genitore1_email'],
+            genitore1_codice_fiscale=validated_data.get('genitore1_codice_fiscale', ''),
+            genitore1_indirizzo=validated_data.get('genitore1_indirizzo', ''),
             genitore2=validated_data.get('genitore2_email'),
+            genitore2_codice_fiscale=validated_data.get('genitore2_codice_fiscale', ''),
+            genitore2_indirizzo=validated_data.get('genitore2_indirizzo', ''),
             indirizzo=validated_data.get('indirizzo', ''),
             telefono_emergenza=validated_data['telefono_emergenza'],
             medico_base=validated_data.get('medico_base', ''),
