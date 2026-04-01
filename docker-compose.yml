@@ -39,8 +39,7 @@ services:
 
   db:
     image: postgres:15-alpine
-    ports:
-      - "5432:5432"
+    # porta 5432 NON esposta all'esterno — accessibile solo nella rete Docker interna
     volumes:
       - postgres_data:/var/lib/postgresql/data
     environment:
@@ -57,9 +56,9 @@ services:
 
   minio:
     image: minio/minio:latest
-    ports:
-      - "9000:9000"
-      - "9001:9001"
+    # porte 9000/9001 NON esposte all'esterno — il backend accede a MinIO via rete Docker interna
+    # se in futuro serve accesso pubblico diretto a MinIO (USE_S3=True + URL pubblici),
+    # esporre solo 9000 e configurare firewall Hetzner di conseguenza
     volumes:
       - minio_data:/data
     environment:
