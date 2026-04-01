@@ -41,6 +41,7 @@ Nome interno: Sherazade.
 
 ## Funzionalità Post-MVP
 - [x] Gestione utenti e gruppi configurabili (feature/utenti)
+- [x] Anagrafica v2 — foto profilo, alias nome, dati famiglia completi (feature/anagrafica-v2)
 - Calendario scolastico ed eventi
 - Messaggistica broadcast (circolari)
 - Gestione menu settimanale
@@ -195,6 +196,7 @@ IMPORTANTE: Al termine di ogni task, prima di considerarlo completato, aggiorna 
 
 ## Ultimo Aggiornamento
 Data: 1 aprile 2026
-Completato: feature/anagrafica-v2 — espansione anagrafica bambini (alias, foto) e famiglie (CF, indirizzi per-genitore)
-Branch: feature/anagrafica-v2
-Prossimo task: feature/calendario
+Completato: feature/anagrafica-v2 — foto profilo, alias nome, gruppi, orari uscita, dati famiglia completi, MEDIA_EXTERNAL_BASE_URL per foto
+Branch: mergiato su develop
+Nota tecnica: aggiunta MEDIA_EXTERNAL_BASE_URL=http://159.69.9.230:8000 al .env del server per URL foto corretti
+Prossimo task: feature/presenze-v2
