@@ -101,13 +101,20 @@ class BambinoSerializer(serializers.ModelSerializer):
         data = super().to_representation(instance)
         if instance.foto_profilo:
             try:
-                url = instance.foto_profilo.url
                 from django.conf import settings
-                internal = getattr(settings, 'AWS_S3_ENDPOINT_URL', '')
-                external = getattr(settings, 'AWS_S3_ENDPOINT_URL_EXTERNAL', '')
-                if external and internal and internal != external and url.startswith(internal):
-                    url = url.replace(internal, external, 1)
-                data['foto_profilo'] = url
+                if getattr(settings, 'USE_S3', False):
+                    # MinIO: sostituisce endpoint interno con URL esterno per presigned URL
+                    url = instance.foto_profilo.url
+                    internal = getattr(settings, 'AWS_S3_ENDPOINT_URL', '')
+                    external = getattr(settings, 'AWS_S3_ENDPOINT_URL_EXTERNAL', '')
+                    if external and internal and internal != external and url.startswith(internal):
+                        url = url.replace(internal, external, 1)
+                    data['foto_profilo'] = url
+                else:
+                    # Storage locale: percorso relativo → URL assoluto con host esterno
+                    base = getattr(settings, 'MEDIA_EXTERNAL_BASE_URL', '').rstrip('/')
+                    url = instance.foto_profilo.url  # es. /media/bambini/foto/test.jpg
+                    data['foto_profilo'] = f'{base}{url}' if base else url
             except Exception:
                 data['foto_profilo'] = None
         return data

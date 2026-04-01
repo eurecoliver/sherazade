@@ -97,6 +97,9 @@ STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+# URL esterno del backend accessibile dal browser per i media locali (USE_S3=False)
+# Es: http://159.69.9.230:8000 in produzione, http://localhost:8000 in locale
+MEDIA_EXTERNAL_BASE_URL = config('MEDIA_EXTERNAL_BASE_URL', default='')
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
@@ -139,10 +142,12 @@ if USE_S3:
     AWS_STORAGE_BUCKET_NAME = config('AWS_STORAGE_BUCKET_NAME', default='sherazade-media')
     AWS_S3_ENDPOINT_URL = config('AWS_S3_ENDPOINT_URL')
     # URL esterno di MinIO accessibile dal browser (es. http://159.69.9.230:9000)
-    # Se non impostato, coincide con AWS_S3_ENDPOINT_URL (funziona solo se MinIO è raggiungibile direttamente)
     AWS_S3_ENDPOINT_URL_EXTERNAL = config('AWS_S3_ENDPOINT_URL_EXTERNAL', default='')
     AWS_S3_FILE_OVERWRITE = False
-    AWS_DEFAULT_ACL = 'private'
+    # public-read: le foto profilo (non sensibili) sono accessibili direttamente tramite URL
+    # I media GDPR-sensibili (diario) usano logica separata con accesso controllato
+    AWS_DEFAULT_ACL = 'public-read'
+    AWS_QUERYSTRING_AUTH = False  # nessun presigned URL — URL puliti per file pubblici
     AWS_S3_VERIFY = False
     STORAGES = {
         'default': {

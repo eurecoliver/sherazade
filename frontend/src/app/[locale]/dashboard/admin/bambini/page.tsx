@@ -765,12 +765,12 @@ function BambinoCard({ bambino, onClick }: { bambino: Bambino; onClick: () => vo
         </p>
         <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', marginTop: '0.375rem' }}>
           {bambino.gruppo_nome && <Badge color={color}>{bambino.gruppo_nome}</Badge>}
-          <Badge color={bambino.attivo ? '#27AE60' : '#E67E22'}>
-            {bambino.attivo ? 'Attivo' : 'Non attivo'}
-          </Badge>
           {bambino.alias_attivo && <Badge color="#6C5CE7">alias</Badge>}
         </div>
-        <p style={{ margin: '0.375rem 0 0', color: '#aaa', fontSize: '0.775rem' }}>
+        <p style={{ margin: '0.25rem 0 0', fontSize: '0.75rem', fontWeight: 700, color: bambino.attivo ? '#27AE60' : '#E67E22' }}>
+          {bambino.attivo ? '● Attivo' : '● Non attivo'}
+        </p>
+        <p style={{ margin: '0.25rem 0 0', color: '#aaa', fontSize: '0.775rem' }}>
           {bambino.eta} anni · {bambino.data_nascita}
           {bambino.famiglia ? ' · 👨‍👩‍👧' : ''}
           {bambino.orario_uscita_label ? ` · 🕐 ${bambino.orario_uscita_label}` : ''}
