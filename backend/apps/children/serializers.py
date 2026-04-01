@@ -97,6 +97,21 @@ class BambinoSerializer(serializers.ModelSerializer):
             return f'{obj.orario_uscita.etichetta} ({obj.orario_uscita.orario})'
         return ''
 
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if instance.foto_profilo:
+            try:
+                url = instance.foto_profilo.url
+                from django.conf import settings
+                internal = getattr(settings, 'AWS_S3_ENDPOINT_URL', '')
+                external = getattr(settings, 'AWS_S3_ENDPOINT_URL_EXTERNAL', '')
+                if external and internal and internal != external and url.startswith(internal):
+                    url = url.replace(internal, external, 1)
+                data['foto_profilo'] = url
+            except Exception:
+                data['foto_profilo'] = None
+        return data
+
 
 class BambinoNoteSerializer(serializers.ModelSerializer):
     """Solo note_mediche è scrivibile — per Coordinatrice/Insegnante."""

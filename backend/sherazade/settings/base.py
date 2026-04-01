@@ -138,6 +138,9 @@ if USE_S3:
     AWS_SECRET_ACCESS_KEY = config('AWS_SECRET_ACCESS_KEY')
     AWS_STORAGE_BUCKET_NAME = config('AWS_STORAGE_BUCKET_NAME', default='sherazade-media')
     AWS_S3_ENDPOINT_URL = config('AWS_S3_ENDPOINT_URL')
+    # URL esterno di MinIO accessibile dal browser (es. http://159.69.9.230:9000)
+    # Se non impostato, coincide con AWS_S3_ENDPOINT_URL (funziona solo se MinIO è raggiungibile direttamente)
+    AWS_S3_ENDPOINT_URL_EXTERNAL = config('AWS_S3_ENDPOINT_URL_EXTERNAL', default='')
     AWS_S3_FILE_OVERWRITE = False
     AWS_DEFAULT_ACL = 'private'
     AWS_S3_VERIFY = False

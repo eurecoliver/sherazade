@@ -27,7 +27,12 @@ class BambinoViewSet(viewsets.ModelViewSet):
         user = self.request.user
         qs = (
             Bambino.objects
-            .select_related('famiglia__genitore1', 'famiglia__genitore2')
+            .select_related(
+                'famiglia__genitore1',
+                'famiglia__genitore2',
+                'gruppo',
+                'orario_uscita',
+            )
             .prefetch_related('deleghe_ritiro')
         )
 
