@@ -194,6 +194,24 @@ IMPORTANTE: Al termine di ogni task, prima di considerarlo completato, aggiorna 
 - Frontend genitore: mostra alias_nome se alias_attivo=True, con foto profilo e gruppo del figlio in dashboard
 - Migration: `children/0004_anagrafica_v2.py`
 
+## Sicurezza — Priorità Alta (da completare prima del go-live)
+
+### Completato
+- UFW firewall attivo con porte 22, 80, 443 aperte e 5432 bloccata
+- PostgreSQL non esposto pubblicamente (rimossa porta dal docker-compose)
+
+### Da fare
+1. Docker + UFW bypass — configurare /etc/docker/daemon.json per rispettare UFW (iptables=false)
+2. Porte Docker — verificare che nessuna porta sensibile sia raggiungibile dall'esterno nonostante UFW
+3. SSH hardening — disabilitare root login, usare solo chiave SSH
+4. HTTPS — configurare SSL/TLS con Let's Encrypt + Nginx reverse proxy
+5. Rate limiting — limitare tentativi di login su Django
+6. Secrets management — proteggere .env con permessi corretti
+7. Backup automatico — configurare backup automatico PostgreSQL su storage esterno
+8. Fail2ban — installare per bloccare IP dopo tentativi falliti
+
+Prossimo task: sessione dedicata alla sicurezza (hardening completo)
+
 ## Ultimo Aggiornamento
 Data: 1 aprile 2026
 Completato: feature/anagrafica-v2 — foto profilo, alias nome, gruppi, orari uscita, dati famiglia completi, MEDIA_EXTERNAL_BASE_URL per foto
