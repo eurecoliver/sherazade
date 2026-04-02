@@ -11,6 +11,7 @@ interface Bambino {
   nome: string
   cognome: string
   sezione: string
+  orario_uscita_previsto: string | null
 }
 
 interface Presenza {
@@ -20,6 +21,8 @@ interface Presenza {
   presente: boolean
   ora_arrivo: string | null
   ora_uscita: string | null
+  minuti_ritardo_arrivo: number | null
+  minuti_ritardo_uscita: number | null
   assenza_comunicata: boolean
   motivo_assenza: string
   note: string
@@ -33,8 +36,9 @@ interface RigaGiornata {
 // ─── Stato locale per ogni bambino ────────────────────────────────────────────
 
 interface StatoBambino {
-  presente: boolean | null   // null = non ancora selezionato
+  presente: boolean | null
   ora_arrivo: string
+  ora_uscita: string
   motivo_assenza: string
   note: string
   assenza_comunicata: boolean
@@ -55,6 +59,19 @@ function fmtDataIt(iso: string): string {
   return new Date(iso).toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' })
 }
 
+function calcolaRitardoArrivo(ora: string): number {
+  const [h, m] = ora.split(':').map(Number)
+  const minuti = h * 60 + m
+  const ingresso = 9 * 60
+  return Math.max(0, minuti - ingresso)
+}
+
+function calcolaRitardoUscita(ora: string, previsto: string): number {
+  const [h1, m1] = ora.split(':').map(Number)
+  const [h2, m2] = previsto.split(':').map(Number)
+  return Math.max(0, (h1 * 60 + m1) - (h2 * 60 + m2))
+}
+
 // ─── BambinoRow ───────────────────────────────────────────────────────────────
 
 function BambinoRow({
@@ -67,6 +84,13 @@ function BambinoRow({
   const isPresente = stato.presente === true
   const isAssente = stato.presente === false
   const nonToccato = stato.presente === null
+
+  const ritardoArrivo = isPresente && stato.ora_arrivo
+    ? calcolaRitardoArrivo(stato.ora_arrivo)
+    : 0
+  const ritardoUscita = isPresente && stato.ora_uscita && bambino.orario_uscita_previsto
+    ? calcolaRitardoUscita(stato.ora_uscita, bambino.orario_uscita_previsto)
+    : 0
 
   return (
     <div style={{
@@ -88,7 +112,6 @@ function BambinoRow({
           )}
         </div>
 
-        {/* Toggle PRESENTE */}
         <button
           onClick={() => onChange({ presente: isPresente ? null : true })}
           style={{
@@ -107,7 +130,6 @@ function BambinoRow({
           ✓ Sì
         </button>
 
-        {/* Toggle ASSENTE */}
         <button
           onClick={() => onChange({ presente: isAssente ? null : false, motivo_assenza: isAssente ? '' : stato.motivo_assenza || 'malattia' })}
           style={{
@@ -127,18 +149,57 @@ function BambinoRow({
         </button>
       </div>
 
-      {/* Dettagli espandibili */}
+      {/* Dettagli espandibili — presenza */}
       {isPresente && (
-        <div style={{ marginTop: '0.625rem', display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
-          <label style={{ fontSize: '0.8rem', color: '#555', display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
-            <span>Ora arrivo</span>
-            <input
-              type="time"
-              value={stato.ora_arrivo}
-              onChange={e => onChange({ ora_arrivo: e.target.value })}
-              style={{ padding: '0.25rem 0.5rem', border: '1px solid #CBD5E0', borderRadius: '6px', fontSize: '0.85rem', fontFamily: 'inherit' }}
-            />
-          </label>
+        <div style={{ marginTop: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          {/* Ora arrivo */}
+          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
+            <label style={{ fontSize: '0.8rem', color: '#555', display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+              <span>Ora arrivo</span>
+              <input
+                type="time"
+                value={stato.ora_arrivo}
+                onChange={e => onChange({ ora_arrivo: e.target.value })}
+                style={{ padding: '0.25rem 0.5rem', border: '1px solid #CBD5E0', borderRadius: '6px', fontSize: '0.85rem', fontFamily: 'inherit' }}
+              />
+            </label>
+            {ritardoArrivo > 0 && (
+              <span style={{
+                background: '#FFF3CD', color: '#856404',
+                padding: '0.2rem 0.6rem', borderRadius: '20px',
+                fontSize: '0.75rem', fontWeight: 700,
+              }}>
+                ⏱ +{ritardoArrivo} min
+              </span>
+            )}
+          </div>
+
+          {/* Ora uscita */}
+          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
+            <label style={{ fontSize: '0.8rem', color: '#555', display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+              <span>Ora uscita</span>
+              <input
+                type="time"
+                value={stato.ora_uscita}
+                onChange={e => onChange({ ora_uscita: e.target.value })}
+                style={{ padding: '0.25rem 0.5rem', border: '1px solid #CBD5E0', borderRadius: '6px', fontSize: '0.85rem', fontFamily: 'inherit' }}
+              />
+            </label>
+            {bambino.orario_uscita_previsto && (
+              <span style={{ fontSize: '0.75rem', color: '#888' }}>
+                Previsto: {bambino.orario_uscita_previsto}
+              </span>
+            )}
+            {ritardoUscita > 0 && (
+              <span style={{
+                background: '#FFF5F5', color: '#C53030',
+                padding: '0.2rem 0.6rem', borderRadius: '20px',
+                fontSize: '0.75rem', fontWeight: 700,
+              }}>
+                ⏱ +{ritardoUscita} min
+              </span>
+            )}
+          </div>
         </div>
       )}
 
@@ -196,22 +257,21 @@ export default function StaffPresenzePage() {
       const dati: RigaGiornata[] = await res.json()
       setRighe(dati)
 
-      // Sezioni disponibili (primo caricamento)
       const sez_uniche = [...new Set(dati.map(r => r.bambino.sezione).filter(Boolean))]
       setSezioniDisponibili(sez_uniche)
 
-      // Inizializza stati dai dati esistenti
       const nuoviStati: Record<number, StatoBambino> = {}
       for (const r of dati) {
         nuoviStati[r.bambino.id] = r.presenza
           ? {
               presente: r.presenza.presente,
               ora_arrivo: r.presenza.ora_arrivo ?? '',
+              ora_uscita: r.presenza.ora_uscita ?? '',
               motivo_assenza: r.presenza.motivo_assenza,
               note: r.presenza.note,
               assenza_comunicata: r.presenza.assenza_comunicata,
             }
-          : { presente: null, ora_arrivo: '', motivo_assenza: 'malattia', note: '', assenza_comunicata: false }
+          : { presente: null, ora_arrivo: '', ora_uscita: '', motivo_assenza: 'malattia', note: '', assenza_comunicata: false }
       }
       setStati(nuoviStati)
     } catch {
@@ -240,6 +300,7 @@ export default function StaffPresenzePage() {
           bambino: r.bambino.id,
           presente: stati[r.bambino.id].presente,
           ora_arrivo: stati[r.bambino.id].ora_arrivo || null,
+          ora_uscita: stati[r.bambino.id].ora_uscita || null,
           motivo_assenza: stati[r.bambino.id].presente ? '' : stati[r.bambino.id].motivo_assenza,
           assenza_comunicata: stati[r.bambino.id].assenza_comunicata,
           note: stati[r.bambino.id].note,
@@ -252,7 +313,6 @@ export default function StaffPresenzePage() {
       })
       if (!res.ok) throw new Error()
       setSaved(true)
-      // Ricarica per avere gli id aggiornati
       caricaGiornata(data, sezione)
     } catch {
       setError('Errore nel salvataggio.')
@@ -261,7 +321,6 @@ export default function StaffPresenzePage() {
     }
   }
 
-  // ─── Contatori ─────────────────────────────────────────────────────────────
   const presenti = Object.values(stati).filter(s => s.presente === true).length
   const assenti = Object.values(stati).filter(s => s.presente === false).length
   const nonRegistrati = Object.values(stati).filter(s => s.presente === null).length
@@ -269,7 +328,6 @@ export default function StaffPresenzePage() {
   return (
     <div style={{ minHeight: '100vh', background: '#EAF4FF' }}>
 
-      {/* Header */}
       <div style={{ background: 'linear-gradient(135deg, #0984E3 0%, #0652DD 100%)', padding: '1.25rem 1.25rem 1.75rem', color: 'white' }}>
         <div style={{ maxWidth: '720px', margin: '0 auto' }}>
           <button
@@ -289,7 +347,6 @@ export default function StaffPresenzePage() {
 
       <div style={{ maxWidth: '720px', margin: '0 auto', padding: '1rem 1rem 4rem' }}>
 
-        {/* Filtri */}
         <div style={{ background: 'white', borderRadius: '14px', padding: '0.875rem 1rem', marginBottom: '1rem', display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap', boxShadow: '0 2px 8px rgba(9,132,227,0.08)' }}>
           <input
             type="date"
@@ -309,7 +366,6 @@ export default function StaffPresenzePage() {
           </select>
         </div>
 
-        {/* Contatori */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.625rem', marginBottom: '1rem' }}>
           {[
             { label: 'Presenti', count: presenti, color: '#48BB78', bg: '#F0FFF4' },
@@ -335,7 +391,6 @@ export default function StaffPresenzePage() {
           </div>
         )}
 
-        {/* Lista bambini */}
         {loading ? (
           <div style={{ textAlign: 'center', padding: '3rem', color: '#0984E3', fontWeight: 600 }}>Caricamento...</div>
         ) : righe.length === 0 ? (
@@ -347,14 +402,13 @@ export default function StaffPresenzePage() {
             <BambinoRow
               key={r.bambino.id}
               bambino={r.bambino}
-              stato={stati[r.bambino.id] ?? { presente: null, ora_arrivo: '', motivo_assenza: 'malattia', note: '', assenza_comunicata: false }}
+              stato={stati[r.bambino.id] ?? { presente: null, ora_arrivo: '', ora_uscita: '', motivo_assenza: 'malattia', note: '', assenza_comunicata: false }}
               onChange={delta => aggiornaStato(r.bambino.id, delta)}
             />
           ))
         )}
       </div>
 
-      {/* Bottone Salva fisso in basso */}
       {!loading && righe.length > 0 && (
         <div style={{ position: 'fixed', bottom: 0, left: 0, right: 0, padding: '1rem', background: 'white', borderTop: '1px solid #E2E8F0', display: 'flex', gap: '0.75rem', justifyContent: 'center' }}>
           <button

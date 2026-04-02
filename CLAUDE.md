@@ -38,6 +38,8 @@ Nome interno: Sherazade.
 4. [x] Diario del bambino (foto/video giornalieri)
 5. [x] Diario alimentare (foglio pappe + allergie)
 6. [x] Registro presenze/assenze
+7. [x] Presenze v2 — ritardi arrivo/uscita automatici
+8. [x] Diario v2 — sonno, popò, tag "cosa portare"
 
 ## Funzionalità Post-MVP
 - [x] Gestione utenti e gruppi configurabili (feature/utenti)
@@ -215,7 +217,27 @@ IMPORTANTE: Al termine di ogni task, prima di considerarlo completato, aggiorna 
 - Monitoring e alerting (es. Uptime Robot per downtime)
 - Backup offsite (copia backup su storage esterno)
 
+### Presenze v2 — ritardi arrivo/uscita (2 aprile 2026)
+- `Presenza` model: aggiunti `minuti_ritardo_arrivo` e `minuti_ritardo_uscita` (IntegerField, null=True)
+- `save()` override: calcola automaticamente ritardo arrivo (vs 09:00 fisso) e ritardo uscita (vs `bambino.orario_uscita.orario`)
+- `_calcola_ritardi()` helper: usa `datetime.combine()` per aritmetica su TimeField
+- `giornata` action: restituisce `orario_uscita_previsto` nel bambino dict (da `bambino.orario_uscita.orario`)
+- Frontend staff presenze: ora_uscita time picker, badge arancione ritardo arrivo, badge rosso ritardo uscita, "Previsto: HH:MM"
+- Frontend admin presenze: badge ritardo arrivo e uscita inline nella lista per-sezione
+- Migration: `attendance/0002_presenza_ritardi.py`
+
+### Diario v2 — sonno, popò, tags (2 aprile 2026)
+- `TagCosaPortare` model: nome (unique), creato_da FK, attivo BooleanField
+- `RegistroDiario`: aggiunti 4 TimeField sonno (mattina/pomeriggio inizio/fine), `popo` BooleanField, M2M `tags_cosa_portare`
+- `TagCosaPortareViewSet`: CRUD, genitore vede solo attivi, staff/admin vede tutti; `creato_da` settato automaticamente
+- `RegistroDiarioWriteSerializer`: accetta `tags_cosa_portare` come lista di PK
+- `RegistroDiarioSerializer`: serializza `tags_cosa_portare` nested con `TagCosaPortareSerializer`
+- Frontend staff diario: sezione sonno 2×2 grid time range picker, checkbox popò con stile, TagSelector con chip toggle + campo "nuovo tag" inline
+- Frontend genitore diario: mostra badge popò, badge tag cosa portare, sezione sonno mattina/pomeriggio
+- API route Next.js: `/api/diario/tags` (GET list + POST crea)
+- Migration: `diary/0002_diario_v2.py`
+
 ## Ultimo Aggiornamento
-Data: 1 aprile 2026
-Completato: Sessione sicurezza — SSH hardening, fail2ban, rate limiting, backup automatico, kernel aggiornato
-Prossimo task: feature/presenze-v2 (dopo configurazione HTTPS con dominio)
+Data: 2 aprile 2026
+Completato: feature/v2-updates — presenze v2 (ritardi automatici) + diario v2 (sonno, popò, tags cosa portare)
+Prossimo task: HTTPS con Let's Encrypt + Nginx (richiede dominio definitivo)

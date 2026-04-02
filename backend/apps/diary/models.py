@@ -6,6 +6,25 @@ def _media_upload_path(instance, filename):
     return f'diario/{instance.registro.bambino_id}/{instance.registro.data}/{filename}'
 
 
+class TagCosaPortare(models.Model):
+    nome = models.CharField(max_length=100, unique=True)
+    creato_da = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name='tags_creati',
+    )
+    attivo = models.BooleanField(default=True)
+    creato_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Tag Cosa Portare'
+        verbose_name_plural = 'Tag Cosa Portare'
+        ordering = ['nome']
+
+    def __str__(self):
+        return self.nome
+
+
 class RegistroDiario(models.Model):
 
     class Umore(models.TextChoices):
@@ -33,6 +52,19 @@ class RegistroDiario(models.Model):
     )
     attivita_descrizione = models.TextField(blank=True)
     note_giornata = models.TextField(blank=True)
+    # Sonno
+    sonno_mattina_inizio = models.TimeField(null=True, blank=True)
+    sonno_mattina_fine = models.TimeField(null=True, blank=True)
+    sonno_pomeriggio_inizio = models.TimeField(null=True, blank=True)
+    sonno_pomeriggio_fine = models.TimeField(null=True, blank=True)
+    # Popò
+    popo = models.BooleanField(default=False)
+    # Cosa portare domani
+    tags_cosa_portare = models.ManyToManyField(
+        TagCosaPortare,
+        blank=True,
+        related_name='registri',
+    )
     creato_at = models.DateTimeField(auto_now_add=True)
     aggiornato_at = models.DateTimeField(auto_now=True)
 

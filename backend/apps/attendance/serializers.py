@@ -12,11 +12,13 @@ class PresenzaSerializer(serializers.ModelSerializer):
         fields = (
             'id', 'bambino', 'bambino_nome', 'bambino_sezione', 'data',
             'presente', 'ora_arrivo', 'ora_uscita',
+            'minuti_ritardo_arrivo', 'minuti_ritardo_uscita',
             'assenza_comunicata', 'motivo_assenza', 'note',
             'registrato_da', 'registrato_da_nome',
             'creato_at', 'aggiornato_at',
         )
-        read_only_fields = ('registrato_da', 'creato_at', 'aggiornato_at')
+        read_only_fields = ('registrato_da', 'creato_at', 'aggiornato_at',
+                            'minuti_ritardo_arrivo', 'minuti_ritardo_uscita')
 
     def get_bambino_nome(self, obj):
         return str(obj.bambino)

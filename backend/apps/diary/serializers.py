@@ -1,5 +1,12 @@
 from rest_framework import serializers
-from .models import RegistroDiario, MediaDiario
+from .models import RegistroDiario, MediaDiario, TagCosaPortare
+
+
+class TagCosaPortareSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TagCosaPortare
+        fields = ('id', 'nome', 'attivo', 'creato_at')
+        read_only_fields = ('creato_at',)
 
 
 class MediaDiarioSerializer(serializers.ModelSerializer):
@@ -30,6 +37,7 @@ class MediaDiarioSerializer(serializers.ModelSerializer):
 
 class RegistroDiarioSerializer(serializers.ModelSerializer):
     media = MediaDiarioSerializer(many=True, read_only=True)
+    tags_cosa_portare = TagCosaPortareSerializer(many=True, read_only=True)
     bambino_nome = serializers.SerializerMethodField()
     autore_nome = serializers.SerializerMethodField()
     umore_label = serializers.CharField(source='get_umore_display', read_only=True)
@@ -41,6 +49,10 @@ class RegistroDiarioSerializer(serializers.ModelSerializer):
             'autore', 'autore_nome',
             'umore', 'umore_label',
             'attivita_descrizione', 'note_giornata',
+            'sonno_mattina_inizio', 'sonno_mattina_fine',
+            'sonno_pomeriggio_inizio', 'sonno_pomeriggio_fine',
+            'popo',
+            'tags_cosa_portare',
             'creato_at', 'aggiornato_at',
             'media',
         )
@@ -55,10 +67,19 @@ class RegistroDiarioSerializer(serializers.ModelSerializer):
 
 class RegistroDiarioWriteSerializer(serializers.ModelSerializer):
     """Serializer per creazione/modifica — no media nested."""
+    tags_cosa_portare = serializers.PrimaryKeyRelatedField(
+        many=True,
+        queryset=TagCosaPortare.objects.filter(attivo=True),
+        required=False,
+    )
 
     class Meta:
         model = RegistroDiario
         fields = (
             'id', 'bambino', 'data',
             'umore', 'attivita_descrizione', 'note_giornata',
+            'sonno_mattina_inizio', 'sonno_mattina_fine',
+            'sonno_pomeriggio_inizio', 'sonno_pomeriggio_fine',
+            'popo',
+            'tags_cosa_portare',
         )

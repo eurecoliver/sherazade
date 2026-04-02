@@ -20,6 +20,11 @@ interface MediaItem {
   visibile_a_genitori: boolean
 }
 
+interface Tag {
+  id: number
+  nome: string
+}
+
 interface Registro {
   id: number
   data: string
@@ -28,6 +33,12 @@ interface Registro {
   attivita_descrizione: string
   note_giornata: string
   autore_nome: string
+  sonno_mattina_inizio: string | null
+  sonno_mattina_fine: string | null
+  sonno_pomeriggio_inizio: string | null
+  sonno_pomeriggio_fine: string | null
+  popo: boolean
+  tags_cosa_portare: Tag[]
   media: MediaItem[]
 }
 
@@ -53,6 +64,10 @@ function fmtData(iso: string) {
   return new Date(iso).toLocaleDateString('it-IT', {
     weekday: 'long', day: 'numeric', month: 'long',
   })
+}
+
+function fmtOrario(t: string) {
+  return t.slice(0, 5)
 }
 
 // ─── LightBox ─────────────────────────────────────────────────────────────────
@@ -119,6 +134,7 @@ function RegistroCard({ registro }: { registro: Registro }) {
   const umore = registro.umore
   const hasContent = registro.attivita_descrizione || registro.note_giornata
   const mediaList = registro.media
+  const hasSonno = registro.sonno_mattina_inizio || registro.sonno_pomeriggio_inizio
 
   return (
     <div style={{
@@ -152,6 +168,55 @@ function RegistroCard({ registro }: { registro: Registro }) {
         )}
       </div>
 
+      {/* Popò e badge extra */}
+      {(registro.popo || registro.tags_cosa_portare.length > 0) && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginBottom: '0.875rem' }}>
+          {registro.popo && (
+            <span style={{
+              background: '#FFF9E6', color: '#744210',
+              border: '1px solid #F6AD55',
+              padding: '0.25rem 0.75rem', borderRadius: '20px',
+              fontSize: '0.8rem', fontWeight: 700,
+            }}>
+              💩 Popò
+            </span>
+          )}
+          {registro.tags_cosa_portare.map(t => (
+            <span key={t.id} style={{
+              background: '#EAF4FF', color: '#0984E3',
+              border: '1px solid #BDE0FF',
+              padding: '0.25rem 0.75rem', borderRadius: '20px',
+              fontSize: '0.8rem', fontWeight: 600,
+            }}>
+              📦 {t.nome}
+            </span>
+          ))}
+        </div>
+      )}
+
+      {/* Sonno */}
+      {hasSonno && (
+        <div style={{
+          background: '#F0F8FF', borderRadius: '10px', padding: '0.75rem 1rem',
+          marginBottom: '0.875rem',
+          display: 'flex', flexWrap: 'wrap', gap: '1rem',
+        }}>
+          <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#0984E3', marginRight: '0.25rem' }}>😴 Sonno</span>
+          {registro.sonno_mattina_inizio && (
+            <span style={{ fontSize: '0.82rem', color: '#444' }}>
+              Mattina: {fmtOrario(registro.sonno_mattina_inizio)}
+              {registro.sonno_mattina_fine && ` – ${fmtOrario(registro.sonno_mattina_fine)}`}
+            </span>
+          )}
+          {registro.sonno_pomeriggio_inizio && (
+            <span style={{ fontSize: '0.82rem', color: '#444' }}>
+              Pomeriggio: {fmtOrario(registro.sonno_pomeriggio_inizio)}
+              {registro.sonno_pomeriggio_fine && ` – ${fmtOrario(registro.sonno_pomeriggio_fine)}`}
+            </span>
+          )}
+        </div>
+      )}
+
       {/* Testi */}
       {registro.attivita_descrizione && (
         <div style={{ marginBottom: '0.875rem' }}>
@@ -178,7 +243,7 @@ function RegistroCard({ registro }: { registro: Registro }) {
         </div>
       )}
 
-      {!hasContent && mediaList.length === 0 && (
+      {!hasContent && !hasSonno && !registro.popo && registro.tags_cosa_portare.length === 0 && mediaList.length === 0 && (
         <p style={{ margin: 0, color: '#bbb', fontSize: '0.875rem', fontStyle: 'italic' }}>
           Nessuna nota per questa giornata.
         </p>
@@ -244,7 +309,6 @@ export default function GenitoreDiarioPage() {
   const [loadingRegistri, setLoadingRegistri] = useState(false)
   const [error, setError] = useState('')
 
-  // Carica lista figli
   useEffect(() => {
     fetch('/api/bambini')
       .then(res => {
@@ -294,7 +358,6 @@ export default function GenitoreDiarioPage() {
   return (
     <div style={{ minHeight: '100vh', background: '#FFF3EE' }}>
 
-      {/* Header */}
       <div style={{ background: 'linear-gradient(135deg, #E17055 0%, #C0392B 100%)', padding: '1.5rem 1.5rem 2rem', color: 'white' }}>
         <div style={{ maxWidth: '680px', margin: '0 auto' }}>
           <button
@@ -312,7 +375,6 @@ export default function GenitoreDiarioPage() {
 
       <div style={{ maxWidth: '680px', margin: '0 auto', padding: '1.5rem 1rem' }}>
 
-        {/* Selettore figlio (se più figli) */}
         {figli.length > 1 && (
           <div style={{
             background: 'white', borderRadius: '14px', padding: '1rem 1.25rem',

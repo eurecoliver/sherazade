@@ -21,6 +21,9 @@ interface Presenza {
   data: string
   presente: boolean
   ora_arrivo: string | null
+  ora_uscita: string | null
+  minuti_ritardo_arrivo: number | null
+  minuti_ritardo_uscita: number | null
   assenza_comunicata: boolean
   motivo_assenza: string
   note: string
@@ -270,6 +273,16 @@ export default function AdminPresenzePage() {
                             )}
                             {r.presenza?.presente && r.presenza.ora_arrivo && (
                               <span style={{ fontSize: '0.75rem', color: '#48BB78' }}>⏰ {r.presenza.ora_arrivo.slice(0, 5)}</span>
+                            )}
+                            {r.presenza?.minuti_ritardo_arrivo != null && r.presenza.minuti_ritardo_arrivo > 0 && (
+                              <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#856404', background: '#FFF3CD', padding: '0.15rem 0.4rem', borderRadius: '10px' }}>
+                                +{r.presenza.minuti_ritardo_arrivo}min
+                              </span>
+                            )}
+                            {r.presenza?.minuti_ritardo_uscita != null && r.presenza.minuti_ritardo_uscita > 0 && (
+                              <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#C53030', background: '#FFF5F5', padding: '0.15rem 0.4rem', borderRadius: '10px' }}>
+                                uscita +{r.presenza.minuti_ritardo_uscita}min
+                              </span>
                             )}
                           </div>
                         ))}

@@ -8,12 +8,13 @@ from rest_framework.response import Response
 from apps.children.models import Bambino
 from apps.consents.models import ConsensoFotografico
 from apps.users.models import Role
-from .models import RegistroDiario, MediaDiario
+from .models import RegistroDiario, MediaDiario, TagCosaPortare
 from .permissions import DiarioPermission
 from .serializers import (
     RegistroDiarioSerializer,
     RegistroDiarioWriteSerializer,
     MediaDiarioSerializer,
+    TagCosaPortareSerializer,
 )
 
 
@@ -64,7 +65,7 @@ class RegistroDiarioViewSet(viewsets.ModelViewSet):
         qs = (
             RegistroDiario.objects
             .select_related('bambino__famiglia__genitore1', 'bambino__famiglia__genitore2', 'autore')
-            .prefetch_related('media')
+            .prefetch_related('media', 'tags_cosa_portare')
         )
 
         if user.role == Role.GENITORE:
@@ -117,7 +118,7 @@ class RegistroDiarioViewSet(viewsets.ModelViewSet):
             r.bambino_id: r
             for r in RegistroDiario.objects
             .filter(data=data_str)
-            .prefetch_related('media')
+            .prefetch_related('media', 'tags_cosa_portare')
             .select_related('autore')
         }
 
@@ -169,7 +170,7 @@ class RegistroDiarioViewSet(viewsets.ModelViewSet):
             RegistroDiario.objects
             .filter(bambino_id=bambino_id)
             .select_related('autore')
-            .prefetch_related('media')
+            .prefetch_related('media', 'tags_cosa_portare')
             .order_by('-data')
         )
 
@@ -219,3 +220,17 @@ class MediaDiarioViewSet(viewsets.ModelViewSet):
             raise PermissionDenied(f'Impossibile caricare media: {msg}')
 
         serializer.save(caricato_da=self.request.user)
+
+
+class TagCosaPortareViewSet(viewsets.ModelViewSet):
+    serializer_class = TagCosaPortareSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        role = self.request.user.role
+        if role == Role.GENITORE:
+            return TagCosaPortare.objects.filter(attivo=True)
+        return TagCosaPortare.objects.all()
+
+    def perform_create(self, serializer):
+        serializer.save(creato_da=self.request.user)

@@ -1,3 +1,5 @@
+from datetime import datetime, time
+
 from django.conf import settings
 from django.db import models
 
@@ -10,6 +12,8 @@ class Presenza(models.Model):
         VACANZA = 'vacanza', 'Vacanza'
         ALTRO = 'altro', 'Altro'
 
+    ORA_INGRESSO = time(9, 0)
+
     bambino = models.ForeignKey(
         'children.Bambino',
         on_delete=models.CASCADE,
@@ -19,6 +23,14 @@ class Presenza(models.Model):
     presente = models.BooleanField()
     ora_arrivo = models.TimeField(null=True, blank=True)
     ora_uscita = models.TimeField(null=True, blank=True)
+    minuti_ritardo_arrivo = models.IntegerField(
+        null=True, blank=True,
+        verbose_name='Minuti di ritardo arrivo',
+    )
+    minuti_ritardo_uscita = models.IntegerField(
+        null=True, blank=True,
+        verbose_name='Minuti di ritardo uscita',
+    )
     assenza_comunicata = models.BooleanField(
         default=False,
         verbose_name='Assenza comunicata dal genitore',
@@ -45,3 +57,35 @@ class Presenza(models.Model):
     def __str__(self):
         stato = 'Presente' if self.presente else 'Assente'
         return f'{self.bambino} — {self.data} ({stato})'
+
+    def save(self, *args, **kwargs):
+        self._calcola_ritardi()
+        super().save(*args, **kwargs)
+
+    def _calcola_ritardi(self):
+        if self.ora_arrivo:
+            if self.ora_arrivo > self.ORA_INGRESSO:
+                dt_arrivo = datetime.combine(datetime.min, self.ora_arrivo)
+                dt_ingresso = datetime.combine(datetime.min, self.ORA_INGRESSO)
+                self.minuti_ritardo_arrivo = int((dt_arrivo - dt_ingresso).total_seconds() // 60)
+            else:
+                self.minuti_ritardo_arrivo = 0
+        else:
+            self.minuti_ritardo_arrivo = None
+
+        if self.ora_uscita:
+            orario_previsto = self._get_orario_uscita_previsto()
+            if orario_previsto and self.ora_uscita > orario_previsto:
+                dt_uscita = datetime.combine(datetime.min, self.ora_uscita)
+                dt_previsto = datetime.combine(datetime.min, orario_previsto)
+                self.minuti_ritardo_uscita = int((dt_uscita - dt_previsto).total_seconds() // 60)
+            else:
+                self.minuti_ritardo_uscita = 0
+        else:
+            self.minuti_ritardo_uscita = None
+
+    def _get_orario_uscita_previsto(self):
+        try:
+            return self.bambino.orario_uscita.orario
+        except Exception:
+            return None

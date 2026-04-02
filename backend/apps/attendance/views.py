@@ -63,7 +63,7 @@ class PresenzaViewSet(viewsets.ModelViewSet):
         bambini_qs = (
             Bambino.objects
             .filter(attivo=True)
-            .select_related('gruppo')
+            .select_related('gruppo', 'orario_uscita')
             .order_by('gruppo__ordine', 'cognome', 'nome')
         )
         if gruppo:
@@ -77,12 +77,19 @@ class PresenzaViewSet(viewsets.ModelViewSet):
         result = []
         for b in bambini_qs:
             presenza = presenze.get(b.id)
+            orario_uscita_previsto = None
+            try:
+                if b.orario_uscita:
+                    orario_uscita_previsto = b.orario_uscita.orario.strftime('%H:%M')
+            except Exception:
+                pass
             result.append({
                 'bambino': {
                     'id': b.id,
                     'nome': b.nome,
                     'cognome': b.cognome,
                     'sezione': b.sezione,
+                    'orario_uscita_previsto': orario_uscita_previsto,
                 },
                 'presenza': PresenzaSerializer(presenza).data if presenza else None,
             })

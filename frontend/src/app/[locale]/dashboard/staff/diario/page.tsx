@@ -22,6 +22,12 @@ interface MediaItem {
   visibile_a_genitori: boolean
 }
 
+interface Tag {
+  id: number
+  nome: string
+  attivo: boolean
+}
+
 interface Registro {
   id: number
   umore: string
@@ -29,6 +35,12 @@ interface Registro {
   note_giornata: string
   autore_nome: string
   aggiornato_at: string
+  sonno_mattina_inizio: string | null
+  sonno_mattina_fine: string | null
+  sonno_pomeriggio_inizio: string | null
+  sonno_pomeriggio_fine: string | null
+  popo: boolean
+  tags_cosa_portare: Tag[]
   media: MediaItem[]
 }
 
@@ -68,14 +80,123 @@ function fmtData(iso: string) {
   })
 }
 
+// ─── TagSelector ──────────────────────────────────────────────────────────────
+
+function TagSelector({
+  allTags,
+  selectedIds,
+  onChange,
+  onNewTag,
+}: {
+  allTags: Tag[]
+  selectedIds: number[]
+  onChange: (ids: number[]) => void
+  onNewTag: (tag: Tag) => void
+}) {
+  const [newNome, setNewNome] = useState('')
+  const [creating, setCreating] = useState(false)
+
+  const toggle = (id: number) => {
+    onChange(
+      selectedIds.includes(id)
+        ? selectedIds.filter(x => x !== id)
+        : [...selectedIds, id]
+    )
+  }
+
+  const creaTag = async () => {
+    const nome = newNome.trim()
+    if (!nome) return
+    setCreating(true)
+    try {
+      const res = await fetch('/api/diario/tags', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nome }),
+      })
+      if (res.ok) {
+        const tag: Tag = await res.json()
+        onNewTag(tag)
+        onChange([...selectedIds, tag.id])
+        setNewNome('')
+      }
+    } finally {
+      setCreating(false)
+    }
+  }
+
+  return (
+    <div>
+      <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#555', marginBottom: '0.375rem' }}>
+        📦 Cosa portare domani
+      </label>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginBottom: '0.5rem' }}>
+        {allTags.filter(t => t.attivo).map(t => (
+          <button
+            key={t.id}
+            type="button"
+            onClick={() => toggle(t.id)}
+            style={{
+              padding: '0.3rem 0.75rem',
+              background: selectedIds.includes(t.id) ? '#0984E3' : '#EAF4FF',
+              color: selectedIds.includes(t.id) ? 'white' : '#0984E3',
+              border: `1px solid ${selectedIds.includes(t.id) ? '#0984E3' : '#BDE0FF'}`,
+              borderRadius: '20px',
+              fontSize: '0.8rem',
+              fontWeight: 600,
+              cursor: 'pointer',
+              fontFamily: 'inherit',
+            }}
+          >
+            {t.nome}
+          </button>
+        ))}
+      </div>
+      <div style={{ display: 'flex', gap: '0.4rem' }}>
+        <input
+          type="text"
+          value={newNome}
+          onChange={e => setNewNome(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); creaTag() } }}
+          placeholder="Nuovo tag..."
+          style={{
+            flex: 1, padding: '0.35rem 0.625rem',
+            border: '1px solid #CBD5E0', borderRadius: '8px',
+            fontSize: '0.8rem', fontFamily: 'inherit',
+          }}
+        />
+        <button
+          type="button"
+          onClick={creaTag}
+          disabled={creating || !newNome.trim()}
+          style={{
+            padding: '0.35rem 0.75rem',
+            background: '#EAF4FF', color: '#0984E3',
+            border: '1px solid #BDE0FF', borderRadius: '8px',
+            fontSize: '0.8rem', fontWeight: 700,
+            cursor: creating ? 'not-allowed' : 'pointer', fontFamily: 'inherit',
+            opacity: creating ? 0.6 : 1,
+          }}
+        >
+          + Aggiungi
+        </button>
+      </div>
+    </div>
+  )
+}
+
 // ─── BambinoCard ──────────────────────────────────────────────────────────────
 
 function BambinoCard({
   entry,
+  allTags,
   onSaved,
+  onNewTag,
 }: {
   entry: GiornataEntry
+  allTags: Tag[]
   onSaved: () => void
+  onNewTag: (tag: Tag) => void
 }) {
   const { bambino, consenso_ok, consenso_msg, registro } = entry
 
@@ -83,24 +204,47 @@ function BambinoCard({
   const [umore, setUmore] = useState(registro?.umore ?? '')
   const [attivita, setAttivita] = useState(registro?.attivita_descrizione ?? '')
   const [note, setNote] = useState(registro?.note_giornata ?? '')
+  const [sonnoMInizio, setSonnoMInizio] = useState(registro?.sonno_mattina_inizio ?? '')
+  const [sonnoMFine, setSonnoMFine] = useState(registro?.sonno_mattina_fine ?? '')
+  const [sonnoPInizio, setSonnoPInizio] = useState(registro?.sonno_pomeriggio_inizio ?? '')
+  const [sonnoPFine, setSonnoPFine] = useState(registro?.sonno_pomeriggio_fine ?? '')
+  const [popo, setPopo] = useState(registro?.popo ?? false)
+  const [tagIds, setTagIds] = useState<number[]>(registro?.tags_cosa_portare?.map(t => t.id) ?? [])
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState('')
   const [previews, setPreviews] = useState<{ url: string; tipo: string }[]>([])
   const fileRef = useRef<HTMLInputElement>(null)
 
-  // Sync state when registro changes (after refresh)
   useEffect(() => {
     setUmore(registro?.umore ?? '')
     setAttivita(registro?.attivita_descrizione ?? '')
     setNote(registro?.note_giornata ?? '')
+    setSonnoMInizio(registro?.sonno_mattina_inizio ?? '')
+    setSonnoMFine(registro?.sonno_mattina_fine ?? '')
+    setSonnoPInizio(registro?.sonno_pomeriggio_inizio ?? '')
+    setSonnoPFine(registro?.sonno_pomeriggio_fine ?? '')
+    setPopo(registro?.popo ?? false)
+    setTagIds(registro?.tags_cosa_portare?.map(t => t.id) ?? [])
   }, [registro])
 
   const handleSave = async () => {
     setSaving(true)
     setError('')
     try {
-      const body = { bambino: bambino.id, data: todayISO(), umore, attivita_descrizione: attivita, note_giornata: note }
+      const body = {
+        bambino: bambino.id,
+        data: todayISO(),
+        umore,
+        attivita_descrizione: attivita,
+        note_giornata: note,
+        sonno_mattina_inizio: sonnoMInizio || null,
+        sonno_mattina_fine: sonnoMFine || null,
+        sonno_pomeriggio_inizio: sonnoPInizio || null,
+        sonno_pomeriggio_fine: sonnoPFine || null,
+        popo,
+        tags_cosa_portare: tagIds,
+      }
       const res = registro
         ? await fetch(`/api/diario/registri/${registro.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
         : await fetch('/api/diario/registri', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
@@ -189,6 +333,9 @@ function BambinoCard({
             {registro?.umore && (
               <span style={{ marginLeft: '0.5rem' }}>{UMORE_EMOJI[registro.umore]}</span>
             )}
+            {registro?.popo && (
+              <span style={{ marginLeft: '0.375rem', fontSize: '0.85rem' }}>💩</span>
+            )}
           </p>
           <p style={{ margin: 0, fontSize: '0.775rem', color: '#aaa' }}>
             {bambino.sezione && `Sez. ${bambino.sezione} · `}
@@ -211,7 +358,6 @@ function BambinoCard({
       {expanded && (
         <div style={{ padding: '0 1.25rem 1.25rem', borderTop: '1px solid #F0F0F0' }}>
 
-          {/* Warning consenso */}
           {!consenso_ok && (
             <div style={{
               background: '#FFF3CD', border: '1px solid #FFEAA7',
@@ -224,7 +370,6 @@ function BambinoCard({
             </div>
           )}
 
-          {/* Warning non fotografabile */}
           {bambino.non_fotografabile && (
             <div style={{
               background: '#333', color: 'white', borderRadius: '10px',
@@ -235,9 +380,9 @@ function BambinoCard({
             </div>
           )}
 
-          {/* Form */}
           <div style={{ marginTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
 
+            {/* Umore */}
             <div>
               <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#555', marginBottom: '0.375rem' }}>
                 Come stava oggi?
@@ -258,6 +403,7 @@ function BambinoCard({
               </select>
             </div>
 
+            {/* Attività */}
             <div>
               <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#555', marginBottom: '0.375rem' }}>
                 Attività del giorno
@@ -276,6 +422,7 @@ function BambinoCard({
               />
             </div>
 
+            {/* Note */}
             <div>
               <label style={{ display: 'block', fontSize: '0.8rem', fontWeight: 600, color: '#555', marginBottom: '0.375rem' }}>
                 Note per i genitori
@@ -294,13 +441,84 @@ function BambinoCard({
               />
             </div>
 
+            {/* Sonno */}
+            <div style={{ background: '#F7FBFF', borderRadius: '10px', padding: '0.875rem' }}>
+              <p style={{ margin: '0 0 0.625rem', fontSize: '0.8rem', fontWeight: 700, color: '#0984E3' }}>
+                😴 Sonno
+              </p>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.75rem', color: '#666', marginBottom: '0.25rem' }}>Mattina: dalle</label>
+                  <input
+                    type="time"
+                    value={sonnoMInizio}
+                    onChange={e => setSonnoMInizio(e.target.value)}
+                    style={{ width: '100%', padding: '0.35rem 0.5rem', border: '1px solid #CBD5E0', borderRadius: '6px', fontSize: '0.85rem', fontFamily: 'inherit', boxSizing: 'border-box' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.75rem', color: '#666', marginBottom: '0.25rem' }}>alle</label>
+                  <input
+                    type="time"
+                    value={sonnoMFine}
+                    onChange={e => setSonnoMFine(e.target.value)}
+                    style={{ width: '100%', padding: '0.35rem 0.5rem', border: '1px solid #CBD5E0', borderRadius: '6px', fontSize: '0.85rem', fontFamily: 'inherit', boxSizing: 'border-box' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.75rem', color: '#666', marginBottom: '0.25rem' }}>Pomeriggio: dalle</label>
+                  <input
+                    type="time"
+                    value={sonnoPInizio}
+                    onChange={e => setSonnoPInizio(e.target.value)}
+                    style={{ width: '100%', padding: '0.35rem 0.5rem', border: '1px solid #CBD5E0', borderRadius: '6px', fontSize: '0.85rem', fontFamily: 'inherit', boxSizing: 'border-box' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.75rem', color: '#666', marginBottom: '0.25rem' }}>alle</label>
+                  <input
+                    type="time"
+                    value={sonnoPFine}
+                    onChange={e => setSonnoPFine(e.target.value)}
+                    style={{ width: '100%', padding: '0.35rem 0.5rem', border: '1px solid #CBD5E0', borderRadius: '6px', fontSize: '0.85rem', fontFamily: 'inherit', boxSizing: 'border-box' }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Popò */}
+            <label style={{
+              display: 'flex', alignItems: 'center', gap: '0.625rem',
+              cursor: 'pointer', userSelect: 'none',
+              background: popo ? '#FFF9E6' : '#F7FAFC',
+              border: `2px solid ${popo ? '#F6AD55' : '#E2E8F0'}`,
+              borderRadius: '10px', padding: '0.75rem 1rem',
+            }}>
+              <input
+                type="checkbox"
+                checked={popo}
+                onChange={e => setPopo(e.target.checked)}
+                style={{ width: 18, height: 18, cursor: 'pointer' }}
+              />
+              <span style={{ fontSize: '0.9rem', fontWeight: 600, color: popo ? '#744210' : '#555' }}>
+                💩 Ha fatto la popò
+              </span>
+            </label>
+
+            {/* Tags cosa portare */}
+            <TagSelector
+              allTags={allTags}
+              selectedIds={tagIds}
+              onChange={setTagIds}
+              onNewTag={onNewTag}
+            />
+
             {error && (
               <p style={{ margin: 0, fontSize: '0.83rem', color: '#C0392B', background: '#FADBD8', padding: '0.5rem 0.75rem', borderRadius: '8px' }}>
                 {error}
               </p>
             )}
 
-            {/* Bottoni azione */}
             <div style={{ display: 'flex', gap: '0.625rem', flexWrap: 'wrap' }}>
               <button
                 onClick={handleSave}
@@ -417,8 +635,16 @@ export default function StaffDiarioPage() {
   const [data, setData] = useState(todayISO())
   const [sezione, setSezione] = useState('')
   const [entries, setEntries] = useState<GiornataEntry[]>([])
+  const [allTags, setAllTags] = useState<Tag[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+
+  useEffect(() => {
+    fetch('/api/diario/tags')
+      .then(r => r.ok ? r.json() : [])
+      .then(d => setAllTags(Array.isArray(d) ? d : (d.results ?? [])))
+      .catch(() => {})
+  }, [])
 
   const fetchGiornata = useCallback(async () => {
     setError('')
@@ -455,7 +681,6 @@ export default function StaffDiarioPage() {
   return (
     <div style={{ minHeight: '100vh', background: '#EAF4FF' }}>
 
-      {/* Header */}
       <div style={{ background: 'linear-gradient(135deg, #0984E3 0%, #0652DD 100%)', padding: '1.5rem 1.5rem 2rem', color: 'white' }}>
         <div style={{ maxWidth: '720px', margin: '0 auto' }}>
           <button
@@ -473,7 +698,6 @@ export default function StaffDiarioPage() {
 
       <div style={{ maxWidth: '720px', margin: '0 auto', padding: '1.5rem 1rem' }}>
 
-        {/* Filtri */}
         <div style={{
           background: 'white', borderRadius: '14px', padding: '1rem 1.25rem',
           marginBottom: '1.25rem', boxShadow: '0 2px 8px rgba(9,132,227,0.08)',
@@ -538,7 +762,9 @@ export default function StaffDiarioPage() {
             <BambinoCard
               key={entry.bambino.id}
               entry={entry}
+              allTags={allTags}
               onSaved={fetchGiornata}
+              onNewTag={tag => setAllTags(prev => [...prev, tag])}
             />
           ))
         )}
