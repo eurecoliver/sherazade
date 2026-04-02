@@ -1,4 +1,5 @@
 from django.contrib.auth import authenticate
+from django.utils.decorators import method_decorator
 from django_ratelimit.decorators import ratelimit
 from rest_framework import generics, permissions, status, viewsets, filters
 from rest_framework.response import Response
@@ -22,7 +23,7 @@ class IsAdminOrDirettrice(permissions.BasePermission):
 class LoginView(APIView):
     permission_classes = [permissions.AllowAny]
 
-    @ratelimit(key='ip', rate='5/5m', method='POST', block=False)
+    @method_decorator(ratelimit(key='ip', rate='5/5m', method='POST', block=False))
     def post(self, request):
         if getattr(request, 'limited', False):
             return Response(
