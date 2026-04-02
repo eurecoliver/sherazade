@@ -1,5 +1,5 @@
 from django.contrib.auth import authenticate
-from ratelimit.decorators import ratelimit
+from django_ratelimit.decorators import ratelimit
 from rest_framework import generics, permissions, status, viewsets, filters
 from rest_framework.response import Response
 from rest_framework.views import APIView
