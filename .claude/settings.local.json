@@ -7,7 +7,11 @@
       "Bash(mkdir -p \"/Users/oliver/repos/sherazade/frontend/src/app/api/diario/registri/[id]\")",
       "Bash(mkdir -p \"/Users/oliver/repos/sherazade/frontend/src/app/api/diario/media/[id]\")",
       "Bash(grep -n \"sezione\\\\|SEZIONI\" /Users/oliver/repos/sherazade/frontend/src/app/[locale]/dashboard/admin/bambini/page.tsx)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(ssh:*)",
+      "Bash(/usr/local/bin/docker ps:*)",
+      "Read(//Applications/Docker.app/Contents/Resources/bin/**)",
+      "Read(//Users/oliver/.docker/bin/**)"
     ]
   }
 }

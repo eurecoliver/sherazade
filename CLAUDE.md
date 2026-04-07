@@ -83,6 +83,7 @@ IMPORTANTE: Al termine di ogni task, prima di considerarlo completato, aggiorna 
 - Accedere al server: ssh root@159.69.9.230
 - Deploy sul server: cd /var/www/sherazade && bash deploy.sh
 - Avviare Claude Code: cd ~/repos/sherazade && claude
+'- Per analisi massive di codice, lettura log o documentazione, delega SEMPRE l'esplorazione a Gemini usando questo comando: gemini -p "inserisci qui il prompt".'
 
 ## Decisioni Tecniche
 
