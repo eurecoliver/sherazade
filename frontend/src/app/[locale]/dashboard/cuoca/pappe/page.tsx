@@ -6,6 +6,12 @@ import { useRouter } from 'next/navigation'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
+interface NuovoPiattoForm {
+  tipo: string
+  descrizione: string
+  note: string
+}
+
 interface Allergia {
   id: number
   tipo: string
@@ -52,6 +58,17 @@ const GRAVITA_COLOR: Record<string, { bg: string; text: string; border: string }
   anafilassi: { bg: '#C0392B', text: 'white', border: '#922B21' },
 }
 
+const TIPI_PIATTO = [
+  { value: 'colazione', label: 'Colazione' },
+  { value: 'primo', label: 'Primo' },
+  { value: 'secondo', label: 'Secondo' },
+  { value: 'monopiatto', label: 'Monopiatto' },
+  { value: 'contorno', label: 'Contorno' },
+  { value: 'pane', label: 'Pane' },
+  { value: 'frutta', label: 'Frutta' },
+  { value: 'merenda', label: 'Merenda' },
+]
+
 const TIPO_LABEL: Record<string, { label: string; emoji: string; color: string }> = {
   colazione:  { label: 'Colazione',  emoji: '☕', color: '#F39C12' },
   primo:      { label: 'Primo',      emoji: '🍝', color: '#E17055' },
@@ -75,6 +92,10 @@ export default function CuocaPappePage() {
   const [menu, setMenu] = useState<MenuGiorno | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [showNuovoPiatto, setShowNuovoPiatto] = useState(false)
+  const [nuovoPiatto, setNuovoPiatto] = useState<NuovoPiattoForm>({ tipo: 'primo', descrizione: '', note: '' })
+  const [savingPiatto, setSavingPiatto] = useState(false)
+  const [msgPiatto, setMsgPiatto] = useState('')
 
   const today = new Date().toISOString().split('T')[0]
 
@@ -117,6 +138,25 @@ export default function CuocaPappePage() {
   useEffect(() => {
     if (selectedGruppo) fetchData()
   }, [fetchData, selectedGruppo])
+
+  const creaPiatto = async () => {
+    if (!nuovoPiatto.descrizione.trim()) return
+    setSavingPiatto(true); setMsgPiatto('')
+    const res = await fetch('/api/pappe/piatti', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(nuovoPiatto),
+    })
+    if (res.ok) {
+      setMsgPiatto('✓ Piatto aggiunto!')
+      setNuovoPiatto({ tipo: 'primo', descrizione: '', note: '' })
+      setTimeout(() => { setMsgPiatto(''); setShowNuovoPiatto(false) }, 1500)
+    } else {
+      const d = await res.json()
+      setMsgPiatto(d.detail || 'Errore nel salvataggio.')
+    }
+    setSavingPiatto(false)
+  }
 
   const gruppoCorrente = gruppi.find(g => g.id === selectedGruppo)
   const gravi = bambini.filter(b => b.ha_allergie_gravi)
@@ -233,6 +273,66 @@ export default function CuocaPappePage() {
                       </div>
                     )
                   })}
+                </div>
+              )}
+            </div>
+
+            {/* Aggiungi nuovo piatto */}
+            <div style={{ background: 'white', borderRadius: '14px', padding: '1rem 1.25rem', marginBottom: '1.25rem', boxShadow: '0 2px 8px rgba(0,184,148,0.08)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <p style={{ margin: 0, fontWeight: 700, color: '#00897B', fontSize: '0.9rem' }}>➕ Aggiungi piatto al catalogo</p>
+                <button
+                  onClick={() => setShowNuovoPiatto(v => !v)}
+                  style={{ background: showNuovoPiatto ? '#EAFAF1' : '#00B894', color: showNuovoPiatto ? '#00897B' : 'white', border: 'none', borderRadius: '8px', padding: '0.35rem 0.875rem', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
+                >
+                  {showNuovoPiatto ? 'Chiudi' : '+ Nuovo'}
+                </button>
+              </div>
+
+              {showNuovoPiatto && (
+                <div style={{ marginTop: '1rem', display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
+                  <div style={{ display: 'flex', gap: '0.625rem', flexWrap: 'wrap' }}>
+                    <div style={{ flex: '0 0 auto' }}>
+                      <label style={{ display: 'block', fontSize: '0.775rem', fontWeight: 700, color: '#555', marginBottom: '0.25rem' }}>Tipo</label>
+                      <select
+                        value={nuovoPiatto.tipo}
+                        onChange={e => setNuovoPiatto(f => ({ ...f, tipo: e.target.value }))}
+                        style={{ padding: '0.5rem 0.75rem', border: '2px solid #D5F5E3', borderRadius: '8px', fontSize: '0.875rem', fontFamily: 'inherit', background: '#FAFFFE' }}
+                      >
+                        {TIPI_PIATTO.map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+                      </select>
+                    </div>
+                    <div style={{ flex: 1, minWidth: 160 }}>
+                      <label style={{ display: 'block', fontSize: '0.775rem', fontWeight: 700, color: '#555', marginBottom: '0.25rem' }}>Descrizione</label>
+                      <input
+                        type="text"
+                        value={nuovoPiatto.descrizione}
+                        onChange={e => setNuovoPiatto(f => ({ ...f, descrizione: e.target.value }))}
+                        placeholder="es. Pasta al pomodoro"
+                        style={{ width: '100%', padding: '0.5rem 0.75rem', border: '2px solid #D5F5E3', borderRadius: '8px', fontSize: '0.875rem', fontFamily: 'inherit', background: '#FAFFFE', boxSizing: 'border-box' }}
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.775rem', fontWeight: 700, color: '#555', marginBottom: '0.25rem' }}>Note (opzionale)</label>
+                    <input
+                      type="text"
+                      value={nuovoPiatto.note}
+                      onChange={e => setNuovoPiatto(f => ({ ...f, note: e.target.value }))}
+                      placeholder="es. senza glutine"
+                      style={{ width: '100%', padding: '0.5rem 0.75rem', border: '2px solid #D5F5E3', borderRadius: '8px', fontSize: '0.875rem', fontFamily: 'inherit', background: '#FAFFFE', boxSizing: 'border-box' }}
+                    />
+                  </div>
+                  {msgPiatto && (
+                    <p style={{ margin: 0, fontSize: '0.825rem', color: msgPiatto.startsWith('✓') ? '#27AE60' : '#C0392B', fontWeight: 600 }}>{msgPiatto}</p>
+                  )}
+                  <button
+                    onClick={creaPiatto}
+                    disabled={savingPiatto || !nuovoPiatto.descrizione.trim()}
+                    style={{ alignSelf: 'flex-start', padding: '0.5rem 1.25rem', background: '#00B894', color: 'white', border: 'none', borderRadius: '8px', fontFamily: 'inherit', fontWeight: 700, fontSize: '0.875rem', cursor: savingPiatto ? 'not-allowed' : 'pointer', opacity: savingPiatto ? 0.7 : 1 }}
+                  >
+                    {savingPiatto ? 'Salvataggio...' : 'Aggiungi piatto'}
+                  </button>
                 </div>
               )}
             </div>

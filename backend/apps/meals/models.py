@@ -194,10 +194,11 @@ class PiattoAssegnazione(models.Model):
         on_delete=models.CASCADE,
         related_name='assegnazioni',
     )
-    gruppo = models.ForeignKey(
+    gruppi = models.ManyToManyField(
         'config.Gruppo',
-        on_delete=models.CASCADE,
         related_name='piatti_assegnati',
+        blank=True,
+        help_text='Gruppi a cui è assegnato questo piatto nel ciclo.',
     )
     sempre = models.BooleanField(
         default=False,
@@ -212,10 +213,10 @@ class PiattoAssegnazione(models.Model):
     class Meta:
         verbose_name = 'Assegnazione Piatto'
         verbose_name_plural = 'Assegnazioni Piatti'
-        unique_together = [('piatto', 'gruppo')]
 
     def __str__(self):
-        return f'{self.piatto} → {self.gruppo}'
+        gruppi = ', '.join(g.nome for g in self.gruppi.all()) or 'nessun gruppo'
+        return f'{self.piatto} → {gruppi}'
 
 
 class SostituzionePiatto(models.Model):

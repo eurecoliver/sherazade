@@ -26,8 +26,8 @@ interface Assegnazione {
   piatto: number
   piatto_descrizione: string
   piatto_tipo: string
-  gruppo: number
-  gruppo_nome: string
+  gruppi: number[]
+  gruppi_nomi: string[]
   sempre: boolean
   giorni_per_settimana: Record<string, number[]>
 }
@@ -340,12 +340,17 @@ function TabPiatti() {
 
 // ─── Tab: Calendario ─────────────────────────────────────────────────────────
 
+type CalForm = { piatto?: string; sempre: boolean; giorni: Record<string, number[]>; gruppi: number[] }
+const EMPTY_CAL_FORM = (): CalForm => ({ piatto: '', sempre: false, giorni: {}, gruppi: [] })
+
 function TabCalendario({ gruppi }: { gruppi: Gruppo[] }) {
   const [selectedGruppo, setSelectedGruppo] = useState<number | null>(gruppi[0]?.id ?? null)
   const [piatti, setPiatti] = useState<Piatto[]>([])
   const [assegnazioni, setAssegnazioni] = useState<Assegnazione[]>([])
   const [showAddForm, setShowAddForm] = useState(false)
-  const [addForm, setAddForm] = useState({ piatto: '', sempre: false, giorni: {} as Record<string, number[]> })
+  const [addForm, setAddForm] = useState<CalForm>(EMPTY_CAL_FORM())
+  const [editingId, setEditingId] = useState<number | null>(null)
+  const [editForm, setEditForm] = useState<CalForm>(EMPTY_CAL_FORM())
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
@@ -361,14 +366,14 @@ function TabCalendario({ gruppi }: { gruppi: Gruppo[] }) {
   useEffect(() => { loadAssegnazioni() }, [loadAssegnazioni])
 
   const salvaAssegnazione = async () => {
-    if (!addForm.piatto || !selectedGruppo) return
+    if (!addForm.piatto || addForm.gruppi.length === 0) return
     setSaving(true)
     const res = await fetch('/api/pappe/assegnazioni', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         piatto: parseInt(addForm.piatto),
-        gruppo: selectedGruppo,
+        gruppi: addForm.gruppi,
         sempre: addForm.sempre,
         giorni_per_settimana: addForm.sempre ? {} : addForm.giorni,
       }),
@@ -376,28 +381,39 @@ function TabCalendario({ gruppi }: { gruppi: Gruppo[] }) {
     if (res.ok) {
       await loadAssegnazioni()
       setShowAddForm(false)
-      setAddForm({ piatto: '', sempre: false, giorni: {} })
+      setAddForm(EMPTY_CAL_FORM())
+    }
+    setSaving(false)
+  }
+
+  const apriEdit = (a: Assegnazione) => {
+    setEditingId(a.id)
+    setEditForm({ sempre: a.sempre, giorni: { ...a.giorni_per_settimana }, gruppi: [...a.gruppi] })
+  }
+
+  const salvaEdit = async () => {
+    if (!editingId) return
+    setSaving(true)
+    const res = await fetch(`/api/pappe/assegnazioni/${editingId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        gruppi: editForm.gruppi,
+        sempre: editForm.sempre,
+        giorni_per_settimana: editForm.sempre ? {} : editForm.giorni,
+      }),
+    })
+    if (res.ok) {
+      await loadAssegnazioni()
+      setEditingId(null)
     }
     setSaving(false)
   }
 
   const eliminaAssegnazione = async (id: number) => {
+    if (!confirm('Eliminare questa assegnazione?')) return
     await fetch(`/api/pappe/assegnazioni/${id}`, { method: 'DELETE' })
     await loadAssegnazioni()
-  }
-
-  const toggleGiorno = (sett: number, giorno: number) => {
-    setAddForm(f => {
-      const key = String(sett)
-      const curr = f.giorni[key] ?? []
-      return {
-        ...f,
-        giorni: {
-          ...f.giorni,
-          [key]: curr.includes(giorno) ? curr.filter(d => d !== giorno) : [...curr, giorno],
-        },
-      }
-    })
   }
 
   // Raggruppa assegnazioni per tipo piatto
@@ -406,27 +422,55 @@ function TabCalendario({ gruppi }: { gruppi: Gruppo[] }) {
     byTipo[a.piatto_tipo] = [...(byTipo[a.piatto_tipo] ?? []), a]
   })
 
+  const GiornoGrid = ({ form, setter }: { form: CalForm; setter: (fn: (f: CalForm) => CalForm) => void }) => (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
+      {Array.from({ length: 5 }, (_, si) => (
+        <div key={si} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+          <span style={{ width: 70, fontSize: '0.8rem', color: '#555', fontWeight: 600 }}>Sett. {si + 1}</span>
+          {GIORNI.map((g, gi) => {
+            const sel = (form.giorni[String(si + 1)] ?? []).includes(gi)
+            return (
+              <button key={gi} type="button"
+                onClick={() => setter(f => { const key = String(si + 1); const curr = f.giorni[key] ?? []; return { ...f, giorni: { ...f.giorni, [key]: curr.includes(gi) ? curr.filter(d => d !== gi) : [...curr, gi] } } })}
+                style={{ width: 36, height: 28, background: sel ? '#6C5CE7' : 'white', color: sel ? 'white' : '#888', border: `1.5px solid ${sel ? '#6C5CE7' : '#D6CCFF'}`, borderRadius: '6px', fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                {g}
+              </button>
+            )
+          })}
+        </div>
+      ))}
+    </div>
+  )
+
+  const GruppiCheckbox = ({ form, setter }: { form: CalForm; setter: (fn: (f: CalForm) => CalForm) => void }) => (
+    <div>
+      <label style={labelStyle}>Gruppi</label>
+      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.25rem' }}>
+        {gruppi.map(g => {
+          const sel = form.gruppi.includes(g.id)
+          return (
+            <button key={g.id} type="button"
+              onClick={() => setter(f => ({ ...f, gruppi: f.gruppi.includes(g.id) ? f.gruppi.filter(x => x !== g.id) : [...f.gruppi, g.id] }))}
+              style={{ padding: '0.3rem 0.75rem', background: sel ? g.colore : 'white', color: sel ? 'white' : '#555', border: `2px solid ${g.colore}`, borderRadius: '8px', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+              {g.nome}
+            </button>
+          )
+        })}
+      </div>
+    </div>
+  )
+
   return (
     <div>
       <h3 style={{ margin: '0 0 1rem', color: '#333', fontSize: '1rem', fontWeight: 700 }}>
         📅 Calendario Ciclo — 5 Settimane
       </h3>
 
-      {/* Selettore gruppo */}
+      {/* Selettore gruppo (solo per visualizzazione) */}
       <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1.25rem' }}>
         {gruppi.map(g => (
-          <button
-            key={g.id}
-            onClick={() => setSelectedGruppo(g.id)}
-            style={{
-              padding: '0.4rem 0.875rem',
-              background: selectedGruppo === g.id ? g.colore : 'white',
-              color: selectedGruppo === g.id ? 'white' : '#555',
-              border: `2px solid ${g.colore}`,
-              borderRadius: '8px', fontSize: '0.8rem', fontWeight: 600,
-              cursor: 'pointer', fontFamily: 'inherit',
-            }}
-          >
+          <button key={g.id} onClick={() => setSelectedGruppo(g.id)}
+            style={{ padding: '0.4rem 0.875rem', background: selectedGruppo === g.id ? g.colore : 'white', color: selectedGruppo === g.id ? 'white' : '#555', border: `2px solid ${g.colore}`, borderRadius: '8px', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
             {g.nome}
           </button>
         ))}
@@ -436,83 +480,66 @@ function TabCalendario({ gruppi }: { gruppi: Gruppo[] }) {
         <p style={{ color: '#aaa', fontSize: '0.875rem' }}>Seleziona un gruppo per vedere il calendario.</p>
       ) : (
         <>
-          {/* Griglia 5 settimane × 5 giorni */}
-          <div style={{ overflowX: 'auto', marginBottom: '1.25rem' }}>
-            <table style={{ borderCollapse: 'collapse', minWidth: 600, width: '100%', fontSize: '0.8rem' }}>
-              <thead>
-                <tr>
-                  <th style={thStyle}>Tipo/Piatto</th>
-                  {Array.from({ length: 5 }, (_, s) => (
-                    <th key={s} colSpan={5} style={{ ...thStyle, background: '#6C5CE7', color: 'white' }}>
-                      Settimana {s + 1}
-                    </th>
-                  ))}
-                </tr>
-                <tr>
-                  <th style={thStyle}></th>
-                  {Array.from({ length: 5 }, (_, _s) =>
-                    GIORNI.map((g, gi) => (
-                      <th key={`${_s}-${gi}`} style={{ ...thStyle, fontSize: '0.7rem', color: '#888' }}>{g}</th>
-                    ))
-                  )}
-                </tr>
-              </thead>
-              <tbody>
-                {TIPI_PIATTO.map(tipo => {
-                  const assegnTipo = byTipo[tipo.value] ?? []
-                  if (assegnTipo.length === 0) return null
-                  return assegnTipo.map((a, ai) => (
-                    <tr key={a.id} style={{ background: ai % 2 === 0 ? 'white' : '#FAFAFA' }}>
-                      {ai === 0 && (
-                        <td rowSpan={assegnTipo.length} style={{ ...tdStyle, background: `${tipo.color}18`, fontWeight: 700, color: tipo.color, whiteSpace: 'nowrap', verticalAlign: 'top', paddingTop: '0.5rem' }}>
-                          {tipo.label}
-                        </td>
-                      )}
-                      <td colSpan={25} style={{ padding: '0.25rem 0.5rem' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-                          <span style={{ fontWeight: 600, color: '#333', fontSize: '0.8rem' }}>{a.piatto_descrizione}</span>
+          {/* Lista assegnazioni */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '1.25rem' }}>
+            {assegnazioni.length === 0 && (
+              <p style={{ color: '#aaa', fontSize: '0.875rem', textAlign: 'center', padding: '1.5rem' }}>
+                Nessun piatto assegnato a questo gruppo. Clicca &quot;+ Assegna piatto&quot; per iniziare.
+              </p>
+            )}
+            {TIPI_PIATTO.map(tipo => {
+              const list = byTipo[tipo.value] ?? []
+              if (list.length === 0) return null
+              return (
+                <div key={tipo.value}>
+                  <p style={{ margin: '0.5rem 0 0.25rem', fontSize: '0.775rem', fontWeight: 700, color: tipo.color, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    {tipo.label}
+                  </p>
+                  {list.map(a => (
+                    <div key={a.id} style={{ display: 'flex', alignItems: 'flex-start', gap: '0.625rem', background: 'white', borderRadius: '10px', padding: '0.625rem 0.875rem', border: '1.5px solid #E8E0FF', marginBottom: '0.375rem' }}>
+                      <div style={{ flex: 1 }}>
+                        <span style={{ fontWeight: 700, color: '#333', fontSize: '0.875rem' }}>{a.piatto_descrizione}</span>
+                        <div style={{ marginTop: '0.25rem', display: 'flex', flexWrap: 'wrap', gap: '0.25rem' }}>
+                          {/* Gruppi */}
+                          {a.gruppi_nomi.map(n => (
+                            <span key={n} style={{ background: '#F3F0FF', color: '#6C5CE7', border: '1px solid #D6CCFF', borderRadius: '6px', padding: '1px 7px', fontSize: '0.72rem', fontWeight: 600 }}>{n}</span>
+                          ))}
+                          {/* Giorni / sempre */}
                           {a.sempre ? (
                             <span style={{ background: '#00B89422', color: '#00B894', border: '1px solid #00B89455', borderRadius: '6px', padding: '1px 8px', fontSize: '0.72rem', fontWeight: 700 }}>ogni giorno</span>
                           ) : (
                             Object.entries(a.giorni_per_settimana).map(([sett, giorni]) =>
                               (giorni as number[]).map(g => (
-                                <span key={`${sett}-${g}`} style={{ background: '#F3F0FF', color: '#6C5CE7', border: '1px solid #D6CCFF', borderRadius: '4px', padding: '1px 6px', fontSize: '0.7rem' }}>
+                                <span key={`${sett}-${g}`} style={{ background: '#EEF2FF', color: '#555', borderRadius: '4px', padding: '1px 6px', fontSize: '0.7rem' }}>
                                   S{sett}/{GIORNI[g]}
                                 </span>
                               ))
                             )
                           )}
-                          <button onClick={() => eliminaAssegnazione(a.id)} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#E17055', cursor: 'pointer', fontSize: '0.75rem', padding: '0 4px' }}>
-                            ✕
-                          </button>
                         </div>
-                      </td>
-                    </tr>
-                  ))
-                })}
-                {assegnazioni.length === 0 && (
-                  <tr>
-                    <td colSpan={26} style={{ textAlign: 'center', padding: '2rem', color: '#aaa', fontSize: '0.875rem' }}>
-                      Nessun piatto assegnato a questo gruppo. Clicca "+ Assegna piatto" per iniziare.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+                      </div>
+                      <div style={{ display: 'flex', gap: '0.375rem', flexShrink: 0 }}>
+                        <button onClick={() => apriEdit(a)} style={{ background: '#F3F0FF', border: 'none', color: '#6C5CE7', cursor: 'pointer', borderRadius: '6px', padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}>✏️</button>
+                        <button onClick={() => eliminaAssegnazione(a.id)} style={{ background: '#FFF0EE', border: 'none', color: '#E17055', cursor: 'pointer', borderRadius: '6px', padding: '0.25rem 0.5rem', fontSize: '0.75rem' }}>🗑</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )
+            })}
           </div>
 
-          <button
-            onClick={() => setShowAddForm(!showAddForm)}
-            style={{ padding: '0.5rem 1rem', background: '#6C5CE7', color: 'white', border: 'none', borderRadius: '8px', fontFamily: 'inherit', fontWeight: 600, fontSize: '0.825rem', cursor: 'pointer', marginBottom: '1rem' }}
-          >
+          <button onClick={() => { setShowAddForm(!showAddForm); setAddForm({ ...EMPTY_CAL_FORM(), gruppi: selectedGruppo ? [selectedGruppo] : [] }) }}
+            style={{ padding: '0.5rem 1rem', background: '#6C5CE7', color: 'white', border: 'none', borderRadius: '8px', fontFamily: 'inherit', fontWeight: 600, fontSize: '0.825rem', cursor: 'pointer', marginBottom: '1rem' }}>
             + Assegna piatto
           </button>
 
+          {/* Form aggiungi */}
           {showAddForm && (
             <div style={{ background: '#F3F0FF', borderRadius: '12px', padding: '1.25rem', marginBottom: '1rem' }}>
               <h4 style={{ margin: '0 0 1rem', fontSize: '0.875rem', color: '#6C5CE7' }}>Assegna piatto al ciclo</h4>
 
-              <div style={{ display: 'flex', gap: '0.625rem', alignItems: 'flex-end', flexWrap: 'wrap', marginBottom: '0.875rem' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
                 <div>
                   <label style={labelStyle}>Piatto</label>
                   <select value={addForm.piatto} onChange={e => setAddForm(f => ({ ...f, piatto: e.target.value }))} style={inputStyle}>
@@ -526,52 +553,59 @@ function TabCalendario({ gruppi }: { gruppi: Gruppo[] }) {
                     ))}
                   </select>
                 </div>
+
+                <GruppiCheckbox form={addForm} setter={setAddForm} />
+
                 <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.825rem', color: '#555', cursor: 'pointer' }}>
                   <input type="checkbox" checked={addForm.sempre} onChange={e => setAddForm(f => ({ ...f, sempre: e.target.checked }))} />
                   Ogni giorno (es. pane, acqua)
                 </label>
+
+                {!addForm.sempre && (
+                  <div>
+                    <p style={{ margin: '0 0 0.5rem', fontSize: '0.8rem', color: '#555', fontWeight: 600 }}>Settimana e giorno:</p>
+                    <GiornoGrid form={addForm} setter={setAddForm} />
+                  </div>
+                )}
               </div>
 
-              {!addForm.sempre && (
-                <div style={{ marginBottom: '0.875rem' }}>
-                  <p style={{ margin: '0 0 0.5rem', fontSize: '0.8rem', color: '#555', fontWeight: 600 }}>
-                    Seleziona settimana e giorno:
-                  </p>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
-                    {Array.from({ length: 5 }, (_, si) => (
-                      <div key={si} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <span style={{ width: 70, fontSize: '0.8rem', color: '#555', fontWeight: 600 }}>Sett. {si + 1}</span>
-                        {GIORNI.map((g, gi) => {
-                          const sel = (addForm.giorni[String(si + 1)] ?? []).includes(gi)
-                          return (
-                            <button
-                              key={gi}
-                              type="button"
-                              onClick={() => toggleGiorno(si + 1, gi)}
-                              style={{
-                                width: 36, height: 28,
-                                background: sel ? '#6C5CE7' : 'white',
-                                color: sel ? 'white' : '#888',
-                                border: `1.5px solid ${sel ? '#6C5CE7' : '#D6CCFF'}`,
-                                borderRadius: '6px', fontSize: '0.72rem', fontWeight: 600,
-                                cursor: 'pointer', fontFamily: 'inherit',
-                              }}
-                            >
-                              {g}
-                            </button>
-                          )
-                        })}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <button onClick={salvaAssegnazione} disabled={saving || !addForm.piatto} style={saveBtn}>
+              <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
+                <button onClick={salvaAssegnazione} disabled={saving || !addForm.piatto || addForm.gruppi.length === 0} style={saveBtn}>
                   {saving ? '...' : 'Assegna'}
                 </button>
                 <button onClick={() => setShowAddForm(false)} style={cancelBtn}>Annulla</button>
+              </div>
+            </div>
+          )}
+
+          {/* Modal modifica */}
+          {editingId !== null && (
+            <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 999, padding: '1rem' }}>
+              <div style={{ background: 'white', borderRadius: '16px', padding: '1.5rem', maxWidth: 480, width: '100%', boxShadow: '0 8px 40px rgba(0,0,0,0.18)' }}>
+                <h4 style={{ margin: '0 0 1.25rem', fontSize: '1rem', color: '#333' }}>Modifica assegnazione</h4>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.875rem' }}>
+                  <GruppiCheckbox form={editForm} setter={setEditForm} />
+
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.825rem', color: '#555', cursor: 'pointer' }}>
+                    <input type="checkbox" checked={editForm.sempre} onChange={e => setEditForm(f => ({ ...f, sempre: e.target.checked }))} />
+                    Ogni giorno
+                  </label>
+
+                  {!editForm.sempre && (
+                    <div>
+                      <p style={{ margin: '0 0 0.5rem', fontSize: '0.8rem', color: '#555', fontWeight: 600 }}>Settimana e giorno:</p>
+                      <GiornoGrid form={editForm} setter={setEditForm} />
+                    </div>
+                  )}
+                </div>
+
+                <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1.25rem' }}>
+                  <button onClick={salvaEdit} disabled={saving || editForm.gruppi.length === 0} style={saveBtn}>
+                    {saving ? '...' : 'Salva'}
+                  </button>
+                  <button onClick={() => setEditingId(null)} style={cancelBtn}>Annulla</button>
+                </div>
               </div>
             </div>
           )}

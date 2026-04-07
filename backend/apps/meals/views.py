@@ -319,7 +319,7 @@ class PiattoViewSet(viewsets.ModelViewSet):
         return qs
 
     def perform_create(self, serializer):
-        if self.request.user.role not in (Role.ADMIN, Role.DIRETTRICE, Role.COORDINATRICE):
+        if self.request.user.role not in (Role.ADMIN, Role.DIRETTRICE, Role.COORDINATRICE, Role.CUOCA):
             from rest_framework.exceptions import PermissionDenied
             raise PermissionDenied('Non autorizzato.')
         serializer.save(creato_da=self.request.user)
@@ -355,8 +355,9 @@ class PiattoViewSet(viewsets.ModelViewSet):
 
         assegnazioni = (
             PiattoAssegnazione.objects
-            .filter(gruppo_id=gruppo_id, piatto__attivo=True)
+            .filter(gruppi__id=gruppo_id, piatto__attivo=True)
             .select_related('piatto')
+            .prefetch_related('gruppi')
         )
 
         ciclo: dict = {}
@@ -406,9 +407,9 @@ class PiattoAssegnazioneViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        qs = PiattoAssegnazione.objects.select_related('piatto', 'gruppo')
+        qs = PiattoAssegnazione.objects.select_related('piatto').prefetch_related('gruppi')
         if gruppo := self.request.query_params.get('gruppo'):
-            qs = qs.filter(gruppo_id=gruppo)
+            qs = qs.filter(gruppi__id=gruppo)
         if tipo := self.request.query_params.get('tipo'):
             qs = qs.filter(piatto__tipo=tipo)
         return qs

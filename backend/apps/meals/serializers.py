@@ -102,15 +102,18 @@ class PiattoSerializer(serializers.ModelSerializer):
 class PiattoAssegnazioneSerializer(serializers.ModelSerializer):
     piatto_descrizione = serializers.CharField(source='piatto.descrizione', read_only=True)
     piatto_tipo = serializers.CharField(source='piatto.tipo', read_only=True)
-    gruppo_nome = serializers.CharField(source='gruppo.nome', read_only=True)
+    gruppi_nomi = serializers.SerializerMethodField()
 
     class Meta:
         model = PiattoAssegnazione
         fields = (
             'id', 'piatto', 'piatto_descrizione', 'piatto_tipo',
-            'gruppo', 'gruppo_nome',
+            'gruppi', 'gruppi_nomi',
             'sempre', 'giorni_per_settimana',
         )
+
+    def get_gruppi_nomi(self, obj):
+        return [g.nome for g in obj.gruppi.all()]
 
 
 class SostituzionePiattoSerializer(serializers.ModelSerializer):
