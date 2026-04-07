@@ -439,7 +439,7 @@ export default function BambiniPage() {
               </p>
             </div>
             <button
-              onClick={() => { setShowAdd(true); setAddError(''); clearPhoto() }}
+              onClick={() => { setShowAdd(true); setAddError(''); clearPhoto(); setSelected(null); setShowEdit(false) }}
               style={{
                 background: 'white', color: '#E8562A', border: 'none',
                 borderRadius: '12px', padding: '0.75rem 1.25rem',
@@ -656,7 +656,7 @@ export default function BambiniPage() {
 
       {/* ── Modal: Modifica bambino ──────────────────────────────────────────── */}
       {showEdit && selected && (
-        <Overlay onClose={() => setShowEdit(false)}>
+        <Overlay onClose={() => setShowEdit(false)} zIndex={1100}>
           <ModalHeader title={`✏️ Modifica — ${selected.nome} ${selected.cognome}`} onClose={() => setShowEdit(false)} />
           <form onSubmit={handleEditSubmit}>
             {/* Foto profilo */}
@@ -1038,10 +1038,10 @@ function BambinoCard({ bambino, onClick }: { bambino: Bambino; onClick: () => vo
   )
 }
 
-function Overlay({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
+function Overlay({ children, onClose, zIndex = 1000 }: { children: React.ReactNode; onClose: () => void; zIndex?: number }) {
   return (
     <div
-      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}
+      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}
       onClick={e => { if (e.target === e.currentTarget) onClose() }}
     >
       <div style={{ background: 'white', borderRadius: '20px', padding: '2rem', width: '100%', maxWidth: '560px', maxHeight: '90vh', overflowY: 'auto' }}>
