@@ -104,6 +104,19 @@ function initRowState(registro: Registro | null): RowState {
 
 // ─── TagSelector inline ───────────────────────────────────────────────────────
 
+const TAG_PALETTE = [
+  '#0984E3', '#00B894', '#E17055', '#6C5CE7', '#FDCB6E',
+  '#00CEC9', '#E84393', '#55EFC4', '#F39C12', '#A29BFE',
+]
+
+function nextPaletteColor(usedColors: string[]): string {
+  const used = usedColors.map(c => c.toLowerCase())
+  for (const color of TAG_PALETTE) {
+    if (!used.includes(color.toLowerCase())) return color
+  }
+  return TAG_PALETTE[usedColors.length % TAG_PALETTE.length]
+}
+
 function TagSelector({
   allTags,
   selectedIds,
@@ -162,12 +175,12 @@ function TagSelector({
       {active.map(t => {
         const sel = selectedIds.includes(t.id)
         return (
-          <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 0 }}>
+          <div key={t.id} style={{ display: 'inline-flex', alignItems: 'stretch', height: '1.6rem' }}>
             <button
               type="button"
               onClick={() => toggle(t.id)}
               style={{
-                padding: '0.2rem 0.55rem',
+                padding: '0 0.55rem',
                 background: sel ? t.colore : `${t.colore}22`,
                 color: sel ? 'white' : t.colore,
                 border: `1.5px solid ${t.colore}`,
@@ -177,6 +190,7 @@ function TagSelector({
                 cursor: 'pointer',
                 fontFamily: 'inherit',
                 transition: 'all 0.15s',
+                lineHeight: 1,
               }}
             >
               {t.nome}
@@ -187,15 +201,19 @@ function TagSelector({
                 onClick={() => eliminaTag(t.id)}
                 title="Disattiva tag"
                 style={{
-                  padding: '0.2rem 0.3rem',
+                  padding: '0 0.35rem',
                   background: '#FFF0F0',
                   color: '#C0392B',
                   border: `1.5px solid ${t.colore}`,
                   borderLeft: 'none',
                   borderRadius: '0 12px 12px 0',
-                  fontSize: '0.65rem',
+                  fontSize: '0.7rem',
+                  fontWeight: 700,
                   cursor: 'pointer',
                   fontFamily: 'inherit',
+                  lineHeight: 1,
+                  display: 'flex',
+                  alignItems: 'center',
                 }}
               >
                 ×
@@ -208,7 +226,10 @@ function TagSelector({
       {!showForm ? (
         <button
           type="button"
-          onClick={() => setShowForm(true)}
+          onClick={() => {
+            setNewColore(nextPaletteColor(allTags.map(t => t.colore)))
+            setShowForm(true)
+          }}
           style={{
             padding: '0.2rem 0.5rem',
             background: '#F0F6FF', color: '#0984E3',
