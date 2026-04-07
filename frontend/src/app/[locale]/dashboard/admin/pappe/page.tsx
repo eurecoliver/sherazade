@@ -197,7 +197,7 @@ function TabPiatti() {
 
   const load = useCallback(async () => {
     const res = await fetch('/api/pappe/piatti')
-    if (res.ok) setPiatti(await res.json())
+    if (res.ok) { const d = await res.json(); setPiatti(d.results ?? d) }
   }, [])
 
   useEffect(() => { load() }, [load])
@@ -349,13 +349,13 @@ function TabCalendario({ gruppi }: { gruppi: Gruppo[] }) {
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
-    fetch('/api/pappe/piatti?attivo=true').then(r => r.json()).then(setPiatti)
+    fetch('/api/pappe/piatti?attivo=true').then(r => r.json()).then(d => setPiatti(d.results ?? d))
   }, [])
 
   const loadAssegnazioni = useCallback(async () => {
     if (!selectedGruppo) return
     const res = await fetch(`/api/pappe/assegnazioni?gruppo=${selectedGruppo}`)
-    if (res.ok) setAssegnazioni(await res.json())
+    if (res.ok) { const d = await res.json(); setAssegnazioni(d.results ?? d) }
   }, [selectedGruppo])
 
   useEffect(() => { loadAssegnazioni() }, [loadAssegnazioni])
@@ -592,7 +592,7 @@ function TabSostituzioni({ gruppi }: { gruppi: Gruppo[] }) {
 
   const load = useCallback(async () => {
     const res = await fetch('/api/pappe/sostituzioni')
-    if (res.ok) setSostituzioni(await res.json())
+    if (res.ok) { const d = await res.json(); setSostituzioni(d.results ?? d) }
   }, [])
 
   useEffect(() => { load() }, [load])
