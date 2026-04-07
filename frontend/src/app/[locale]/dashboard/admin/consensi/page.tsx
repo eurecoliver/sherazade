@@ -411,9 +411,13 @@ export default function AdminConsensiPage() {
             <div style={{ borderTop: '2px solid #FFE0CC', paddingTop: '1.25rem', marginTop: '0.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem' }}>
               <div>
                 <p style={{ margin: 0, fontSize: '0.8rem', color: '#888' }}>Export PDF riepilogo</p>
-                <button style={{ padding: '0.4rem 0.875rem', border: '2px solid #FFD4B3', borderRadius: '8px', background: 'white', color: '#888', fontSize: '0.775rem', cursor: 'not-allowed', fontFamily: 'inherit' }} disabled>
-                  📄 Scarica PDF (prossimamente)
-                </button>
+                <a
+                  href={`/api/consensi/pdf?bambino=${selected.id}`}
+                  download
+                  style={{ display: 'inline-block', padding: '0.4rem 0.875rem', border: '2px solid #FFD4B3', borderRadius: '8px', background: 'white', color: '#E8562A', fontSize: '0.775rem', fontWeight: 600, textDecoration: 'none', fontFamily: 'inherit' }}
+                >
+                  📄 Scarica PDF
+                </a>
               </div>
               <button
                 onClick={() => revocaTutti(selected.id)}

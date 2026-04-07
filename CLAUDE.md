@@ -261,8 +261,8 @@ IMPORTANTE: Al termine di ogni task, prima di considerarlo completato, aggiorna 
 - Tag: aggiunto `colore` (hex) a `TagCosaPortare`; insegnante/direttrice possono disattivare tag (soft-delete, storico preservato)
 - Frontend staff diario: vista tabellare inline (nome | sonno | popò | tag | umore | note, tutto senza espandere)
 
-#### Fase 2 — Consensi admin
-- Admin può forzare consenso a True anche se genitore aveva detto No
+#### Fase 2 — Consensi admin ✅ COMPLETATA (7 aprile 2026)
+- Admin può forzare consenso a True anche se genitore aveva detto No (già funzionante via PATCH toggle per-genitore)
 - PDF precompilato scaricabile con spunte sui consensi richiesti (generato da WeasyPrint)
 
 #### Fase 3 — Pappe (redesign completo)
@@ -282,5 +282,6 @@ Nuova architettura menu ciclico 5 settimane (ciclo continuo tra mesi):
 
 ## Ultimo Aggiornamento
 Data: 7 aprile 2026
-Completato: Fase 1 diario — sonno unificato (4→2 campi), tag colorati, vista tabellare staff, genitore aggiornata
-Prossimo task: Fase 2 consensi admin (override admin + PDF WeasyPrint) → Fase 3 pappe (redesign completo)
+Completato: Fase 2 consensi admin — PDF WeasyPrint scaricabile dal modal admin con spunte consensi per bambino
+File: backend/apps/consents/views.py (action `pdf`), frontend/src/app/api/consensi/pdf/route.ts, admin/consensi/page.tsx
+Prossimo task: Fase 3 pappe (redesign completo menu ciclico 5 settimane)
