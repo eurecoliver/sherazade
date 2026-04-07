@@ -1,18 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-
-const BACKEND_URL = process.env.BACKEND_URL ?? 'http://localhost:8000'
-
-function authHeaders(request: NextRequest): Record<string, string> {
-  const token = request.cookies.get('access_token')?.value
-  return token ? { Authorization: `Bearer ${token}` } : {}
-}
+import { fetchBackend, COOKIE_OPTIONS } from '@/lib/fetchBackend'
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   try {
-    const res = await fetch(`${BACKEND_URL}/api/v1/diario/registri/${id}/`, {
-      headers: authHeaders(request), cache: 'no-store',
-    })
+    const { res } = await fetchBackend(request, `/api/v1/diario/registri/${id}/`, { cache: 'no-store' } as RequestInit)
     return NextResponse.json(await res.json(), { status: res.status })
   } catch {
     return NextResponse.json({ detail: 'Errore server.' }, { status: 503 })
@@ -23,12 +15,14 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   const { id } = await params
   const body = await request.json()
   try {
-    const res = await fetch(`${BACKEND_URL}/api/v1/diario/registri/${id}/`, {
+    const { res, newAccessToken } = await fetchBackend(request, `/api/v1/diario/registri/${id}/`, {
       method: 'PATCH',
-      headers: { 'Content-Type': 'application/json', ...authHeaders(request) },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     })
-    return NextResponse.json(await res.json(), { status: res.status })
+    const nextRes = NextResponse.json(await res.json(), { status: res.status })
+    if (newAccessToken) nextRes.cookies.set('access_token', newAccessToken, COOKIE_OPTIONS)
+    return nextRes
   } catch {
     return NextResponse.json({ detail: 'Errore server.' }, { status: 503 })
   }
@@ -37,12 +31,15 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 export async function DELETE(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   try {
-    const res = await fetch(`${BACKEND_URL}/api/v1/diario/registri/${id}/`, {
-      method: 'DELETE',
-      headers: authHeaders(request),
-    })
-    if (res.status === 204) return new NextResponse(null, { status: 204 })
-    return NextResponse.json(await res.json(), { status: res.status })
+    const { res, newAccessToken } = await fetchBackend(request, `/api/v1/diario/registri/${id}/`, { method: 'DELETE' })
+    if (res.status === 204) {
+      const nextRes = new NextResponse(null, { status: 204 })
+      if (newAccessToken) nextRes.cookies.set('access_token', newAccessToken, COOKIE_OPTIONS)
+      return nextRes
+    }
+    const nextRes = NextResponse.json(await res.json(), { status: res.status })
+    if (newAccessToken) nextRes.cookies.set('access_token', newAccessToken, COOKIE_OPTIONS)
+    return nextRes
   } catch {
     return NextResponse.json({ detail: 'Errore server.' }, { status: 503 })
   }

@@ -1,17 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
-
-const BACKEND_URL = process.env.BACKEND_URL ?? 'http://localhost:8000'
+import { fetchBackend, COOKIE_OPTIONS } from '@/lib/fetchBackend'
 
 export async function GET(request: NextRequest) {
-  const token = request.cookies.get('access_token')?.value
   const params = request.nextUrl.searchParams.toString()
   try {
-    const res = await fetch(
-      `${BACKEND_URL}/api/v1/diario/media/${params ? `?${params}` : ''}`,
-      {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
-        cache: 'no-store',
-      },
+    const { res } = await fetchBackend(
+      request,
+      `/api/v1/diario/media/${params ? `?${params}` : ''}`,
+      { cache: 'no-store' } as RequestInit,
     )
     return NextResponse.json(await res.json(), { status: res.status })
   } catch {
@@ -20,16 +16,16 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const token = request.cookies.get('access_token')?.value
   try {
     // Passa il FormData direttamente (multipart/form-data per file upload)
     const formData = await request.formData()
-    const res = await fetch(`${BACKEND_URL}/api/v1/diario/media/`, {
+    const { res, newAccessToken } = await fetchBackend(request, '/api/v1/diario/media/', {
       method: 'POST',
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
       body: formData,
     })
-    return NextResponse.json(await res.json(), { status: res.status })
+    const nextRes = NextResponse.json(await res.json(), { status: res.status })
+    if (newAccessToken) nextRes.cookies.set('access_token', newAccessToken, COOKIE_OPTIONS)
+    return nextRes
   } catch {
     return NextResponse.json({ detail: 'Errore server.' }, { status: 503 })
   }

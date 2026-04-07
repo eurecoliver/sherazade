@@ -1,18 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
-
-const BACKEND_URL = process.env.BACKEND_URL ?? 'http://localhost:8000'
-
-function authHeaders(request: NextRequest): Record<string, string> {
-  const token = request.cookies.get('access_token')?.value
-  return token ? { Authorization: `Bearer ${token}` } : {}
-}
+import { fetchBackend, COOKIE_OPTIONS } from '@/lib/fetchBackend'
 
 export async function GET(request: NextRequest) {
   const params = request.nextUrl.searchParams.toString()
   try {
-    const res = await fetch(
-      `${BACKEND_URL}/api/v1/diario/registri/${params ? `?${params}` : ''}`,
-      { headers: authHeaders(request), cache: 'no-store' },
+    const { res } = await fetchBackend(
+      request,
+      `/api/v1/diario/registri/${params ? `?${params}` : ''}`,
+      { cache: 'no-store' } as RequestInit,
     )
     return NextResponse.json(await res.json(), { status: res.status })
   } catch {
@@ -23,12 +18,20 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const body = await request.json()
   try {
-    const res = await fetch(`${BACKEND_URL}/api/v1/diario/registri/`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...authHeaders(request) },
-      body: JSON.stringify(body),
-    })
-    return NextResponse.json(await res.json(), { status: res.status })
+    const { res, newAccessToken } = await fetchBackend(
+      request,
+      '/api/v1/diario/registri/',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      },
+    )
+    const nextRes = NextResponse.json(await res.json(), { status: res.status })
+    if (newAccessToken) {
+      nextRes.cookies.set('access_token', newAccessToken, COOKIE_OPTIONS)
+    }
+    return nextRes
   } catch {
     return NextResponse.json({ detail: 'Errore server.' }, { status: 503 })
   }

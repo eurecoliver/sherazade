@@ -1,19 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
-
-const BACKEND_URL = process.env.BACKEND_URL ?? 'http://localhost:8000'
+import { fetchBackend, COOKIE_OPTIONS } from '@/lib/fetchBackend'
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const token = request.cookies.get('access_token')?.value
   try {
-    const res = await fetch(`${BACKEND_URL}/api/v1/consensi/${id}/revoca_consenso/`, {
+    const { res, newAccessToken } = await fetchBackend(request, `/api/v1/consensi/${id}/revoca_consenso/`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      },
+      headers: { 'Content-Type': 'application/json' },
     })
-    return NextResponse.json(await res.json(), { status: res.status })
+    const nextRes = NextResponse.json(await res.json(), { status: res.status })
+    if (newAccessToken) nextRes.cookies.set('access_token', newAccessToken, COOKIE_OPTIONS)
+    return nextRes
   } catch {
     return NextResponse.json({ detail: 'Errore server.' }, { status: 503 })
   }

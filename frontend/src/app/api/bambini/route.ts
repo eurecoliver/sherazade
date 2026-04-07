@@ -1,23 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
-
-const BACKEND_URL = process.env.BACKEND_URL ?? 'http://localhost:8000'
-
-function authHeaders(request: NextRequest): Record<string, string> {
-  const token = request.cookies.get('access_token')?.value
-  return token ? { Authorization: `Bearer ${token}` } : {}
-}
+import { fetchBackend, COOKIE_OPTIONS } from '@/lib/fetchBackend'
 
 export async function GET(request: NextRequest) {
   const params = request.nextUrl.searchParams.toString()
-  const url = `${BACKEND_URL}/api/v1/bambini/${params ? `?${params}` : ''}`
-
   try {
-    const res = await fetch(url, {
-      headers: authHeaders(request),
-      cache: 'no-store',
-    })
-    const data = await res.json()
-    return NextResponse.json(data, { status: res.status })
+    const { res } = await fetchBackend(
+      request,
+      `/api/v1/bambini/${params ? `?${params}` : ''}`,
+      { cache: 'no-store' } as RequestInit,
+    )
+    return NextResponse.json(await res.json(), { status: res.status })
   } catch {
     return NextResponse.json({ detail: 'Errore server.' }, { status: 503 })
   }
@@ -26,22 +18,17 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   const contentType = request.headers.get('content-type') ?? ''
   try {
-    if (contentType.includes('multipart/form-data')) {
-      const formData = await request.formData()
-      const res = await fetch(`${BACKEND_URL}/api/v1/bambini/`, {
-        method: 'POST',
-        headers: authHeaders(request),
-        body: formData,
-      })
-      return NextResponse.json(await res.json(), { status: res.status })
-    }
-    const body = await request.json()
-    const res = await fetch(`${BACKEND_URL}/api/v1/bambini/`, {
+    const isMultipart = contentType.includes('multipart/form-data')
+    const body = isMultipart ? await request.formData() : JSON.stringify(await request.json())
+    const headers = isMultipart ? {} : { 'Content-Type': 'application/json' }
+    const { res, newAccessToken } = await fetchBackend(request, '/api/v1/bambini/', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', ...authHeaders(request) },
-      body: JSON.stringify(body),
+      headers,
+      body,
     })
-    return NextResponse.json(await res.json(), { status: res.status })
+    const nextRes = NextResponse.json(await res.json(), { status: res.status })
+    if (newAccessToken) nextRes.cookies.set('access_token', newAccessToken, COOKIE_OPTIONS)
+    return nextRes
   } catch {
     return NextResponse.json({ detail: 'Errore server.' }, { status: 503 })
   }
