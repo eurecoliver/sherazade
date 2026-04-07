@@ -62,7 +62,22 @@ class Presenza(models.Model):
         self._calcola_ritardi()
         super().save(*args, **kwargs)
 
+    @staticmethod
+    def _to_time(value):
+        if value is None:
+            return None
+        if isinstance(value, time):
+            return value
+        try:
+            parts = str(value).split(':')
+            return time(int(parts[0]), int(parts[1]))
+        except Exception:
+            return None
+
     def _calcola_ritardi(self):
+        self.ora_arrivo = self._to_time(self.ora_arrivo)
+        self.ora_uscita = self._to_time(self.ora_uscita)
+
         if self.ora_arrivo:
             if self.ora_arrivo > self.ORA_INGRESSO:
                 dt_arrivo = datetime.combine(datetime.min, self.ora_arrivo)
