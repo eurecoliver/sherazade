@@ -8,6 +8,7 @@ def _media_upload_path(instance, filename):
 
 class TagCosaPortare(models.Model):
     nome = models.CharField(max_length=100, unique=True)
+    colore = models.CharField(max_length=7, default='#0984E3', verbose_name='Colore (hex)')
     creato_da = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.PROTECT,
@@ -53,10 +54,8 @@ class RegistroDiario(models.Model):
     attivita_descrizione = models.TextField(blank=True)
     note_giornata = models.TextField(blank=True)
     # Sonno
-    sonno_mattina_inizio = models.TimeField(null=True, blank=True)
-    sonno_mattina_fine = models.TimeField(null=True, blank=True)
-    sonno_pomeriggio_inizio = models.TimeField(null=True, blank=True)
-    sonno_pomeriggio_fine = models.TimeField(null=True, blank=True)
+    sonno_inizio = models.TimeField(null=True, blank=True)
+    sonno_fine = models.TimeField(null=True, blank=True)
     # Popò
     popo = models.BooleanField(default=False)
     # Cosa portare domani

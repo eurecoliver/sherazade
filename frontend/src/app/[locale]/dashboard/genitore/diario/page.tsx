@@ -23,6 +23,7 @@ interface MediaItem {
 interface Tag {
   id: number
   nome: string
+  colore: string
 }
 
 interface Registro {
@@ -33,10 +34,8 @@ interface Registro {
   attivita_descrizione: string
   note_giornata: string
   autore_nome: string
-  sonno_mattina_inizio: string | null
-  sonno_mattina_fine: string | null
-  sonno_pomeriggio_inizio: string | null
-  sonno_pomeriggio_fine: string | null
+  sonno_inizio: string | null
+  sonno_fine: string | null
   popo: boolean
   tags_cosa_portare: Tag[]
   media: MediaItem[]
@@ -134,7 +133,7 @@ function RegistroCard({ registro }: { registro: Registro }) {
   const umore = registro.umore
   const hasContent = registro.attivita_descrizione || registro.note_giornata
   const mediaList = registro.media
-  const hasSonno = registro.sonno_mattina_inizio || registro.sonno_pomeriggio_inizio
+  const hasSonno = registro.sonno_inizio
 
   return (
     <div style={{
@@ -183,8 +182,9 @@ function RegistroCard({ registro }: { registro: Registro }) {
           )}
           {registro.tags_cosa_portare.map(t => (
             <span key={t.id} style={{
-              background: '#EAF4FF', color: '#0984E3',
-              border: '1px solid #BDE0FF',
+              background: `${t.colore}22`,
+              color: t.colore,
+              border: `1px solid ${t.colore}55`,
               padding: '0.25rem 0.75rem', borderRadius: '20px',
               fontSize: '0.8rem', fontWeight: 600,
             }}>
@@ -202,18 +202,10 @@ function RegistroCard({ registro }: { registro: Registro }) {
           display: 'flex', flexWrap: 'wrap', gap: '1rem',
         }}>
           <span style={{ fontSize: '0.78rem', fontWeight: 700, color: '#0984E3', marginRight: '0.25rem' }}>😴 Sonno</span>
-          {registro.sonno_mattina_inizio && (
-            <span style={{ fontSize: '0.82rem', color: '#444' }}>
-              Mattina: {fmtOrario(registro.sonno_mattina_inizio)}
-              {registro.sonno_mattina_fine && ` – ${fmtOrario(registro.sonno_mattina_fine)}`}
-            </span>
-          )}
-          {registro.sonno_pomeriggio_inizio && (
-            <span style={{ fontSize: '0.82rem', color: '#444' }}>
-              Pomeriggio: {fmtOrario(registro.sonno_pomeriggio_inizio)}
-              {registro.sonno_pomeriggio_fine && ` – ${fmtOrario(registro.sonno_pomeriggio_fine)}`}
-            </span>
-          )}
+          <span style={{ fontSize: '0.82rem', color: '#444' }}>
+            {fmtOrario(registro.sonno_inizio!)}
+            {registro.sonno_fine && ` – ${fmtOrario(registro.sonno_fine)}`}
+          </span>
         </div>
       )}
 

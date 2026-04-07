@@ -234,3 +234,13 @@ class TagCosaPortareViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save(creato_da=self.request.user)
+
+    def destroy(self, request, *args, **kwargs):
+        """Soft-delete: disattiva il tag senza cancellarlo (preserva storico diari)."""
+        role = request.user.role
+        if role not in (Role.ADMIN, Role.DIRETTRICE, Role.COORDINATRICE, Role.INSEGNANTE):
+            return Response({'detail': 'Non autorizzato.'}, status=status.HTTP_403_FORBIDDEN)
+        tag = self.get_object()
+        tag.attivo = False
+        tag.save()
+        return Response(status=status.HTTP_204_NO_CONTENT)

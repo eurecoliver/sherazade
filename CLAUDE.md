@@ -222,6 +222,7 @@ IMPORTANTE: Al termine di ogni task, prima di considerarlo completato, aggiorna 
 - `Presenza` model: aggiunti `minuti_ritardo_arrivo` e `minuti_ritardo_uscita` (IntegerField, null=True)
 - `save()` override: calcola automaticamente ritardo arrivo (vs 09:00 fisso) e ritardo uscita (vs `bambino.orario_uscita.orario`)
 - `_calcola_ritardi()` helper: usa `datetime.combine()` per aritmetica su TimeField
+- BUGFIX (7 aprile 2026): `_to_time()` helper aggiunto — converte stringa "HH:MM" a oggetto `time` prima del confronto; `update_or_create` passa stringhe non convertite a Django, causava TypeError silenzioso e perdita dell'orario
 - `giornata` action: restituisce `orario_uscita_previsto` nel bambino dict (da `bambino.orario_uscita.orario`)
 - Frontend staff presenze: ora_uscita time picker, badge arancione ritardo arrivo, badge rosso ritardo uscita, "Previsto: HH:MM"
 - Frontend admin presenze: badge ritardo arrivo e uscita inline nella lista per-sezione
@@ -238,7 +239,48 @@ IMPORTANTE: Al termine di ogni task, prima di considerarlo completato, aggiorna 
 - API route Next.js: `/api/diario/tags` (GET list + POST crea)
 - Migration: `diary/0002_diario_v2.py`
 
+### Diario Fase 1 — sonno unificato + tag colorati (7 aprile 2026)
+- `TagCosaPortare`: aggiunto campo `colore` (CharField hex, default `#0984E3`)
+- `RegistroDiario`: campi sonno da 4 (mattina/pomeriggio inizio/fine) → 2 (`sonno_inizio`, `sonno_fine`)
+- `TagCosaPortareViewSet.destroy()`: soft-delete (imposta `attivo=False`) per preservare storico diari; solo staff autorizzato
+- API route Next.js `/api/diario/tags/[id]`: DELETE (soft-delete) e PATCH
+- Frontend staff diario: vista tabellare compatta — una riga per bambino, tutto inline senza espandere; chip tag con colore personalizzato; color picker per nuovo tag; colonna media collassabile
+- Frontend genitore diario: badge tag con colore personalizzato (`colore` da API); sonno mostrato come "dalle HH:MM alle HH:MM"
+- Migration: `diary/0004_diario_fase1.py`
+
+### Hotfix deploy (7 aprile 2026)
+- Migrazioni `attendance/0003` e `diary/0003`: sostituite `RemoveConstraint` con `SeparateDatabaseAndState` (RunSQL `IF EXISTS` + state operation) per gestire constraint già rimossi o mai creati nel DB
+- `AlterUniqueTogether` in `diary/0003` resa idempotente con `SeparateDatabaseAndState` + DO block PostgreSQL `IF NOT EXISTS`
+- Rimosso `makemigrations --noinput` da `entrypoint.sh`: generava migration spurie (`0004`) ad ogni restart in produzione
+- `fetchBackend` utility (`frontend/src/lib/fetchBackend.ts`): refresh automatico del `access_token` su 401 in tutte le route Next.js API — previene perdita dati quando il token scade dopo 1 ora di sessione
+
+### Piano sviluppo concordato con direttrice (7 aprile 2026)
+
+#### Fase 1 — Diario ✅ COMPLETATA (7 aprile 2026)
+- Sonno: da 4 campi (mattina/pomeriggio inizio/fine) → 2 campi (`sonno_inizio`, `sonno_fine`)
+- Tag: aggiunto `colore` (hex) a `TagCosaPortare`; insegnante/direttrice possono disattivare tag (soft-delete, storico preservato)
+- Frontend staff diario: vista tabellare inline (nome | sonno | popò | tag | umore | note, tutto senza espandere)
+
+#### Fase 2 — Consensi admin
+- Admin può forzare consenso a True anche se genitore aveva detto No
+- PDF precompilato scaricabile con spunte sui consensi richiesti (generato da WeasyPrint)
+
+#### Fase 3 — Pappe (redesign completo)
+Nuova architettura menu ciclico 5 settimane (ciclo continuo tra mesi):
+- `ConfigMenuCiclo`: data_inizio_ciclo (imposta una volta, usata per calcolo automatico settimana 1-5)
+- `Piatto`: tipo (Colazione/Primo/Secondo/Monopiatto/Contorno/Pane/Frutta/Merenda) | descrizione | data_inizio | data_fine
+- `PiattoAssegnazione`: piatto FK | gruppo FK | sempre bool | giorni_per_settimana JSON `{"1":[0,3],"2":[1,4],...}` (0=lun, 4=ven)
+- `SostituzionePiatto`: M2M gruppi | data_inizio | data_fine | tipo | descrizione | inserito_da (override temporaneo senza toccare ciclo base)
+- `RegistroPasto`: aggiunti colazione_quantita, monopiatto_quantita, pane_quantita
+- Frontend admin: CRUD piatti + scheduler grafico settimane/giorni + gestione sostituzioni
+- Frontend staff pappe: menu del giorno calcolato automaticamente + registrazione consumo
+- Frontend genitore: menu del giorno + quanto ha mangiato il figlio
+
+#### Modifiche anagrafica/permessi (da fare in parallelo alle fasi)
+- Anagrafica admin: popup bidirezionale bambino↔famiglia già parzialmente presente, verificare completezza
+- Admin: permessi CRUD completi su tutti i campi inclusi consensi
+
 ## Ultimo Aggiornamento
-Data: 2 aprile 2026
-Completato: feature/v2-updates — presenze v2 (ritardi automatici) + diario v2 (sonno, popò, tags cosa portare)
-Prossimo task: HTTPS con Let's Encrypt + Nginx (richiede dominio definitivo)
+Data: 7 aprile 2026
+Completato: Fase 1 diario — sonno unificato (4→2 campi), tag colorati, vista tabellare staff, genitore aggiornata
+Prossimo task: Fase 2 consensi admin (override admin + PDF WeasyPrint) → Fase 3 pappe (redesign completo)

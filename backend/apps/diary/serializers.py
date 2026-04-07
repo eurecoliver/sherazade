@@ -5,7 +5,7 @@ from .models import RegistroDiario, MediaDiario, TagCosaPortare
 class TagCosaPortareSerializer(serializers.ModelSerializer):
     class Meta:
         model = TagCosaPortare
-        fields = ('id', 'nome', 'attivo', 'creato_at')
+        fields = ('id', 'nome', 'colore', 'attivo', 'creato_at')
         read_only_fields = ('creato_at',)
 
 
@@ -49,8 +49,7 @@ class RegistroDiarioSerializer(serializers.ModelSerializer):
             'autore', 'autore_nome',
             'umore', 'umore_label',
             'attivita_descrizione', 'note_giornata',
-            'sonno_mattina_inizio', 'sonno_mattina_fine',
-            'sonno_pomeriggio_inizio', 'sonno_pomeriggio_fine',
+            'sonno_inizio', 'sonno_fine',
             'popo',
             'tags_cosa_portare',
             'creato_at', 'aggiornato_at',
@@ -78,8 +77,7 @@ class RegistroDiarioWriteSerializer(serializers.ModelSerializer):
         fields = (
             'id', 'bambino', 'data',
             'umore', 'attivita_descrizione', 'note_giornata',
-            'sonno_mattina_inizio', 'sonno_mattina_fine',
-            'sonno_pomeriggio_inizio', 'sonno_pomeriggio_fine',
+            'sonno_inizio', 'sonno_fine',
             'popo',
             'tags_cosa_portare',
         )
