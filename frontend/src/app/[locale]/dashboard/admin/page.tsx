@@ -103,6 +103,12 @@ export default function AdminDashboard() {
             👥 Utenti
           </button>
           <button
+            onClick={() => router.push(`/${locale}/dashboard/admin/pappe`)}
+            style={{ padding: '0.75rem 1.25rem', background: '#FFF9E6', color: '#E67E22', border: '2px solid #FED7AA', borderRadius: '10px', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
+          >
+            🍽️ Menu
+          </button>
+          <button
             onClick={() => router.push(`/${locale}/dashboard/admin/impostazioni`)}
             style={{ padding: '0.75rem 1.25rem', background: '#F3F0FF', color: '#6C5CE7', border: '2px solid #D6CCFF', borderRadius: '10px', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
           >

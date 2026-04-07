@@ -265,7 +265,7 @@ IMPORTANTE: Al termine di ogni task, prima di considerarlo completato, aggiorna 
 - Admin può forzare consenso a True anche se genitore aveva detto No (già funzionante via PATCH toggle per-genitore)
 - PDF precompilato scaricabile con spunte sui consensi richiesti (generato da WeasyPrint)
 
-#### Fase 3 — Pappe (redesign completo)
+#### Fase 3 — Pappe (redesign completo) ✅ COMPLETATA (7 aprile 2026)
 Nuova architettura menu ciclico 5 settimane (ciclo continuo tra mesi):
 - `ConfigMenuCiclo`: data_inizio_ciclo (imposta una volta, usata per calcolo automatico settimana 1-5)
 - `Piatto`: tipo (Colazione/Primo/Secondo/Monopiatto/Contorno/Pane/Frutta/Merenda) | descrizione | data_inizio | data_fine
@@ -282,6 +282,11 @@ Nuova architettura menu ciclico 5 settimane (ciclo continuo tra mesi):
 
 ## Ultimo Aggiornamento
 Data: 7 aprile 2026
-Completato: Fase 2 consensi admin — PDF WeasyPrint scaricabile dal modal admin con spunte consensi per bambino
-File: backend/apps/consents/views.py (action `pdf`), frontend/src/app/api/consensi/pdf/route.ts, admin/consensi/page.tsx
-Prossimo task: Fase 3 pappe (redesign completo menu ciclico 5 settimane)
+Completato: Fase 3 pappe — menu ciclico 5 settimane completo (backend + frontend admin/staff/genitore)
+- Backend: ConfigMenuCiclo, Piatto, PiattoAssegnazione, SostituzionePiatto + migration 0003_pappe_v2
+- RegistroPasto: +colazione_quantita, +monopiatto_quantita, +pane_quantita
+- Admin: /dashboard/admin/pappe (4 tab: Piatti CRUD, Calendario 5×5, Sostituzioni, Config ciclo)
+- Staff: foglio pappe con menu calcolato automaticamente, selezione gruppo, portate filtrate
+- Genitore: menu del giorno con piatti del ciclo + storico pasti con nuovi campi
+- Route Next.js: /api/pappe/{config,piatti,assegnazioni,sostituzioni} + menu-giorno
+Prossimo task: deploy + test in produzione
