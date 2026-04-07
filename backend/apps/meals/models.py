@@ -38,6 +38,7 @@ class AllergiaIntolleranza(models.Model):
 
 
 class MenuGiornaliero(models.Model):
+    """Legacy: menu giornaliero inserito manualmente. Mantenuto per compatibilità storica."""
     data = models.DateField()
     sezione = models.CharField(max_length=50, blank=True)
     primo = models.CharField(max_length=200, blank=True)
@@ -55,8 +56,8 @@ class MenuGiornaliero(models.Model):
     aggiornato_il = models.DateTimeField(auto_now=True)
 
     class Meta:
-        verbose_name = 'Menu Giornaliero'
-        verbose_name_plural = 'Menu Giornalieri'
+        verbose_name = 'Menu Giornaliero (legacy)'
+        verbose_name_plural = 'Menu Giornalieri (legacy)'
         unique_together = [('data', 'sezione')]
         ordering = ['-data', 'sezione']
 
@@ -68,10 +69,10 @@ class MenuGiornaliero(models.Model):
 class RegistroPasto(models.Model):
 
     class Quantita(models.TextChoices):
-        TUTTO = 'tutto', 'Tutto 🍽️'
-        META = 'meta', 'Metà 🍽️½'
-        POCO = 'poco', 'Poco 🥄'
-        NULLA = 'nulla', 'Nulla ❌'
+        TUTTO = 'tutto', 'Tutto'
+        META = 'meta', 'Metà'
+        POCO = 'poco', 'Poco'
+        NULLA = 'nulla', 'Nulla'
 
     bambino = models.ForeignKey(
         'children.Bambino',
@@ -79,21 +80,14 @@ class RegistroPasto(models.Model):
         related_name='registri_pasto',
     )
     data = models.DateField()
-    primo_quantita = models.CharField(
-        max_length=6, choices=Quantita.choices, blank=True,
-    )
-    secondo_quantita = models.CharField(
-        max_length=6, choices=Quantita.choices, blank=True,
-    )
-    contorno_quantita = models.CharField(
-        max_length=6, choices=Quantita.choices, blank=True,
-    )
-    frutta_quantita = models.CharField(
-        max_length=6, choices=Quantita.choices, blank=True,
-    )
-    merenda_quantita = models.CharField(
-        max_length=6, choices=Quantita.choices, blank=True,
-    )
+    colazione_quantita = models.CharField(max_length=6, choices=Quantita.choices, blank=True)
+    primo_quantita = models.CharField(max_length=6, choices=Quantita.choices, blank=True)
+    secondo_quantita = models.CharField(max_length=6, choices=Quantita.choices, blank=True)
+    monopiatto_quantita = models.CharField(max_length=6, choices=Quantita.choices, blank=True)
+    contorno_quantita = models.CharField(max_length=6, choices=Quantita.choices, blank=True)
+    pane_quantita = models.CharField(max_length=6, choices=Quantita.choices, blank=True)
+    frutta_quantita = models.CharField(max_length=6, choices=Quantita.choices, blank=True)
+    merenda_quantita = models.CharField(max_length=6, choices=Quantita.choices, blank=True)
     note_pasto = models.TextField(blank=True)
     compilato_da = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -111,3 +105,145 @@ class RegistroPasto(models.Model):
 
     def __str__(self):
         return f'{self.bambino} — {self.data}'
+
+
+# ── Menu ciclico v2 ──────────────────────────────────────────────────────────
+
+class ConfigMenuCiclo(models.Model):
+    """
+    Configurazione del menu ciclico a 5 settimane.
+    Deve esistere un solo record. La data_inizio_ciclo è il lunedì
+    della prima settimana del ciclo: da lì si calcola automaticamente
+    la settimana corrente (1-5) per qualsiasi data futura.
+    """
+    data_inizio_ciclo = models.DateField(
+        help_text='Lunedì della settimana 1 del ciclo. Il sistema calcola settimana 1-5 da questa data.'
+    )
+    aggiornato_il = models.DateTimeField(auto_now=True)
+    aggiornato_da = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name='+',
+    )
+
+    class Meta:
+        verbose_name = 'Configurazione Menu Ciclico'
+
+    def __str__(self):
+        return f'Ciclo da {self.data_inizio_ciclo}'
+
+    @classmethod
+    def settimana_ciclo(cls, data):
+        """Restituisce il numero di settimana (1-5) per la data indicata, o None."""
+        try:
+            cfg = cls.objects.get()
+        except cls.DoesNotExist:
+            return None
+        delta = (data - cfg.data_inizio_ciclo).days
+        if delta < 0:
+            return None
+        return (delta // 7) % 5 + 1
+
+
+class Piatto(models.Model):
+
+    class Tipo(models.TextChoices):
+        COLAZIONE = 'colazione', 'Colazione'
+        PRIMO = 'primo', 'Primo'
+        SECONDO = 'secondo', 'Secondo'
+        MONOPIATTO = 'monopiatto', 'Monopiatto'
+        CONTORNO = 'contorno', 'Contorno'
+        PANE = 'pane', 'Pane'
+        FRUTTA = 'frutta', 'Frutta'
+        MERENDA = 'merenda', 'Merenda'
+
+    descrizione = models.CharField(max_length=200)
+    tipo = models.CharField(max_length=12, choices=Tipo.choices)
+    note = models.TextField(blank=True)
+    attivo = models.BooleanField(default=True)
+    creato_da = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name='piatti_creati',
+    )
+    creato_il = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Piatto'
+        verbose_name_plural = 'Piatti'
+        ordering = ['tipo', 'descrizione']
+
+    def __str__(self):
+        return f'{self.get_tipo_display()} — {self.descrizione}'
+
+
+class PiattoAssegnazione(models.Model):
+    """
+    Assegna un piatto a un gruppo per specifiche settimane/giorni del ciclo.
+
+    giorni_per_settimana: {"1": [0, 3], "2": [1, 4]}
+        → settimana 1: lunedì (0) e giovedì (3)
+        → settimana 2: martedì (1) e venerdì (4)
+    Settimane non presenti nel dict = piatto non servito in quella settimana.
+
+    Se sempre=True il campo giorni_per_settimana viene ignorato e il piatto
+    è servito ogni giorno (utile per pane, acqua, frutta fissa, ecc.).
+    """
+    piatto = models.ForeignKey(
+        Piatto,
+        on_delete=models.CASCADE,
+        related_name='assegnazioni',
+    )
+    gruppo = models.ForeignKey(
+        'config.Gruppo',
+        on_delete=models.CASCADE,
+        related_name='piatti_assegnati',
+    )
+    sempre = models.BooleanField(
+        default=False,
+        help_text='Se True, servito ogni giorno indipendentemente dal ciclo.',
+    )
+    giorni_per_settimana = models.JSONField(
+        default=dict,
+        blank=True,
+        help_text='Es. {"1": [0, 3], "2": [1, 4]} — chiave=settimana, valore=lista giorni (0=lun, 4=ven).',
+    )
+
+    class Meta:
+        verbose_name = 'Assegnazione Piatto'
+        verbose_name_plural = 'Assegnazioni Piatti'
+        unique_together = [('piatto', 'gruppo')]
+
+    def __str__(self):
+        return f'{self.piatto} → {self.gruppo}'
+
+
+class SostituzionePiatto(models.Model):
+    """
+    Override temporaneo per una data specifica.
+    Sostituisce tutti i piatti del tipo indicato per i gruppi selezionati in quella data.
+    """
+    gruppi = models.ManyToManyField(
+        'config.Gruppo',
+        related_name='sostituzioni_piatto',
+        blank=True,
+        help_text='Gruppi coinvolti dalla sostituzione. Se vuoto, vale per tutti i gruppi.',
+    )
+    data = models.DateField()
+    tipo = models.CharField(max_length=12, choices=Piatto.Tipo.choices)
+    descrizione = models.CharField(max_length=200)
+    note = models.TextField(blank=True)
+    inserito_da = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name='sostituzioni_inserite',
+    )
+    creato_il = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Sostituzione Piatto'
+        verbose_name_plural = 'Sostituzioni Piatti'
+        ordering = ['data', 'tipo']
+
+    def __str__(self):
+        return f'{self.data} — {self.get_tipo_display()}: {self.descrizione}'

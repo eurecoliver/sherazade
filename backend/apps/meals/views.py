@@ -9,13 +9,20 @@ from rest_framework.response import Response
 
 from apps.children.models import Bambino
 from apps.users.models import Role
-from .models import AllergiaIntolleranza, MenuGiornaliero, RegistroPasto
+from .models import (
+    AllergiaIntolleranza, MenuGiornaliero, RegistroPasto,
+    ConfigMenuCiclo, Piatto, PiattoAssegnazione, SostituzionePiatto,
+)
 from .permissions import AllergiaPermission, MenuPermission, RegistroPastoPermission
 from .serializers import (
     AllergiaIntolleranzaSerializer,
     MenuGiornalieroSerializer,
     RegistroPastoSerializer,
     RegistroPastoWriteSerializer,
+    ConfigMenuCicloSerializer,
+    PiattoSerializer,
+    PiattoAssegnazioneSerializer,
+    SostituzionePiattoSerializer,
 )
 
 
@@ -38,10 +45,6 @@ class AllergiaIntolleranzaViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'])
     def per_sezione(self, request):
-        """
-        Cuoca/Staff: lista bambini attivi con le loro allergie attive, raggruppati per sezione.
-        Utile per la vista mattutina prima di preparare i pasti.
-        """
         gruppo = request.query_params.get('gruppo', '')
         bambini_qs = (
             Bambino.objects
@@ -96,7 +99,6 @@ class MenuGiornalieroViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'])
     def oggi(self, request):
-        """Restituisce il menu di oggi per la sezione indicata (o tutti se non specificata)."""
         sezione = request.query_params.get('sezione', '')
         qs = MenuGiornaliero.objects.filter(data=date.today()).select_related('inserito_da')
         if sezione:
@@ -138,10 +140,6 @@ class RegistroPastoViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'])
     def giornata(self, request):
-        """
-        Vista staff: lista bambini con il loro registro pasto del giorno.
-        Parametri: data (default oggi), sezione (opzionale).
-        """
         data_str = request.query_params.get('data', str(date.today()))
         gruppo = request.query_params.get('gruppo', '')
 
@@ -175,6 +173,7 @@ class RegistroPastoViewSet(viewsets.ModelViewSet):
                     'nome': b.nome,
                     'cognome': b.cognome,
                     'sezione': b.sezione,
+                    'gruppo_id': b.gruppo_id,
                     'allergie': AllergiaIntolleranzaSerializer(allergie, many=True).data,
                     'ha_allergie_gravi': any(
                         a.gravita in (
@@ -190,29 +189,25 @@ class RegistroPastoViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['post'])
     def salva_sezione(self, request):
-        """
-        Salva (crea o aggiorna) i registri pasto di tutti i bambini di una sezione in un solo POST.
-        Body: { data: "YYYY-MM-DD", pasti: [ { bambino, primo_quantita, ... }, ... ] }
-        """
         data_str = request.data.get('data', str(date.today()))
         pasti = request.data.get('pasti', [])
         if not isinstance(pasti, list):
             return Response({'detail': 'Campo "pasti" deve essere una lista.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        CAMPI_QUANTITA = (
+            'colazione_quantita', 'primo_quantita', 'secondo_quantita',
+            'monopiatto_quantita', 'contorno_quantita', 'pane_quantita',
+            'frutta_quantita', 'merenda_quantita',
+        )
 
         saved, errors = [], []
         for item in pasti:
             bambino_id = item.get('bambino')
             if not bambino_id:
                 continue
-            defaults = {
-                'primo_quantita': item.get('primo_quantita', ''),
-                'secondo_quantita': item.get('secondo_quantita', ''),
-                'contorno_quantita': item.get('contorno_quantita', ''),
-                'frutta_quantita': item.get('frutta_quantita', ''),
-                'merenda_quantita': item.get('merenda_quantita', ''),
-                'note_pasto': item.get('note_pasto', ''),
-                'compilato_da': request.user,
-            }
+            defaults = {campo: item.get(campo, '') for campo in CAMPI_QUANTITA}
+            defaults['note_pasto'] = item.get('note_pasto', '')
+            defaults['compilato_da'] = request.user
             try:
                 obj, _ = RegistroPasto.objects.update_or_create(
                     bambino_id=bambino_id,
@@ -227,14 +222,12 @@ class RegistroPastoViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'])
     def mio_figlio(self, request):
-        """Genitore: feed cronologico pasti del proprio figlio."""
         if request.user.role != Role.GENITORE:
             return Response({'detail': 'Riservato ai genitori.'}, status=status.HTTP_403_FORBIDDEN)
 
         bambino_id = request.query_params.get('bambino')
         user = request.user
 
-        # Se bambino_id non è fornito → fallback: tutti i pasti dei bambini visibili al genitore
         if not bambino_id:
             registri = (
                 RegistroPasto.objects
@@ -254,7 +247,6 @@ class RegistroPastoViewSet(viewsets.ModelViewSet):
         except Bambino.DoesNotExist:
             return Response({'detail': 'Bambino non trovato.'}, status=status.HTTP_404_NOT_FOUND)
 
-        # Verifica autorizzazione tramite Famiglia
         try:
             famiglia = bambino.famiglia
             autorizzato = (
@@ -262,7 +254,6 @@ class RegistroPastoViewSet(viewsets.ModelViewSet):
                 or famiglia.genitore2_id == user.pk
             )
         except Exception:
-            # Bambino senza Famiglia: fallback sui pasti di tutti i bambini visibili al genitore
             registri = (
                 RegistroPasto.objects
                 .filter(
@@ -284,3 +275,179 @@ class RegistroPastoViewSet(viewsets.ModelViewSet):
             .order_by('-data')
         )
         return Response(RegistroPastoSerializer(registri, many=True).data)
+
+
+# ── Menu ciclico v2 ──────────────────────────────────────────────────────────
+
+class ConfigMenuCicloViewSet(viewsets.ViewSet):
+    """Singleton: GET restituisce la config, POST la crea/aggiorna."""
+    permission_classes = [IsAuthenticated]
+
+    def list(self, request):
+        try:
+            cfg = ConfigMenuCiclo.objects.get()
+            return Response(ConfigMenuCicloSerializer(cfg).data)
+        except ConfigMenuCiclo.DoesNotExist:
+            return Response(None)
+
+    def create(self, request):
+        if request.user.role not in (Role.ADMIN, Role.DIRETTRICE):
+            return Response({'detail': 'Non autorizzato.'}, status=status.HTTP_403_FORBIDDEN)
+        try:
+            cfg = ConfigMenuCiclo.objects.get()
+            serializer = ConfigMenuCicloSerializer(cfg, data=request.data, partial=True)
+        except ConfigMenuCiclo.DoesNotExist:
+            serializer = ConfigMenuCicloSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save(aggiornato_da=request.user)
+        return Response(serializer.data)
+
+
+class PiattoViewSet(viewsets.ModelViewSet):
+    serializer_class = PiattoSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        qs = Piatto.objects.all()
+        if tipo := self.request.query_params.get('tipo'):
+            qs = qs.filter(tipo=tipo)
+        if self.request.user.role == Role.GENITORE:
+            qs = qs.filter(attivo=True)
+        attivo = self.request.query_params.get('attivo')
+        if attivo is not None:
+            qs = qs.filter(attivo=attivo.lower() == 'true')
+        return qs
+
+    def perform_create(self, serializer):
+        if self.request.user.role not in (Role.ADMIN, Role.DIRETTRICE, Role.COORDINATRICE):
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied('Non autorizzato.')
+        serializer.save(creato_da=self.request.user)
+
+    def destroy(self, request, *args, **kwargs):
+        if request.user.role not in (Role.ADMIN, Role.DIRETTRICE):
+            return Response({'detail': 'Non autorizzato.'}, status=status.HTTP_403_FORBIDDEN)
+        piatto = self.get_object()
+        piatto.attivo = False
+        piatto.save()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(detail=False, methods=['get'])
+    def menu_giorno(self, request):
+        """
+        Calcola il menu del giorno per un gruppo dal ciclo configurato.
+        Parametri: data (default oggi), gruppo (obbligatorio)
+        """
+        data_str = request.query_params.get('data', str(date.today()))
+        gruppo_id = request.query_params.get('gruppo')
+
+        try:
+            from datetime import date as date_cls
+            data = date_cls.fromisoformat(data_str)
+        except ValueError:
+            return Response({'detail': 'Data non valida.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not gruppo_id:
+            return Response({'detail': 'Parametro "gruppo" obbligatorio.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        settimana = ConfigMenuCiclo.settimana_ciclo(data)
+        weekday = data.weekday()  # 0=lunedì, 4=venerdì
+
+        assegnazioni = (
+            PiattoAssegnazione.objects
+            .filter(gruppo_id=gruppo_id, piatto__attivo=True)
+            .select_related('piatto')
+        )
+
+        ciclo: dict = {}
+        for asseg in assegnazioni:
+            if asseg.sempre:
+                ciclo.setdefault(asseg.piatto.tipo, []).append(PiattoSerializer(asseg.piatto).data)
+            elif settimana is not None:
+                giorni = asseg.giorni_per_settimana.get(str(settimana), [])
+                if weekday in giorni:
+                    ciclo.setdefault(asseg.piatto.tipo, []).append(PiattoSerializer(asseg.piatto).data)
+
+        sostituzioni = list(
+            SostituzionePiatto.objects
+            .filter(data=data)
+            .filter(Q(gruppi__id=gruppo_id) | Q(gruppi__isnull=True))
+            .distinct()
+            .prefetch_related('gruppi')
+        )
+
+        piatti_finali = dict(ciclo)
+        for sost in sostituzioni:
+            piatti_finali[sost.tipo] = [{
+                'id': None,
+                'descrizione': sost.descrizione,
+                'tipo': sost.tipo,
+                'tipo_label': sost.get_tipo_display(),
+                'note': sost.note,
+                'attivo': True,
+                'is_sostituzione': True,
+                'sostituzione_id': sost.id,
+            }]
+
+        for t in [c.value for c in Piatto.Tipo]:
+            piatti_finali.setdefault(t, [])
+
+        return Response({
+            'data': data_str,
+            'gruppo_id': int(gruppo_id),
+            'settimana_ciclo': settimana,
+            'piatti': piatti_finali,
+            'sostituzioni_raw': SostituzionePiattoSerializer(sostituzioni, many=True).data,
+        })
+
+
+class PiattoAssegnazioneViewSet(viewsets.ModelViewSet):
+    serializer_class = PiattoAssegnazioneSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        qs = PiattoAssegnazione.objects.select_related('piatto', 'gruppo')
+        if gruppo := self.request.query_params.get('gruppo'):
+            qs = qs.filter(gruppo_id=gruppo)
+        if tipo := self.request.query_params.get('tipo'):
+            qs = qs.filter(piatto__tipo=tipo)
+        return qs
+
+    def create(self, request, *args, **kwargs):
+        if request.user.role not in (Role.ADMIN, Role.DIRETTRICE, Role.COORDINATRICE):
+            return Response({'detail': 'Non autorizzato.'}, status=status.HTTP_403_FORBIDDEN)
+        return super().create(request, *args, **kwargs)
+
+    def update(self, request, *args, **kwargs):
+        if request.user.role not in (Role.ADMIN, Role.DIRETTRICE, Role.COORDINATRICE):
+            return Response({'detail': 'Non autorizzato.'}, status=status.HTTP_403_FORBIDDEN)
+        return super().update(request, *args, **kwargs)
+
+    def destroy(self, request, *args, **kwargs):
+        if request.user.role not in (Role.ADMIN, Role.DIRETTRICE, Role.COORDINATRICE):
+            return Response({'detail': 'Non autorizzato.'}, status=status.HTTP_403_FORBIDDEN)
+        return super().destroy(request, *args, **kwargs)
+
+
+class SostituzionePiattoViewSet(viewsets.ModelViewSet):
+    serializer_class = SostituzionePiattoSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        qs = SostituzionePiatto.objects.prefetch_related('gruppi')
+        if data := self.request.query_params.get('data'):
+            qs = qs.filter(data=data)
+        if gruppo := self.request.query_params.get('gruppo'):
+            qs = qs.filter(Q(gruppi__id=gruppo) | Q(gruppi__isnull=True)).distinct()
+        return qs
+
+    def perform_create(self, serializer):
+        if self.request.user.role not in (Role.ADMIN, Role.DIRETTRICE, Role.COORDINATRICE):
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied('Non autorizzato.')
+        serializer.save(inserito_da=self.request.user)
+
+    def destroy(self, request, *args, **kwargs):
+        if request.user.role not in (Role.ADMIN, Role.DIRETTRICE, Role.COORDINATRICE):
+            return Response({'detail': 'Non autorizzato.'}, status=status.HTTP_403_FORBIDDEN)
+        return super().destroy(request, *args, **kwargs)
