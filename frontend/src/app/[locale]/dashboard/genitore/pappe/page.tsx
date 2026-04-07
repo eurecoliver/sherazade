@@ -89,7 +89,7 @@ function PastoCard({ registro, menu }: { registro: RegistroPasto; menu: MenuGior
 
   // Portate che hanno almeno una quantità registrata o un piatto nel menu
   const portateAttive = Object.entries(CAMPO_A_TIPO).filter(([campo, tipo]) => {
-    const q = (registro as Record<string, string>)[campo]
+    const q = (registro as unknown as Record<string, string>)[campo]
     const haMenu = (menu?.piatti[tipo]?.length ?? 0) > 0
     return q || haMenu
   })
@@ -107,7 +107,7 @@ function PastoCard({ registro, menu }: { registro: RegistroPasto; menu: MenuGior
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
         {portateAttive.map(([campo, tipo]) => {
-          const q = (registro as Record<string, string>)[campo] ?? ''
+          const q = (registro as unknown as Record<string, string>)[campo] ?? ''
           const qi = QUANTITA_ICON[q] ?? QUANTITA_ICON['']
           const piatti = menu?.piatti[tipo] ?? []
           const { label, emoji } = PORTATE_LABEL[tipo] ?? { label: tipo, emoji: '🍽️' }

@@ -11,7 +11,11 @@
       "Bash(ssh:*)",
       "Bash(/usr/local/bin/docker ps:*)",
       "Read(//Applications/Docker.app/Contents/Resources/bin/**)",
-      "Read(//Users/oliver/.docker/bin/**)"
+      "Read(//Users/oliver/.docker/bin/**)",
+      "Bash(ls /Users/oliver/repos/sherazade/frontend/src/app/api/consensi/[id]/)",
+      "Bash(cat /Users/oliver/repos/sherazade/frontend/src/app/api/consensi/[id]/route.ts)",
+      "Bash(ls /Users/oliver/repos/sherazade/frontend/src/app/[locale]/dashboard/admin/)",
+      "Bash(ls /Users/oliver/repos/sherazade/frontend/src/app/[locale]/dashboard/staff/)"
     ]
   }
 }
