@@ -9,9 +9,19 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.RunSQL(
-            sql='ALTER TABLE diary_registrodiario DROP CONSTRAINT IF EXISTS unique_registro_per_giorno;',
-            reverse_sql=migrations.RunSQL.noop,
+        migrations.SeparateDatabaseAndState(
+            database_operations=[
+                migrations.RunSQL(
+                    sql='ALTER TABLE diary_registrodiario DROP CONSTRAINT IF EXISTS unique_registro_per_giorno;',
+                    reverse_sql=migrations.RunSQL.noop,
+                ),
+            ],
+            state_operations=[
+                migrations.RemoveConstraint(
+                    model_name='registrodiario',
+                    name='unique_registro_per_giorno',
+                ),
+            ],
         ),
         migrations.AlterUniqueTogether(
             name='registrodiario',
