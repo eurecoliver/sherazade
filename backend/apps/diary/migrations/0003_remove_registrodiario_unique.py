@@ -23,8 +23,29 @@ class Migration(migrations.Migration):
                 ),
             ],
         ),
-        migrations.AlterUniqueTogether(
-            name='registrodiario',
-            unique_together={('bambino', 'data')},
+        migrations.SeparateDatabaseAndState(
+            database_operations=[
+                migrations.RunSQL(
+                    sql="""
+                        DO $$ BEGIN
+                            IF NOT EXISTS (
+                                SELECT 1 FROM pg_constraint
+                                WHERE conname = 'diary_registrodiario_bambino_id_data_3748c1b5_uniq'
+                            ) THEN
+                                ALTER TABLE diary_registrodiario
+                                ADD CONSTRAINT diary_registrodiario_bambino_id_data_3748c1b5_uniq
+                                UNIQUE (bambino_id, data);
+                            END IF;
+                        END $$;
+                    """,
+                    reverse_sql='ALTER TABLE diary_registrodiario DROP CONSTRAINT IF EXISTS diary_registrodiario_bambino_id_data_3748c1b5_uniq;',
+                ),
+            ],
+            state_operations=[
+                migrations.AlterUniqueTogether(
+                    name='registrodiario',
+                    unique_together={('bambino', 'data')},
+                ),
+            ],
         ),
     ]
