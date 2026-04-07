@@ -282,7 +282,20 @@ Nuova architettura menu ciclico 5 settimane (ciclo continuo tra mesi):
 
 ## Ultimo Aggiornamento
 Data: 7 aprile 2026
-Completato: Fase 3 pappe — menu ciclico 5 settimane completo (backend + frontend admin/staff/genitore)
+Completato: Fix dashboard admin bambini + miglioramenti pappe
+
+### Fix e miglioramenti bambini admin (7 aprile 2026)
+- `FamigliaCreateSerializer`: aggiunto `genitore1/2_nome/cognome`; se utente non esiste viene creato con ruolo GENITORE e password inutilizzabile
+- Frontend admin/bambini: aggiunto modal "Modifica bambino" (PATCH), pulsanti Disattiva/Riattiva e Elimina nel modal dettaglio
+- Vista tabellare toggle (▦/☰): nome, cognome, gruppo, orario uscita, età, data nascita, genitore 1, CF, stato
+
+### Fix pappe (7 aprile 2026)
+- `PiattoAssegnazione`: campo `gruppo FK` → `gruppi M2M`; migration 0004
+- Admin calendario: list view con badge gruppi/giorni, ✏️ modifica + 🗑 elimina, form multi-gruppo
+- Cuoca: form "Aggiungi piatto al catalogo" nella dashboard pappe
+- Fix `.results ?? d` per tutte le risposte paginate DRF (filter is not a function)
+
+Prossimo task: deploy + test in produzione
 - Backend: ConfigMenuCiclo, Piatto, PiattoAssegnazione, SostituzionePiatto + migration 0003_pappe_v2
 - RegistroPasto: +colazione_quantita, +monopiatto_quantita, +pane_quantita
 - Admin: /dashboard/admin/pappe (4 tab: Piatti CRUD, Calendario 5×5, Sostituzioni, Config ciclo)

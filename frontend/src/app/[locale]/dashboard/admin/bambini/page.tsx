@@ -106,9 +106,13 @@ const EMPTY_BAMBINO = {
 
 const EMPTY_FAMIGLIA = {
   genitore1_email: '',
+  genitore1_nome: '',
+  genitore1_cognome: '',
   genitore1_codice_fiscale: '',
   genitore1_indirizzo: '',
   genitore2_email: '',
+  genitore2_nome: '',
+  genitore2_cognome: '',
   genitore2_codice_fiscale: '',
   genitore2_indirizzo: '',
   telefono_emergenza: '',
@@ -136,6 +140,7 @@ export default function BambiniPage() {
   const [filterGruppo, setFilterGruppo] = useState('')
   const [filterAttivo, setFilterAttivo] = useState<'all' | 'true' | 'false'>('all')
   const [search, setSearch] = useState('')
+  const [viewMode, setViewMode] = useState<'cards' | 'table'>('cards')
 
   // Add bambino modal
   const [showAdd, setShowAdd] = useState(false)
@@ -148,6 +153,15 @@ export default function BambiniPage() {
 
   // Detail modal
   const [selected, setSelected] = useState<Bambino | null>(null)
+
+  // Edit bambino
+  const [showEdit, setShowEdit] = useState(false)
+  const [editForm, setEditForm] = useState(EMPTY_BAMBINO)
+  const [editPhotoFile, setEditPhotoFile] = useState<File | null>(null)
+  const [editPhotoPreview, setEditPhotoPreview] = useState<string | null>(null)
+  const editFileRef = useRef<HTMLInputElement>(null)
+  const [editLoading, setEditLoading] = useState(false)
+  const [editError, setEditError] = useState('')
 
   // Family form (inside detail modal)
   const [showFamForm, setShowFamForm] = useState(false)
@@ -312,6 +326,86 @@ export default function BambiniPage() {
     finally { setDelLoading(false) }
   }
 
+  // ── Open edit modal ────────────────────────────────────────────────────────
+
+  const openEdit = (b: Bambino) => {
+    setEditForm({
+      nome: b.nome,
+      cognome: b.cognome,
+      alias_nome: b.alias_nome || '',
+      alias_attivo: b.alias_attivo,
+      data_nascita: b.data_nascita,
+      codice_fiscale: b.codice_fiscale || '',
+      gruppo: b.gruppo ? String(b.gruppo) : '',
+      orario_uscita: b.orario_uscita ? String(b.orario_uscita) : '',
+      data_iscrizione: b.data_iscrizione,
+      note_mediche: b.note_mediche || '',
+    })
+    setEditPhotoFile(null)
+    setEditPhotoPreview(b.foto_profilo || null)
+    setEditError('')
+    setShowEdit(true)
+  }
+
+  // ── Edit bambino ───────────────────────────────────────────────────────────
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!selected) return
+    setEditLoading(true)
+    setEditError('')
+    try {
+      let body: BodyInit
+      const headers: Record<string, string> = {}
+      if (editPhotoFile) {
+        const fd = new FormData()
+        Object.entries(editForm).forEach(([k, v]) => { if (v !== '' && v !== null) fd.append(k, String(v)) })
+        fd.append('foto_profilo', editPhotoFile)
+        body = fd
+      } else {
+        headers['Content-Type'] = 'application/json'
+        const payload: Record<string, unknown> = { ...editForm }
+        if (!payload.gruppo) delete payload.gruppo
+        if (!payload.orario_uscita) delete payload.orario_uscita
+        body = JSON.stringify(payload)
+      }
+      const res = await fetch(`/api/bambini/${selected.id}`, { method: 'PATCH', headers, body })
+      const data = await res.json()
+      if (!res.ok) { setEditError(formatErrors(data)); return }
+      setShowEdit(false)
+      setSelected(data)
+      await fetchBambini()
+    } catch { setEditError('Errore durante il salvataggio.') }
+    finally { setEditLoading(false) }
+  }
+
+  // ── Delete / toggle attivo ─────────────────────────────────────────────────
+
+  const handleToggleAttivo = async () => {
+    if (!selected) return
+    if (!confirm(`${selected.attivo ? 'Disattivare' : 'Riattivare'} ${selected.nome} ${selected.cognome}?`)) return
+    const res = await fetch(`/api/bambini/${selected.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ attivo: !selected.attivo }),
+    })
+    if (res.ok) {
+      const data = await res.json()
+      setSelected(data)
+      await fetchBambini()
+    }
+  }
+
+  const handleDelete = async () => {
+    if (!selected) return
+    if (!confirm(`Eliminare definitivamente ${selected.nome} ${selected.cognome}? Questa azione non può essere annullata.`)) return
+    const res = await fetch(`/api/bambini/${selected.id}`, { method: 'DELETE' })
+    if (res.ok || res.status === 204) {
+      setSelected(null)
+      await fetchBambini()
+    }
+  }
+
   // ─────────────────────────────────────────────────────────────────────────
 
   if (loading) {
@@ -386,6 +480,14 @@ export default function BambiniPage() {
             <option value="true">Attivi</option>
             <option value="false">Non attivi</option>
           </select>
+          <div style={{ display: 'flex', gap: '0.25rem', marginLeft: 'auto' }}>
+            {(['cards', 'table'] as const).map(m => (
+              <button key={m} onClick={() => setViewMode(m)}
+                style={{ padding: '0.5rem 0.75rem', border: `2px solid ${viewMode === m ? '#E8562A' : '#FFD4B3'}`, borderRadius: '8px', background: viewMode === m ? '#E8562A' : 'white', color: viewMode === m ? 'white' : '#888', cursor: 'pointer', fontSize: '1rem', fontFamily: 'inherit' }}>
+                {m === 'cards' ? '▦' : '☰'}
+              </button>
+            ))}
+          </div>
         </div>
 
         {listError && (
@@ -394,21 +496,69 @@ export default function BambiniPage() {
           </div>
         )}
 
-        {/* ── Cards ─────────────────────────────────────────────────────────── */}
+        {/* ── Lista ─────────────────────────────────────────────────────────── */}
         {bambini.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '3rem 1rem', background: 'white', borderRadius: '16px', color: '#aaa' }}>
             <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>👶</div>
             <p style={{ margin: 0 }}>Nessun bambino trovato.</p>
           </div>
-        ) : (
+        ) : viewMode === 'cards' ? (
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
             {bambini.map(b => (
               <BambinoCard
                 key={b.id}
                 bambino={b}
-                onClick={() => { setSelected(b); setShowFamForm(false); setShowDelForm(false) }}
+                onClick={() => { setSelected(b); setShowFamForm(false); setShowDelForm(false); setShowEdit(false) }}
               />
             ))}
+          </div>
+        ) : (
+          <div style={{ background: 'white', borderRadius: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.825rem' }}>
+              <thead>
+                <tr style={{ background: '#FFF0E8' }}>
+                  {['', 'Nome', 'Cognome', 'Gruppo', 'Orario uscita', 'Età', 'Data nascita', 'Genitore 1', 'CF', 'Stato'].map(h => (
+                    <th key={h} style={{ padding: '0.75rem 0.875rem', textAlign: 'left', fontWeight: 700, color: '#555', whiteSpace: 'nowrap', borderBottom: '2px solid #FFD4B3' }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {bambini.map((b, i) => {
+                  const color = b.gruppo_colore || '#A29BFE'
+                  return (
+                    <tr key={b.id}
+                      onClick={() => { setSelected(b); setShowFamForm(false); setShowDelForm(false); setShowEdit(false) }}
+                      style={{ background: i % 2 === 0 ? 'white' : '#FFF8F4', cursor: 'pointer', transition: 'background 0.1s' }}
+                      onMouseEnter={e => (e.currentTarget.style.background = '#FFE8D6')}
+                      onMouseLeave={e => (e.currentTarget.style.background = i % 2 === 0 ? 'white' : '#FFF8F4')}
+                    >
+                      <td style={{ padding: '0.5rem 0.875rem' }}>
+                        <div style={{ width: 32, height: 32, borderRadius: '50%', background: color, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 700, fontSize: '0.75rem' }}>
+                          {b.foto_profilo ? <img src={b.foto_profilo} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : initials(b.nome, b.cognome)}
+                        </div>
+                      </td>
+                      <td style={{ padding: '0.5rem 0.875rem', fontWeight: 600, color: '#333', whiteSpace: 'nowrap' }}>{b.nome}{b.alias_attivo && b.alias_nome ? <span style={{ color: '#6C5CE7', fontSize: '0.72rem', marginLeft: '0.4rem' }}>({b.alias_nome})</span> : null}</td>
+                      <td style={{ padding: '0.5rem 0.875rem', whiteSpace: 'nowrap' }}>{b.cognome}</td>
+                      <td style={{ padding: '0.5rem 0.875rem' }}>
+                        {b.gruppo_nome ? <span style={{ background: color, color: 'white', borderRadius: '12px', padding: '2px 10px', fontSize: '0.72rem', fontWeight: 700, whiteSpace: 'nowrap' }}>{b.gruppo_nome}</span> : <span style={{ color: '#ccc' }}>—</span>}
+                      </td>
+                      <td style={{ padding: '0.5rem 0.875rem', color: '#555', whiteSpace: 'nowrap' }}>{b.orario_uscita_label || '—'}</td>
+                      <td style={{ padding: '0.5rem 0.875rem', color: '#555' }}>{b.eta}</td>
+                      <td style={{ padding: '0.5rem 0.875rem', color: '#555', whiteSpace: 'nowrap' }}>{b.data_nascita}</td>
+                      <td style={{ padding: '0.5rem 0.875rem', color: '#555', whiteSpace: 'nowrap' }}>
+                        {b.famiglia ? <span>{b.famiglia.genitore1_nome}<br /><span style={{ color: '#aaa', fontSize: '0.75rem' }}>{b.famiglia.genitore1_email}</span></span> : <span style={{ color: '#ccc' }}>—</span>}
+                      </td>
+                      <td style={{ padding: '0.5rem 0.875rem', color: '#888', fontFamily: 'monospace', fontSize: '0.775rem' }}>{b.codice_fiscale || '—'}</td>
+                      <td style={{ padding: '0.5rem 0.875rem' }}>
+                        <span style={{ background: b.attivo ? '#D4EDDA' : '#F8D7DA', color: b.attivo ? '#155724' : '#721C24', borderRadius: '12px', padding: '2px 10px', fontSize: '0.72rem', fontWeight: 700 }}>
+                          {b.attivo ? 'Attivo' : 'Non attivo'}
+                        </span>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
           </div>
         )}
       </div>
@@ -504,13 +654,97 @@ export default function BambiniPage() {
         </Overlay>
       )}
 
+      {/* ── Modal: Modifica bambino ──────────────────────────────────────────── */}
+      {showEdit && selected && (
+        <Overlay onClose={() => setShowEdit(false)}>
+          <ModalHeader title={`✏️ Modifica — ${selected.nome} ${selected.cognome}`} onClose={() => setShowEdit(false)} />
+          <form onSubmit={handleEditSubmit}>
+            {/* Foto profilo */}
+            <Field label="Foto profilo">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <div style={{ width: 64, height: 64, borderRadius: '50%', background: '#FFD4B3', overflow: 'hidden', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#E8562A', fontWeight: 700, fontSize: '1.25rem' }}>
+                  {editPhotoPreview ? <img src={editPhotoPreview} alt="preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '📷'}
+                </div>
+                <div style={{ flex: 1 }}>
+                  <input ref={editFileRef} type="file" accept="image/*" style={{ display: 'none' }}
+                    onChange={e => { const f = e.target.files?.[0]; if (f) { setEditPhotoFile(f); setEditPhotoPreview(URL.createObjectURL(f)) } }} />
+                  <button type="button" onClick={() => editFileRef.current?.click()} style={{ ...secondaryBtn, marginBottom: 0, marginRight: '0.5rem' }}>Cambia foto</button>
+                  {editPhotoPreview && <button type="button" onClick={() => { setEditPhotoFile(null); setEditPhotoPreview(null) }} style={{ ...secondaryBtn, marginBottom: 0, color: '#C0392B', borderColor: '#FADBD8' }}>Rimuovi</button>}
+                </div>
+              </div>
+            </Field>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+              <Field label="Nome *">
+                <input type="text" required value={editForm.nome} onChange={e => setEditForm(p => ({ ...p, nome: e.target.value }))} style={inputSt} />
+              </Field>
+              <Field label="Cognome *">
+                <input type="text" required value={editForm.cognome} onChange={e => setEditForm(p => ({ ...p, cognome: e.target.value }))} style={inputSt} />
+              </Field>
+            </div>
+            <div style={{ background: '#FFF8F4', borderRadius: '10px', padding: '0.75rem', marginBottom: '0.75rem', border: '1px solid #FFD4B3' }}>
+              <Field label="Nome alias / soprannome">
+                <input type="text" value={editForm.alias_nome} onChange={e => setEditForm(p => ({ ...p, alias_nome: e.target.value }))} style={inputSt} placeholder="Es. Lilli, Teo..." />
+              </Field>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.85rem', color: '#555' }}>
+                <input type="checkbox" checked={editForm.alias_attivo} onChange={e => setEditForm(p => ({ ...p, alias_attivo: e.target.checked }))} />
+                Mostra alias ai genitori
+              </label>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+              <Field label="Data di nascita *">
+                <input type="date" required value={editForm.data_nascita} onChange={e => setEditForm(p => ({ ...p, data_nascita: e.target.value }))} style={inputSt} />
+              </Field>
+              <Field label="Codice fiscale">
+                <input type="text" maxLength={16} value={editForm.codice_fiscale} onChange={e => setEditForm(p => ({ ...p, codice_fiscale: e.target.value.toUpperCase() }))} style={inputSt} />
+              </Field>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+              <Field label="Gruppo">
+                <select value={editForm.gruppo} onChange={e => setEditForm(p => ({ ...p, gruppo: e.target.value }))} style={{ ...inputSt, background: 'white' }}>
+                  <option value="">— Nessun gruppo —</option>
+                  {gruppi.map(g => <option key={g.id} value={String(g.id)}>{g.nome}</option>)}
+                </select>
+              </Field>
+              <Field label="Orario uscita">
+                <select value={editForm.orario_uscita} onChange={e => setEditForm(p => ({ ...p, orario_uscita: e.target.value }))} style={{ ...inputSt, background: 'white' }}>
+                  <option value="">— Standard —</option>
+                  {orari.map(o => <option key={o.id} value={String(o.id)}>{o.etichetta} ({o.orario})</option>)}
+                </select>
+              </Field>
+            </div>
+            <Field label="Data iscrizione *">
+              <input type="date" required value={editForm.data_iscrizione} onChange={e => setEditForm(p => ({ ...p, data_iscrizione: e.target.value }))} style={inputSt} />
+            </Field>
+            <Field label="Note mediche / allergie">
+              <textarea rows={3} value={editForm.note_mediche} onChange={e => setEditForm(p => ({ ...p, note_mediche: e.target.value }))} style={{ ...inputSt, resize: 'vertical' }} />
+            </Field>
+            {editError && <ErrorBox>{editError}</ErrorBox>}
+            <ModalActions onCancel={() => setShowEdit(false)} loading={editLoading} submitLabel="Salva modifiche" />
+          </form>
+        </Overlay>
+      )}
+
       {/* ── Modal: Dettaglio bambino ─────────────────────────────────────────── */}
       {selected && (
-        <Overlay onClose={() => setSelected(null)}>
+        <Overlay onClose={() => { setSelected(null); setShowEdit(false) }}>
           <ModalHeader
             title={`${selected.nome} ${selected.cognome}`}
-            onClose={() => setSelected(null)}
+            onClose={() => { setSelected(null); setShowEdit(false) }}
           />
+
+          {/* Azioni */}
+          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.25rem', flexWrap: 'wrap' }}>
+            <button onClick={() => openEdit(selected)} style={{ ...secondaryBtn, marginBottom: 0 }}>✏️ Modifica</button>
+            <button onClick={handleToggleAttivo}
+              style={{ ...secondaryBtn, marginBottom: 0, color: selected.attivo ? '#E67E22' : '#27AE60', borderColor: selected.attivo ? '#FDEBD0' : '#D5F5E3' }}>
+              {selected.attivo ? '⏸ Disattiva' : '▶ Riattiva'}
+            </button>
+            <button onClick={handleDelete}
+              style={{ ...secondaryBtn, marginBottom: 0, marginLeft: 'auto', color: '#C0392B', borderColor: '#FADBD8' }}>
+              🗑 Elimina
+            </button>
+          </div>
 
           {/* Avatar + Info base */}
           <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start', marginBottom: '1.25rem' }}>
@@ -600,6 +834,18 @@ export default function BambiniPage() {
                   style={inputSt} placeholder="genitore@email.it" />
               </Field>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                <Field label="Nome">
+                  <input type="text" value={famForm.genitore1_nome}
+                    onChange={e => setFamForm(p => ({ ...p, genitore1_nome: e.target.value }))}
+                    style={inputSt} placeholder="Mario" />
+                </Field>
+                <Field label="Cognome">
+                  <input type="text" value={famForm.genitore1_cognome}
+                    onChange={e => setFamForm(p => ({ ...p, genitore1_cognome: e.target.value }))}
+                    style={inputSt} placeholder="Rossi" />
+                </Field>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
                 <Field label="Codice fiscale">
                   <input type="text" maxLength={16} value={famForm.genitore1_codice_fiscale}
                     onChange={e => setFamForm(p => ({ ...p, genitore1_codice_fiscale: e.target.value.toUpperCase() }))}
@@ -628,6 +874,18 @@ export default function BambiniPage() {
                       onChange={e => setFamForm(p => ({ ...p, genitore2_email: e.target.value }))}
                       style={inputSt} placeholder="genitore2@email.it" />
                   </Field>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                    <Field label="Nome">
+                      <input type="text" value={famForm.genitore2_nome}
+                        onChange={e => setFamForm(p => ({ ...p, genitore2_nome: e.target.value }))}
+                        style={inputSt} placeholder="Laura" />
+                    </Field>
+                    <Field label="Cognome">
+                      <input type="text" value={famForm.genitore2_cognome}
+                        onChange={e => setFamForm(p => ({ ...p, genitore2_cognome: e.target.value }))}
+                        style={inputSt} placeholder="Rossi" />
+                    </Field>
+                  </div>
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
                     <Field label="Codice fiscale">
                       <input type="text" maxLength={16} value={famForm.genitore2_codice_fiscale}

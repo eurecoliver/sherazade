@@ -29,39 +29,67 @@ class FamigliaSerializer(serializers.ModelSerializer):
 
 
 class FamigliaCreateSerializer(serializers.Serializer):
-    """Crea una Famiglia accettando email dei genitori invece degli ID."""
+    """Crea una Famiglia accettando email dei genitori invece degli ID.
+    Se l'utente non esiste viene creato automaticamente con ruolo GENITORE.
+    """
     bambino = serializers.PrimaryKeyRelatedField(queryset=Bambino.objects.all())
     genitore1_email = serializers.EmailField()
+    genitore1_nome = serializers.CharField(required=False, allow_blank=True, default='')
+    genitore1_cognome = serializers.CharField(required=False, allow_blank=True, default='')
     genitore1_codice_fiscale = serializers.CharField(required=False, allow_blank=True, default='')
     genitore1_indirizzo = serializers.CharField(required=False, allow_blank=True, default='')
     genitore2_email = serializers.EmailField(required=False, allow_blank=True, default='')
+    genitore2_nome = serializers.CharField(required=False, allow_blank=True, default='')
+    genitore2_cognome = serializers.CharField(required=False, allow_blank=True, default='')
     genitore2_codice_fiscale = serializers.CharField(required=False, allow_blank=True, default='')
     genitore2_indirizzo = serializers.CharField(required=False, allow_blank=True, default='')
     indirizzo = serializers.CharField(required=False, allow_blank=True, default='')
     telefono_emergenza = serializers.CharField()
     medico_base = serializers.CharField(required=False, allow_blank=True, default='')
 
-    def validate_genitore1_email(self, value):
+    def _get_or_create_user(self, email):
+        from apps.users.models import Role
         try:
-            return User.objects.get(email__iexact=value)
+            return User.objects.get(email__iexact=email)
         except User.DoesNotExist:
-            raise serializers.ValidationError(f'Utente "{value}" non trovato.')
+            user = User(email=email, username=email, role=Role.GENITORE)
+            user.set_unusable_password()
+            user.save()
+            return user
+
+    def validate_genitore1_email(self, value):
+        return self._get_or_create_user(value)
 
     def validate_genitore2_email(self, value):
         if not value:
             return None
-        try:
-            return User.objects.get(email__iexact=value)
-        except User.DoesNotExist:
-            raise serializers.ValidationError(f'Utente "{value}" non trovato.')
+        return self._get_or_create_user(value)
+
+    def _update_user_name(self, user, nome, cognome):
+        changed = False
+        if nome and not user.first_name:
+            user.first_name = nome
+            changed = True
+        if cognome and not user.last_name:
+            user.last_name = cognome
+            changed = True
+        if changed:
+            user.save(update_fields=['first_name', 'last_name'])
 
     def create(self, validated_data):
+        g1 = validated_data['genitore1_email']
+        self._update_user_name(g1, validated_data.get('genitore1_nome', ''), validated_data.get('genitore1_cognome', ''))
+
+        g2 = validated_data.get('genitore2_email')
+        if g2:
+            self._update_user_name(g2, validated_data.get('genitore2_nome', ''), validated_data.get('genitore2_cognome', ''))
+
         return Famiglia.objects.create(
             bambino=validated_data['bambino'],
-            genitore1=validated_data['genitore1_email'],
+            genitore1=g1,
             genitore1_codice_fiscale=validated_data.get('genitore1_codice_fiscale', ''),
             genitore1_indirizzo=validated_data.get('genitore1_indirizzo', ''),
-            genitore2=validated_data.get('genitore2_email'),
+            genitore2=g2,
             genitore2_codice_fiscale=validated_data.get('genitore2_codice_fiscale', ''),
             genitore2_indirizzo=validated_data.get('genitore2_indirizzo', ''),
             indirizzo=validated_data.get('indirizzo', ''),
