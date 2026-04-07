@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
   try {
     const isMultipart = contentType.includes('multipart/form-data')
     const body = isMultipart ? await request.formData() : JSON.stringify(await request.json())
-    const headers = isMultipart ? {} : { 'Content-Type': 'application/json' }
+    const headers: Record<string, string> = isMultipart ? {} : { 'Content-Type': 'application/json' }
     const { res, newAccessToken } = await fetchBackend(request, '/api/v1/bambini/', {
       method: 'POST',
       headers,
