@@ -91,6 +91,38 @@ class FamigliaViewSet(viewsets.ModelViewSet):
         famiglia = serializer.save()
         return Response(FamigliaSerializer(famiglia).data, status=status.HTTP_201_CREATED)
 
+    def partial_update(self, request, *args, **kwargs):
+        """Supporta genitore2_email: risolve l'email a User ID (crea se non esiste), aggiorna nome/cognome se forniti."""
+        instance = self.get_object()
+        genitore2_email = request.data.get('genitore2_email')
+        data = request.data.copy() if hasattr(request.data, 'copy') else dict(request.data)
+        if genitore2_email:
+            from apps.users.models import Role as UserRole
+            try:
+                g2 = User.objects.get(email__iexact=genitore2_email)
+            except User.DoesNotExist:
+                g2 = User(email=genitore2_email, username=genitore2_email, role=UserRole.GENITORE, is_active=True)
+                g2.set_unusable_password()
+                g2.save()
+            # Aggiorna nome/cognome se forniti e non già presenti
+            g2_nome = data.pop('genitore2_nome', None)
+            g2_cognome = data.pop('genitore2_cognome', None)
+            changed = False
+            if g2_nome and not g2.first_name:
+                g2.first_name = g2_nome if isinstance(g2_nome, str) else g2_nome[0]
+                changed = True
+            if g2_cognome and not g2.last_name:
+                g2.last_name = g2_cognome if isinstance(g2_cognome, str) else g2_cognome[0]
+                changed = True
+            if changed:
+                g2.save(update_fields=['first_name', 'last_name'])
+            data['genitore2'] = g2.id
+            data.pop('genitore2_email', None)
+        serializer = FamigliaSerializer(instance, data=data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(FamigliaSerializer(instance).data)
+
 
 class DelegaRitiroViewSet(viewsets.ModelViewSet):
     serializer_class = DelegaRitiroSerializer

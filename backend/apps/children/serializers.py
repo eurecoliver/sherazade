@@ -52,7 +52,7 @@ class FamigliaCreateSerializer(serializers.Serializer):
         try:
             return User.objects.get(email__iexact=email)
         except User.DoesNotExist:
-            user = User(email=email, username=email, role=Role.GENITORE)
+            user = User(email=email, username=email, role=Role.GENITORE, is_active=True)
             user.set_unusable_password()
             user.save()
             return user

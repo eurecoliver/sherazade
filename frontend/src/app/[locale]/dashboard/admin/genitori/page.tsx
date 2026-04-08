@@ -206,6 +206,10 @@ export default function GenitoriPage() {
 
   const handleEditSubmit = async () => {
     if (!selected) return
+    if (editForm.codice_fiscale && editForm.codice_fiscale.length !== 16) {
+      setEditError('Il codice fiscale deve essere esattamente 16 caratteri.')
+      return
+    }
     setEditLoading(true)
     setEditError('')
     try {
@@ -258,6 +262,10 @@ export default function GenitoriPage() {
   }
 
   const handleNewSubmit = async () => {
+    if (newForm.codice_fiscale && newForm.codice_fiscale.length !== 16) {
+      setNewError('Il codice fiscale deve essere esattamente 16 caratteri.')
+      return
+    }
     setNewLoading(true)
     setNewError('')
     try {
@@ -341,7 +349,12 @@ export default function GenitoriPage() {
       const bRes = await fetch('/api/bambini', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nome: nuovoBNome, cognome: nuovoBCognome, data_nascita: nuovoBData }),
+        body: JSON.stringify({
+          nome: nuovoBNome,
+          cognome: nuovoBCognome,
+          data_nascita: nuovoBData,
+          data_iscrizione: new Date().toISOString().split('T')[0],
+        }),
       })
       const bData = await bRes.json()
       if (!bRes.ok) { setNuovoBError(JSON.stringify(bData)); return }

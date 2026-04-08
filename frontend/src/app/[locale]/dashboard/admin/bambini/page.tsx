@@ -109,15 +109,12 @@ const EMPTY_FAMIGLIA = {
   genitore1_nome: '',
   genitore1_cognome: '',
   genitore1_codice_fiscale: '',
-  genitore1_indirizzo: '',
   genitore2_email: '',
   genitore2_nome: '',
   genitore2_cognome: '',
   genitore2_codice_fiscale: '',
-  genitore2_indirizzo: '',
   telefono_emergenza: '',
   medico_base: '',
-  indirizzo: '',
 }
 
 const EMPTY_DELEGA = {
@@ -170,6 +167,21 @@ export default function BambiniPage() {
   const [hasGenitore2, setHasGenitore2] = useState(false)
   const [famLoading, setFamLoading] = useState(false)
   const [famError, setFamError] = useState('')
+
+  // Edit famiglia (PATCH telefono_emergenza + medico_base)
+  const [editFam, setEditFam] = useState(false)
+  const [editFamForm, setEditFamForm] = useState({ telefono_emergenza: '', medico_base: '' })
+  const [editFamLoading, setEditFamLoading] = useState(false)
+  const [editFamError, setEditFamError] = useState('')
+
+  // Add genitore 2 to existing famiglia
+  const [showAddG2, setShowAddG2] = useState(false)
+  const [addG2Email, setAddG2Email] = useState('')
+  const [addG2Nome, setAddG2Nome] = useState('')
+  const [addG2Cognome, setAddG2Cognome] = useState('')
+  const [addG2CF, setAddG2CF] = useState('')
+  const [addG2Loading, setAddG2Loading] = useState(false)
+  const [addG2Error, setAddG2Error] = useState('')
 
   // Add delega form
   const [showDelForm, setShowDelForm] = useState(false)
@@ -231,6 +243,10 @@ export default function BambiniPage() {
 
   const handleAddSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (addForm.codice_fiscale && addForm.codice_fiscale.length !== 16) {
+      setAddError('Il codice fiscale deve essere esattamente 16 caratteri.')
+      return
+    }
     setAddLoading(true)
     setAddError('')
     try {
@@ -268,15 +284,74 @@ export default function BambiniPage() {
       clearPhoto()
       await fetchBambini()
       setSelected(data)
+      setShowFamForm(true)
     } catch { setAddError('Errore durante il salvataggio.') }
     finally { setAddLoading(false) }
   }
 
   // ── Add famiglia ───────────────────────────────────────────────────────────
 
+  const handleEditFamSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!selected?.famiglia) return
+    setEditFamLoading(true)
+    setEditFamError('')
+    try {
+      const res = await fetch(`/api/famiglie/${selected.famiglia.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(editFamForm),
+      })
+      const data = await res.json()
+      if (!res.ok) { setEditFamError(formatErrors(data)); return }
+      setEditFam(false)
+      const updated = await fetch(`/api/bambini/${selected.id}`)
+      if (updated.ok) setSelected(await updated.json())
+    } catch { setEditFamError('Errore durante il salvataggio.') }
+    finally { setEditFamLoading(false) }
+  }
+
+  const handleAddG2Submit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!selected?.famiglia) return
+    if (addG2CF && addG2CF.length !== 16) {
+      setAddG2Error('Il codice fiscale deve essere esattamente 16 caratteri.')
+      return
+    }
+    setAddG2Loading(true)
+    setAddG2Error('')
+    try {
+      const res = await fetch(`/api/famiglie/${selected.famiglia.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          genitore2_email: addG2Email,
+          genitore2_nome: addG2Nome,
+          genitore2_cognome: addG2Cognome,
+          genitore2_codice_fiscale: addG2CF,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) { setAddG2Error(formatErrors(data)); return }
+      setShowAddG2(false)
+      setAddG2Email(''); setAddG2Nome(''); setAddG2Cognome(''); setAddG2CF('')
+      const updated = await fetch(`/api/bambini/${selected.id}`)
+      if (updated.ok) setSelected(await updated.json())
+    } catch { setAddG2Error('Errore durante il salvataggio.') }
+    finally { setAddG2Loading(false) }
+  }
+
   const handleFamSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!selected) return
+    if (famForm.genitore1_codice_fiscale && famForm.genitore1_codice_fiscale.length !== 16) {
+      setFamError('CF genitore 1 deve essere esattamente 16 caratteri.')
+      return
+    }
+    if (hasGenitore2 && famForm.genitore2_codice_fiscale && famForm.genitore2_codice_fiscale.length !== 16) {
+      setFamError('CF genitore 2 deve essere esattamente 16 caratteri.')
+      return
+    }
     setFamLoading(true)
     setFamError('')
     try {
@@ -285,7 +360,6 @@ export default function BambiniPage() {
         bambino: selected.id,
         genitore2_email: hasGenitore2 ? famForm.genitore2_email : '',
         genitore2_codice_fiscale: hasGenitore2 ? famForm.genitore2_codice_fiscale : '',
-        genitore2_indirizzo: hasGenitore2 ? famForm.genitore2_indirizzo : '',
       }
       const res = await fetch('/api/famiglie', {
         method: 'POST',
@@ -434,7 +508,7 @@ export default function BambiniPage() {
           </button>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '1rem' }}>
             <div>
-              <h1 style={{ margin: 0, fontSize: '1.75rem', fontWeight: 800 }}>👶 Bambini</h1>
+              <h1 style={{ margin: 0, fontSize: '1.75rem', fontWeight: 800 }}>👶 Anagrafica Bambini</h1>
               <p style={{ margin: '0.25rem 0 0', opacity: 0.85, fontSize: '0.875rem' }}>
                 {bambini.length} bambini registrati
               </p>
@@ -728,10 +802,10 @@ export default function BambiniPage() {
 
       {/* ── Modal: Dettaglio bambino ─────────────────────────────────────────── */}
       {selected && (
-        <Overlay onClose={() => { setSelected(null); setShowEdit(false); setDetailTab('genitore1') }}>
+        <Overlay onClose={() => { setSelected(null); setShowEdit(false); setDetailTab('genitore1'); setEditFam(false); setShowAddG2(false) }}>
           <ModalHeader
             title={`${selected.nome} ${selected.cognome}`}
-            onClose={() => { setSelected(null); setShowEdit(false); setDetailTab('genitore1') }}
+            onClose={() => { setSelected(null); setShowEdit(false); setDetailTab('genitore1'); setEditFam(false); setShowAddG2(false) }}
           />
 
           {/* Avatar + Info base */}
@@ -797,10 +871,8 @@ export default function BambiniPage() {
                     )}
                     {selected.famiglia.genitore1_telefono && <p style={{ margin: 0 }}>📱 {selected.famiglia.genitore1_telefono}</p>}
                     {selected.famiglia.genitore1_codice_fiscale && <p style={{ margin: 0, fontFamily: 'monospace', color: '#555' }}>CF: {selected.famiglia.genitore1_codice_fiscale}</p>}
-                    {selected.famiglia.genitore1_indirizzo && <p style={{ margin: 0 }}>🏠 {selected.famiglia.genitore1_indirizzo}</p>}
                     {selected.famiglia.medico_base && <p style={{ margin: '0.375rem 0 0', paddingTop: '0.375rem', borderTop: '1px solid #E9ECEF' }}>🩺 Medico: {selected.famiglia.medico_base}</p>}
-                    {selected.famiglia.telefono_emergenza && <p style={{ margin: 0 }}>📞 Emergenza: {selected.famiglia.telefono_emergenza}</p>}
-                    {selected.famiglia.indirizzo && <p style={{ margin: 0 }}>🏘 Famiglia: {selected.famiglia.indirizzo}</p>}
+                    {selected.famiglia.telefono_emergenza && <p style={{ margin: 0 }}>📞 Tel. emergenza: <strong>{selected.famiglia.telefono_emergenza}</strong></p>}
                   </div>
                 )}
                 {detailTab === 'genitore2' && selected.famiglia.genitore2_email && (
@@ -810,11 +882,20 @@ export default function BambiniPage() {
                     )}
                     {selected.famiglia.genitore2_telefono && <p style={{ margin: 0 }}>📱 {selected.famiglia.genitore2_telefono}</p>}
                     {selected.famiglia.genitore2_codice_fiscale && <p style={{ margin: 0, fontFamily: 'monospace', color: '#555' }}>CF: {selected.famiglia.genitore2_codice_fiscale}</p>}
-                    {selected.famiglia.genitore2_indirizzo && <p style={{ margin: 0 }}>🏠 {selected.famiglia.genitore2_indirizzo}</p>}
                     {selected.famiglia.medico_base && <p style={{ margin: '0.375rem 0 0', paddingTop: '0.375rem', borderTop: '1px solid #E9ECEF' }}>🩺 Medico: {selected.famiglia.medico_base}</p>}
-                    {selected.famiglia.telefono_emergenza && <p style={{ margin: 0 }}>📞 Emergenza: {selected.famiglia.telefono_emergenza}</p>}
-                    {selected.famiglia.indirizzo && <p style={{ margin: 0 }}>🏘 Famiglia: {selected.famiglia.indirizzo}</p>}
+                    {selected.famiglia.telefono_emergenza && <p style={{ margin: 0 }}>📞 Tel. emergenza: <strong>{selected.famiglia.telefono_emergenza}</strong></p>}
                   </div>
+                )}
+              </div>
+              {/* Family action buttons */}
+              <div style={{ padding: '0.625rem 1rem', borderTop: '1px solid #E9ECEF', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                <button onClick={() => {
+                  setEditFamForm({ telefono_emergenza: selected.famiglia!.telefono_emergenza || '', medico_base: selected.famiglia!.medico_base || '' })
+                  setEditFam(true); setShowAddG2(false)
+                }} style={{ ...secondaryBtn, marginBottom: 0, fontSize: '0.75rem' }}>✏️ Modifica dati</button>
+                {!selected.famiglia.genitore2_email && (
+                  <button onClick={() => { setShowAddG2(true); setEditFam(false) }}
+                    style={{ ...secondaryBtn, marginBottom: 0, fontSize: '0.75rem' }}>+ Aggiungi Genitore 2</button>
                 )}
               </div>
             </div>
@@ -824,6 +905,52 @@ export default function BambiniPage() {
 
           {!selected.famiglia && !showFamForm && (
             <button onClick={() => setShowFamForm(true)} style={secondaryBtn}>+ Aggiungi famiglia</button>
+          )}
+
+          {/* Edit famiglia (telefono emergenza + medico base) */}
+          {editFam && selected.famiglia && (
+            <form onSubmit={handleEditFamSubmit} style={{ background: '#FFF8F4', borderRadius: '12px', padding: '1rem', marginBottom: '1rem' }}>
+              <p style={{ margin: '0 0 0.75rem', fontWeight: 700, fontSize: '0.85rem', color: '#E8562A' }}>Modifica dati famiglia</p>
+              <Field label="Telefono emergenza *">
+                <input type="tel" required value={editFamForm.telefono_emergenza}
+                  onChange={e => setEditFamForm(p => ({ ...p, telefono_emergenza: e.target.value }))}
+                  style={inputSt} placeholder="+39 333..." />
+              </Field>
+              <Field label="Medico di base">
+                <input type="text" value={editFamForm.medico_base}
+                  onChange={e => setEditFamForm(p => ({ ...p, medico_base: e.target.value }))}
+                  style={inputSt} />
+              </Field>
+              {editFamError && <ErrorBox>{editFamError}</ErrorBox>}
+              <ModalActions onCancel={() => setEditFam(false)} loading={editFamLoading} submitLabel="Salva" />
+            </form>
+          )}
+
+          {/* Add genitore 2 to existing famiglia */}
+          {showAddG2 && selected.famiglia && (
+            <form onSubmit={handleAddG2Submit} style={{ background: '#FFF8F4', borderRadius: '12px', padding: '1rem', marginBottom: '1rem' }}>
+              <p style={{ margin: '0 0 0.75rem', fontWeight: 700, fontSize: '0.85rem', color: '#E8562A' }}>Aggiungi Genitore 2</p>
+              <Field label="Email *">
+                <input type="email" required value={addG2Email}
+                  onChange={e => setAddG2Email(e.target.value)}
+                  style={inputSt} placeholder="genitore2@email.it" />
+              </Field>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                <Field label="Nome">
+                  <input type="text" value={addG2Nome} onChange={e => setAddG2Nome(e.target.value)} style={inputSt} />
+                </Field>
+                <Field label="Cognome">
+                  <input type="text" value={addG2Cognome} onChange={e => setAddG2Cognome(e.target.value)} style={inputSt} />
+                </Field>
+              </div>
+              <Field label="Codice fiscale">
+                <input type="text" maxLength={16} value={addG2CF}
+                  onChange={e => setAddG2CF(e.target.value.toUpperCase())}
+                  style={inputSt} placeholder="RSSMRA..." />
+              </Field>
+              {addG2Error && <ErrorBox>{addG2Error}</ErrorBox>}
+              <ModalActions onCancel={() => { setShowAddG2(false); setAddG2Error('') }} loading={addG2Loading} submitLabel="Aggiungi" />
+            </form>
           )}
 
           {showFamForm && (
@@ -846,18 +973,11 @@ export default function BambiniPage() {
                     style={inputSt} placeholder="Rossi" />
                 </Field>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-                <Field label="Codice fiscale">
-                  <input type="text" maxLength={16} value={famForm.genitore1_codice_fiscale}
-                    onChange={e => setFamForm(p => ({ ...p, genitore1_codice_fiscale: e.target.value.toUpperCase() }))}
-                    style={inputSt} placeholder="RSSMRA..." />
-                </Field>
-                <Field label="Indirizzo">
-                  <input type="text" value={famForm.genitore1_indirizzo}
-                    onChange={e => setFamForm(p => ({ ...p, genitore1_indirizzo: e.target.value }))}
-                    style={inputSt} />
-                </Field>
-              </div>
+              <Field label="Codice fiscale">
+                <input type="text" maxLength={16} value={famForm.genitore1_codice_fiscale}
+                  onChange={e => setFamForm(p => ({ ...p, genitore1_codice_fiscale: e.target.value.toUpperCase() }))}
+                  style={inputSt} placeholder="RSSMRA..." />
+              </Field>
 
               {/* Toggle genitore 2 */}
               <div style={{ margin: '0.75rem 0', borderTop: '1px solid #FFD4B3', paddingTop: '0.75rem' }}>
@@ -887,18 +1007,11 @@ export default function BambiniPage() {
                         style={inputSt} placeholder="Rossi" />
                     </Field>
                   </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-                    <Field label="Codice fiscale">
-                      <input type="text" maxLength={16} value={famForm.genitore2_codice_fiscale}
-                        onChange={e => setFamForm(p => ({ ...p, genitore2_codice_fiscale: e.target.value.toUpperCase() }))}
-                        style={inputSt} placeholder="RSSMRA..." />
-                    </Field>
-                    <Field label="Indirizzo">
-                      <input type="text" value={famForm.genitore2_indirizzo}
-                        onChange={e => setFamForm(p => ({ ...p, genitore2_indirizzo: e.target.value }))}
-                        style={inputSt} />
-                    </Field>
-                  </div>
+                  <Field label="Codice fiscale">
+                    <input type="text" maxLength={16} value={famForm.genitore2_codice_fiscale}
+                      onChange={e => setFamForm(p => ({ ...p, genitore2_codice_fiscale: e.target.value.toUpperCase() }))}
+                      style={inputSt} placeholder="RSSMRA..." />
+                  </Field>
                 </>
               )}
 
@@ -908,18 +1021,11 @@ export default function BambiniPage() {
                     onChange={e => setFamForm(p => ({ ...p, telefono_emergenza: e.target.value }))}
                     style={inputSt} placeholder="+39 333..." />
                 </Field>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-                  <Field label="Medico di base">
-                    <input type="text" value={famForm.medico_base}
-                      onChange={e => setFamForm(p => ({ ...p, medico_base: e.target.value }))}
-                      style={inputSt} />
-                  </Field>
-                  <Field label="Indirizzo famiglia">
-                    <input type="text" value={famForm.indirizzo}
-                      onChange={e => setFamForm(p => ({ ...p, indirizzo: e.target.value }))}
-                      style={inputSt} />
-                  </Field>
-                </div>
+                <Field label="Medico di base">
+                  <input type="text" value={famForm.medico_base}
+                    onChange={e => setFamForm(p => ({ ...p, medico_base: e.target.value }))}
+                    style={inputSt} />
+                </Field>
               </div>
 
               {famError && <ErrorBox>{famError}</ErrorBox>}
@@ -1089,7 +1195,7 @@ function ModalActions({ onCancel, loading, submitLabel }: { onCancel: () => void
 
 function Badge({ color, children }: { color: string; children: React.ReactNode }) {
   return (
-    <span style={{ background: color, color: 'white', padding: '2px 10px', borderRadius: '20px', fontSize: '0.72rem', fontWeight: 700, whiteSpace: 'nowrap' }}>
+    <span style={{ background: color, color: 'white', padding: '2px 10px', borderRadius: '20px', fontSize: '0.72rem', fontWeight: 700, whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center' }}>
       {children}
     </span>
   )
