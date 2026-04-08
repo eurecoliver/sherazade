@@ -32,27 +32,22 @@ const FIELD_LABELS: Record<string, string> = {
  * Traduce i messaggi di errore Django più comuni in italiano leggibile.
  */
 function translateMsg(msg: string): string {
-  const map: Array<[RegExp | string, string]> = [
+  type Rule = [RegExp, string | ((m: RegExpMatchArray) => string)]
+  const map: Rule[] = [
     [/questo campo non può essere omesso/i, 'campo obbligatorio'],
     [/questo campo non può essere lasciato vuoto/i, 'campo obbligatorio'],
     [/inserisci un indirizzo email valido/i, 'email non valida'],
     [/un utente con questo username esiste già/i, 'nome utente già in uso'],
     [/un utente con questo indirizzo email esiste già/i, 'email già registrata'],
-    [/assicurati che questo valore contenga al più (\d+) caratter/i, (m: RegExpMatchArray) => `massimo ${m[1]} caratteri`],
-    [/assicurati che questo valore contenga almeno (\d+) caratter/i, (m: RegExpMatchArray) => `minimo ${m[1]} caratteri`],
+    [/assicurati che questo valore contenga al più (\d+) caratter/i, (m) => `massimo ${m[1]} caratteri`],
+    [/assicurati che questo valore contenga almeno (\d+) caratter/i, (m) => `minimo ${m[1]} caratteri`],
     [/questo campo deve essere univoco/i, 'valore già presente'],
     [/oggetto non trovato/i, 'elemento non trovato'],
     [/campo obbligatorio/i, 'campo obbligatorio'],
   ]
   for (const [pattern, replacement] of map) {
-    if (typeof pattern === 'string') {
-      if (msg.toLowerCase().includes(pattern.toLowerCase())) {
-        return typeof replacement === 'string' ? replacement : replacement([] as unknown as RegExpMatchArray)
-      }
-    } else {
-      const m = msg.match(pattern)
-      if (m) return typeof replacement === 'string' ? replacement : replacement(m)
-    }
+    const m = msg.match(pattern)
+    if (m) return typeof replacement === 'string' ? replacement : replacement(m)
   }
   // Rimuovi punto finale e porta in minuscolo se già in italiano
   return msg.replace(/\.$/, '')
