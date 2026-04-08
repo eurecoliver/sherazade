@@ -125,11 +125,15 @@ class PresenzaViewSet(viewsets.ModelViewSet):
                 'registrato_da': request.user,
             }
             try:
-                obj, _ = Presenza.objects.update_or_create(
+                obj, created = Presenza.objects.get_or_create(
                     bambino_id=bambino_id,
                     data=data_str,
                     defaults=defaults,
                 )
+                if not created:
+                    for k, v in defaults.items():
+                        setattr(obj, k, v)
+                    obj.save()  # triggera _calcola_ritardi()
                 saved.append(obj.id)
             except Exception as e:
                 errors.append({'bambino': bambino_id, 'errore': str(e)})
