@@ -69,6 +69,14 @@ interface OrarioUscita {
   orario: string
 }
 
+interface GenitoreLight {
+  id: number
+  email: string
+  first_name: string
+  last_name: string
+  phone: string
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function initials(nome: string, cognome: string) {
@@ -105,18 +113,6 @@ const EMPTY_BAMBINO = {
   note_mediche: '',
 }
 
-const EMPTY_FAMIGLIA = {
-  genitore1_email: '',
-  genitore1_nome: '',
-  genitore1_cognome: '',
-  genitore1_codice_fiscale: '',
-  genitore2_email: '',
-  genitore2_nome: '',
-  genitore2_cognome: '',
-  genitore2_codice_fiscale: '',
-  telefono_emergenza: '',
-  medico_base: '',
-}
 
 const EMPTY_DELEGA = {
   nome_delegato: '', cognome_delegato: '',
@@ -131,6 +127,7 @@ export default function BambiniPage() {
 
   const [gruppi, setGruppi] = useState<Gruppo[]>([])
   const [orari, setOrari] = useState<OrarioUscita[]>([])
+  const [genitori, setGenitori] = useState<GenitoreLight[]>([])
 
   const [bambini, setBambini] = useState<Bambino[]>([])
   const [loading, setLoading] = useState(true)
@@ -162,12 +159,24 @@ export default function BambiniPage() {
   const [editLoading, setEditLoading] = useState(false)
   const [editError, setEditError] = useState('')
 
-  // Family form (inside detail modal)
-  const [showFamForm, setShowFamForm] = useState(false)
-  const [famForm, setFamForm] = useState(EMPTY_FAMIGLIA)
-  const [hasGenitore2, setHasGenitore2] = useState(false)
-  const [famLoading, setFamLoading] = useState(false)
-  const [famError, setFamError] = useState('')
+  // "Collega genitore" modal
+  const [showCollegaG, setShowCollegaG] = useState(false)
+  const [collegaGSlot, setCollegaGSlot] = useState<'genitore1' | 'genitore2'>('genitore1')
+  const [collegaGTab, setCollegaGTab] = useState<'cerca' | 'crea'>('cerca')
+  const [collegaGSearch, setCollegaGSearch] = useState('')
+  const [collegaGSelected, setCollegaGSelected] = useState<GenitoreLight | null>(null)
+  const [collegaGTelEmerg, setCollegaGTelEmerg] = useState('')
+  const [collegaGMedico, setCollegaGMedico] = useState('')
+  const [collegaGLoading, setCollegaGLoading] = useState(false)
+  const [collegaGError, setCollegaGError] = useState('')
+  // "Crea nuovo" tab in collega modal
+  const [nuovoGEmail, setNuovoGEmail] = useState('')
+  const [nuovoGNome, setNuovoGNome] = useState('')
+  const [nuovoGCognome, setNuovoGCognome] = useState('')
+  const [nuovoGPhone, setNuovoGPhone] = useState('')
+  const [nuovoGCF, setNuovoGCF] = useState('')
+  const [nuovoGLoading, setNuovoGLoading] = useState(false)
+  const [nuovoGError, setNuovoGError] = useState('')
 
   // Edit famiglia (PATCH telefono_emergenza + medico_base)
   const [editFam, setEditFam] = useState(false)
@@ -184,14 +193,6 @@ export default function BambiniPage() {
   // Unlink family
   const [unlinkLoading, setUnlinkLoading] = useState(false)
 
-  // Add genitore 2 to existing famiglia
-  const [showAddG2, setShowAddG2] = useState(false)
-  const [addG2Email, setAddG2Email] = useState('')
-  const [addG2Nome, setAddG2Nome] = useState('')
-  const [addG2Cognome, setAddG2Cognome] = useState('')
-  const [addG2CF, setAddG2CF] = useState('')
-  const [addG2Loading, setAddG2Loading] = useState(false)
-  const [addG2Error, setAddG2Error] = useState('')
 
   // Add delega form
   const [showDelForm, setShowDelForm] = useState(false)
@@ -208,7 +209,30 @@ export default function BambiniPage() {
     fetch('/api/config/orari').then(r => r.ok ? r.json() : []).then(data => {
       setOrari(Array.isArray(data) ? data : (data.results ?? []))
     })
+    fetch('/api/utenti?role=genitore&ordering=last_name&page_size=500')
+      .then(r => r.ok ? r.json() : { results: [] })
+      .then(d => setGenitori(d.results ?? d))
   }, [])
+
+  const refreshGenitori = () =>
+    fetch('/api/utenti?role=genitore&ordering=last_name&page_size=500')
+      .then(r => r.ok ? r.json() : { results: [] })
+      .then(d => setGenitori(d.results ?? d))
+
+  const openCollegaG = (slot: 'genitore1' | 'genitore2') => {
+    setCollegaGSlot(slot)
+    setCollegaGTab('cerca')
+    setCollegaGSearch('')
+    setCollegaGSelected(null)
+    setCollegaGTelEmerg('')
+    setCollegaGMedico('')
+    setCollegaGError('')
+    setNuovoGEmail(''); setNuovoGNome(''); setNuovoGCognome(''); setNuovoGPhone(''); setNuovoGCF('')
+    setNuovoGError('')
+    setShowCollegaG(true)
+  }
+
+  const closeCollegaG = () => setShowCollegaG(false)
 
   // ── Fetch ──────────────────────────────────────────────────────────────────
 
@@ -294,7 +318,7 @@ export default function BambiniPage() {
       clearPhoto()
       await fetchBambini()
       setSelected(data)
-      setShowFamForm(true)
+      openCollegaG('genitore1')
     } catch { setAddError('Errore durante il salvataggio.') }
     finally { setAddLoading(false) }
   }
@@ -317,7 +341,7 @@ export default function BambiniPage() {
     setEditGError('')
     setEditGTab(tab)
     setEditFam(false)
-    setShowAddG2(false)
+    setShowCollegaG(false)
   }
 
   const handleEditGSubmit = async (e: React.FormEvent) => {
@@ -438,71 +462,116 @@ export default function BambiniPage() {
     finally { setEditFamLoading(false) }
   }
 
-  const handleAddG2Submit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!selected?.famiglia) return
-    if (addG2CF && addG2CF.length !== 16) {
-      setAddG2Error('Il codice fiscale deve essere esattamente 16 caratteri.')
+  const handleCollegaCercaConfirma = async () => {
+    if (!selected || !collegaGSelected) return
+    if (collegaGSlot === 'genitore1' && !collegaGTelEmerg) {
+      setCollegaGError('Inserisci il telefono di emergenza.')
       return
     }
-    setAddG2Loading(true)
-    setAddG2Error('')
+    setCollegaGLoading(true)
+    setCollegaGError('')
     try {
-      const res = await fetch(`/api/famiglie/${selected.famiglia.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          genitore2_email: addG2Email,
-          genitore2_nome: addG2Nome,
-          genitore2_cognome: addG2Cognome,
-          genitore2_codice_fiscale: addG2CF,
-        }),
-      })
-      const data = await res.json()
-      if (!res.ok) { setAddG2Error(formatErrors(data)); return }
-      setShowAddG2(false)
-      setAddG2Email(''); setAddG2Nome(''); setAddG2Cognome(''); setAddG2CF('')
-      const updated = await fetch(`/api/bambini/${selected.id}`)
-      if (updated.ok) setSelected(await updated.json())
-    } catch { setAddG2Error('Errore durante il salvataggio.') }
-    finally { setAddG2Loading(false) }
-  }
-
-  const handleFamSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!selected) return
-    if (famForm.genitore1_codice_fiscale && famForm.genitore1_codice_fiscale.length !== 16) {
-      setFamError('CF genitore 1 deve essere esattamente 16 caratteri.')
-      return
-    }
-    if (hasGenitore2 && famForm.genitore2_codice_fiscale && famForm.genitore2_codice_fiscale.length !== 16) {
-      setFamError('CF genitore 2 deve essere esattamente 16 caratteri.')
-      return
-    }
-    setFamLoading(true)
-    setFamError('')
-    try {
-      const payload = {
-        ...famForm,
-        bambino: selected.id,
-        genitore2_email: hasGenitore2 ? famForm.genitore2_email : '',
-        genitore2_codice_fiscale: hasGenitore2 ? famForm.genitore2_codice_fiscale : '',
+      if (collegaGSlot === 'genitore1') {
+        const res = await fetch('/api/famiglie', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            bambino: selected.id,
+            genitore1_email: collegaGSelected.email,
+            genitore1_nome: collegaGSelected.first_name,
+            genitore1_cognome: collegaGSelected.last_name,
+            telefono_emergenza: collegaGTelEmerg,
+            medico_base: collegaGMedico,
+          }),
+        })
+        if (!res.ok) { const e = await res.json(); setCollegaGError(formatErrors(e)); return }
+      } else {
+        if (!selected.famiglia) return
+        const res = await fetch(`/api/famiglie/${selected.famiglia.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            genitore2_email: collegaGSelected.email,
+            genitore2_nome: collegaGSelected.first_name,
+            genitore2_cognome: collegaGSelected.last_name,
+          }),
+        })
+        if (!res.ok) { const e = await res.json(); setCollegaGError(formatErrors(e)); return }
       }
-      const res = await fetch('/api/famiglie', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      })
-      const data = await res.json()
-      if (!res.ok) { setFamError(formatErrors(data)); return }
-      setShowFamForm(false)
-      setFamForm(EMPTY_FAMIGLIA)
-      setHasGenitore2(false)
+      setShowCollegaG(false)
       await fetchBambini()
       const updated = await fetch(`/api/bambini/${selected.id}`)
       if (updated.ok) setSelected(await updated.json())
-    } catch { setFamError('Errore durante il salvataggio.') }
-    finally { setFamLoading(false) }
+    } catch { setCollegaGError('Errore durante il collegamento.') }
+    finally { setCollegaGLoading(false) }
+  }
+
+  const handleCollegaCrea = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!selected) return
+    if (!nuovoGEmail || !nuovoGNome || !nuovoGCognome) {
+      setNuovoGError('Email, nome e cognome sono obbligatori.')
+      return
+    }
+    if (nuovoGCF && nuovoGCF.length !== 16) {
+      setNuovoGError('Il codice fiscale deve essere esattamente 16 caratteri.')
+      return
+    }
+    if (collegaGSlot === 'genitore1' && !collegaGTelEmerg) {
+      setNuovoGError('Inserisci il telefono di emergenza.')
+      return
+    }
+    setNuovoGLoading(true)
+    setNuovoGError('')
+    try {
+      const uRes = await fetch('/api/utenti', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: nuovoGEmail, username: nuovoGEmail,
+          first_name: nuovoGNome, last_name: nuovoGCognome,
+          phone: nuovoGPhone, codice_fiscale: nuovoGCF,
+          role: 'genitore',
+        }),
+      })
+      const uData = await uRes.json()
+      if (!uRes.ok) { setNuovoGError(formatErrors(uData)); return }
+      const genitore: GenitoreLight = uData
+      // Link genitore to bambino
+      if (collegaGSlot === 'genitore1') {
+        const res = await fetch('/api/famiglie', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            bambino: selected.id,
+            genitore1_email: genitore.email,
+            genitore1_nome: genitore.first_name,
+            genitore1_cognome: genitore.last_name,
+            telefono_emergenza: collegaGTelEmerg,
+            medico_base: collegaGMedico,
+          }),
+        })
+        if (!res.ok) { const e = await res.json(); setNuovoGError(formatErrors(e)); return }
+      } else {
+        if (!selected.famiglia) return
+        const res = await fetch(`/api/famiglie/${selected.famiglia.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            genitore2_email: genitore.email,
+            genitore2_nome: genitore.first_name,
+            genitore2_cognome: genitore.last_name,
+          }),
+        })
+        if (!res.ok) { const e = await res.json(); setNuovoGError(formatErrors(e)); return }
+      }
+      setShowCollegaG(false)
+      await fetchBambini()
+      const updated = await fetch(`/api/bambini/${selected.id}`)
+      if (updated.ok) setSelected(await updated.json())
+      refreshGenitori()
+    } catch { setNuovoGError('Errore nella creazione.') }
+    finally { setNuovoGLoading(false) }
   }
 
   // ── Add delega ─────────────────────────────────────────────────────────────
@@ -710,7 +779,7 @@ export default function BambiniPage() {
               <BambinoCard
                 key={b.id}
                 bambino={b}
-                onClick={() => { setSelected(b); setShowFamForm(false); setShowDelForm(false); setShowEdit(false) }}
+                onClick={() => { setSelected(b); setShowDelForm(false); setShowEdit(false) }}
               />
             ))}
           </div>
@@ -729,7 +798,7 @@ export default function BambiniPage() {
                   const color = b.gruppo_colore || '#A29BFE'
                   return (
                     <tr key={b.id}
-                      onClick={() => { setSelected(b); setShowFamForm(false); setShowDelForm(false); setShowEdit(false) }}
+                      onClick={() => { setSelected(b); setShowDelForm(false); setShowEdit(false) }}
                       style={{ background: i % 2 === 0 ? 'white' : '#FFF8F4', cursor: 'pointer', transition: 'background 0.1s' }}
                       onMouseEnter={e => (e.currentTarget.style.background = '#FFE8D6')}
                       onMouseLeave={e => (e.currentTarget.style.background = i % 2 === 0 ? 'white' : '#FFF8F4')}
@@ -929,10 +998,10 @@ export default function BambiniPage() {
 
       {/* ── Modal: Dettaglio bambino ─────────────────────────────────────────── */}
       {selected && (
-        <Overlay onClose={() => { setSelected(null); setShowEdit(false); setDetailTab('genitore1'); setEditFam(false); setShowAddG2(false); setEditGTab(null) }}>
+        <Overlay onClose={() => { setSelected(null); setShowEdit(false); setDetailTab('genitore1'); setEditFam(false); setShowCollegaG(false); setEditGTab(null) }}>
           <ModalHeader
             title={`${selected.nome} ${selected.cognome}`}
-            onClose={() => { setSelected(null); setShowEdit(false); setDetailTab('genitore1'); setEditFam(false); setShowAddG2(false); setEditGTab(null) }}
+            onClose={() => { setSelected(null); setShowEdit(false); setDetailTab('genitore1'); setEditFam(false); setShowCollegaG(false); setEditGTab(null) }}
           />
 
           {/* Avatar + Info base */}
@@ -1042,10 +1111,10 @@ export default function BambiniPage() {
               <div style={{ padding: '0.625rem 1rem', borderTop: '1px solid #E9ECEF', display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                 <button onClick={() => {
                   setEditFamForm({ telefono_emergenza: selected.famiglia!.telefono_emergenza || '', medico_base: selected.famiglia!.medico_base || '' })
-                  setEditFam(true); setShowAddG2(false); setEditGTab(null)
+                  setEditFam(true); setShowCollegaG(false); setEditGTab(null)
                 }} style={{ ...secondaryBtn, marginBottom: 0, fontSize: '0.75rem' }}>✏️ Telefono / Medico</button>
                 {!selected.famiglia.genitore2_email && (
-                  <button onClick={() => { setShowAddG2(true); setEditFam(false); setEditGTab(null) }}
+                  <button onClick={() => { openCollegaG('genitore2'); setEditFam(false); setEditGTab(null) }}
                     style={{ ...secondaryBtn, marginBottom: 0, fontSize: '0.75rem' }}>+ Aggiungi Genitore 2</button>
                 )}
                 <button onClick={handleUnlinkFamiglia} disabled={unlinkLoading}
@@ -1058,8 +1127,8 @@ export default function BambiniPage() {
             <p style={{ color: '#aaa', fontSize: '0.875rem', marginBottom: '0.5rem' }}>Nessuna famiglia registrata.</p>
           )}
 
-          {!selected.famiglia && !showFamForm && (
-            <button onClick={() => setShowFamForm(true)} style={secondaryBtn}>+ Aggiungi famiglia</button>
+          {!selected.famiglia && (
+            <button onClick={() => openCollegaG('genitore1')} style={secondaryBtn}>+ Aggiungi famiglia</button>
           )}
 
           {/* Edit famiglia (telefono emergenza + medico base) */}
@@ -1112,112 +1181,6 @@ export default function BambiniPage() {
             </form>
           )}
 
-          {/* Add genitore 2 to existing famiglia */}
-          {showAddG2 && selected.famiglia && (
-            <form onSubmit={handleAddG2Submit} style={{ background: '#FFF8F4', borderRadius: '12px', padding: '1rem', marginBottom: '1rem' }}>
-              <p style={{ margin: '0 0 0.75rem', fontWeight: 700, fontSize: '0.85rem', color: '#E8562A' }}>Aggiungi Genitore 2</p>
-              <Field label="Email" required>
-                <input type="email" required value={addG2Email}
-                  onChange={e => setAddG2Email(e.target.value)}
-                  style={inputSt} placeholder="genitore2@email.it" />
-              </Field>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-                <Field label="Nome">
-                  <input type="text" value={addG2Nome} onChange={e => setAddG2Nome(e.target.value)} style={inputSt} />
-                </Field>
-                <Field label="Cognome">
-                  <input type="text" value={addG2Cognome} onChange={e => setAddG2Cognome(e.target.value)} style={inputSt} />
-                </Field>
-              </div>
-              <Field label="Codice fiscale">
-                <input type="text" maxLength={16} value={addG2CF}
-                  onChange={e => setAddG2CF(e.target.value.toUpperCase())}
-                  style={inputSt} placeholder="RSSMRA..." />
-              </Field>
-              {addG2Error && <ErrorBox>{addG2Error}</ErrorBox>}
-              <ModalActions onCancel={() => { setShowAddG2(false); setAddG2Error('') }} loading={addG2Loading} submitLabel="Aggiungi" />
-            </form>
-          )}
-
-          {showFamForm && (
-            <form onSubmit={handleFamSubmit} style={{ background: '#FFF8F4', borderRadius: '12px', padding: '1rem', marginBottom: '1rem' }}>
-              <p style={{ margin: '0 0 0.75rem', fontWeight: 700, fontSize: '0.85rem', color: '#E8562A' }}>Genitore 1</p>
-              <Field label="Email genitore 1" required>
-                <input type="email" required value={famForm.genitore1_email}
-                  onChange={e => setFamForm(p => ({ ...p, genitore1_email: e.target.value }))}
-                  style={inputSt} placeholder="genitore@email.it" />
-              </Field>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-                <Field label="Nome">
-                  <input type="text" value={famForm.genitore1_nome}
-                    onChange={e => setFamForm(p => ({ ...p, genitore1_nome: e.target.value }))}
-                    style={inputSt} placeholder="Mario" />
-                </Field>
-                <Field label="Cognome">
-                  <input type="text" value={famForm.genitore1_cognome}
-                    onChange={e => setFamForm(p => ({ ...p, genitore1_cognome: e.target.value }))}
-                    style={inputSt} placeholder="Rossi" />
-                </Field>
-              </div>
-              <Field label="Codice fiscale">
-                <input type="text" maxLength={16} value={famForm.genitore1_codice_fiscale}
-                  onChange={e => setFamForm(p => ({ ...p, genitore1_codice_fiscale: e.target.value.toUpperCase() }))}
-                  style={inputSt} placeholder="RSSMRA..." />
-              </Field>
-
-              {/* Toggle genitore 2 */}
-              <div style={{ margin: '0.75rem 0', borderTop: '1px solid #FFD4B3', paddingTop: '0.75rem' }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', fontSize: '0.875rem', color: '#555', fontWeight: 600 }}>
-                  <input type="checkbox" checked={hasGenitore2} onChange={e => setHasGenitore2(e.target.checked)} />
-                  Aggiungi secondo genitore
-                </label>
-              </div>
-
-              {hasGenitore2 && (
-                <>
-                  <p style={{ margin: '0 0 0.75rem', fontWeight: 700, fontSize: '0.85rem', color: '#E8562A' }}>Genitore 2</p>
-                  <Field label="Email genitore 2" required>
-                    <input type="email" required={hasGenitore2} value={famForm.genitore2_email}
-                      onChange={e => setFamForm(p => ({ ...p, genitore2_email: e.target.value }))}
-                      style={inputSt} placeholder="genitore2@email.it" />
-                  </Field>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-                    <Field label="Nome">
-                      <input type="text" value={famForm.genitore2_nome}
-                        onChange={e => setFamForm(p => ({ ...p, genitore2_nome: e.target.value }))}
-                        style={inputSt} placeholder="Laura" />
-                    </Field>
-                    <Field label="Cognome">
-                      <input type="text" value={famForm.genitore2_cognome}
-                        onChange={e => setFamForm(p => ({ ...p, genitore2_cognome: e.target.value }))}
-                        style={inputSt} placeholder="Rossi" />
-                    </Field>
-                  </div>
-                  <Field label="Codice fiscale">
-                    <input type="text" maxLength={16} value={famForm.genitore2_codice_fiscale}
-                      onChange={e => setFamForm(p => ({ ...p, genitore2_codice_fiscale: e.target.value.toUpperCase() }))}
-                      style={inputSt} placeholder="RSSMRA..." />
-                  </Field>
-                </>
-              )}
-
-              <div style={{ borderTop: '1px solid #FFD4B3', paddingTop: '0.75rem', marginTop: '0.25rem' }}>
-                <Field label="Telefono emergenza" required>
-                  <input type="tel" required value={famForm.telefono_emergenza}
-                    onChange={e => setFamForm(p => ({ ...p, telefono_emergenza: e.target.value }))}
-                    style={inputSt} placeholder="+39 333..." />
-                </Field>
-                <Field label="Medico di base">
-                  <input type="text" value={famForm.medico_base}
-                    onChange={e => setFamForm(p => ({ ...p, medico_base: e.target.value }))}
-                    style={inputSt} />
-                </Field>
-              </div>
-
-              {famError && <ErrorBox>{famError}</ErrorBox>}
-              <ModalActions onCancel={() => setShowFamForm(false)} loading={famLoading} submitLabel="Salva famiglia" />
-            </form>
-          )}
 
           {/* ── Deleghe ritiro ───────────────────────────────────────────── */}
           <SectionTitle style={{ marginTop: '1.25rem' }}>🚗 Deleghe di ritiro</SectionTitle>
@@ -1277,6 +1240,136 @@ export default function BambiniPage() {
               🗑 Elimina
             </button>
           </div>
+        </Overlay>
+      )}
+
+      {/* ── Modal: Collega genitore ──────────────────────────────────────────── */}
+      {showCollegaG && (
+        <Overlay onClose={closeCollegaG} zIndex={1100}>
+          <ModalHeader
+            title={collegaGSlot === 'genitore1' ? '👤 Aggiungi Genitore 1' : '👤 Aggiungi Genitore 2'}
+            onClose={closeCollegaG}
+          />
+
+          {/* Tab selector */}
+          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
+            {(['cerca', 'crea'] as const).map(t => (
+              <button key={t} onClick={() => { setCollegaGTab(t); setCollegaGError(''); setNuovoGError('') }}
+                style={{ flex: 1, padding: '0.5rem', border: `2px solid ${collegaGTab === t ? '#E8562A' : '#FFD4B3'}`, borderRadius: '8px', background: collegaGTab === t ? '#E8562A' : 'white', color: collegaGTab === t ? 'white' : '#888', fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer', fontFamily: 'inherit' }}>
+                {t === 'cerca' ? '🔍 Cerca esistente' : '➕ Crea nuovo'}
+              </button>
+            ))}
+          </div>
+
+          {/* ── Tab: Cerca esistente ── */}
+          {collegaGTab === 'cerca' && (
+            <>
+              <input
+                type="search" placeholder="Cerca per nome, cognome o email..."
+                value={collegaGSearch} onChange={e => setCollegaGSearch(e.target.value)}
+                style={{ ...inputSt, marginBottom: '0.5rem' }}
+              />
+              <div style={{ maxHeight: '220px', overflowY: 'auto', border: '1px solid #FFD4B3', borderRadius: '10px', marginBottom: '0.75rem' }}>
+                {genitori
+                  .filter(g => {
+                    if (!collegaGSearch) return true
+                    const q = collegaGSearch.toLowerCase()
+                    return `${g.first_name} ${g.last_name} ${g.email}`.toLowerCase().includes(q)
+                  })
+                  .map(g => (
+                    <div key={g.id} onClick={() => setCollegaGSelected(g)}
+                      style={{
+                        padding: '0.625rem 0.875rem', cursor: 'pointer',
+                        background: collegaGSelected?.id === g.id ? '#FFF0E8' : 'white',
+                        borderLeft: collegaGSelected?.id === g.id ? '3px solid #E8562A' : '3px solid transparent',
+                        borderBottom: '1px solid #F5F5F5',
+                        display: 'flex', alignItems: 'center', gap: '0.75rem',
+                      }}
+                      onMouseEnter={e => { if (collegaGSelected?.id !== g.id) e.currentTarget.style.background = '#FFF8F4' }}
+                      onMouseLeave={e => { if (collegaGSelected?.id !== g.id) e.currentTarget.style.background = 'white' }}
+                    >
+                      <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#FFD4B3', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.875rem', flexShrink: 0 }}>👤</div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <p style={{ margin: 0, fontWeight: 600, fontSize: '0.875rem', color: '#333' }}>
+                          {g.first_name} {g.last_name}
+                        </p>
+                        <p style={{ margin: 0, fontSize: '0.775rem', color: '#888', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{g.email}</p>
+                      </div>
+                      {collegaGSelected?.id === g.id && <span style={{ color: '#E8562A', fontWeight: 700 }}>✓</span>}
+                    </div>
+                  ))}
+                {genitori.filter(g => {
+                  if (!collegaGSearch) return true
+                  const q = collegaGSearch.toLowerCase()
+                  return `${g.first_name} ${g.last_name} ${g.email}`.toLowerCase().includes(q)
+                }).length === 0 && (
+                  <p style={{ textAlign: 'center', color: '#aaa', padding: '1rem', margin: 0, fontSize: '0.875rem' }}>Nessun genitore trovato.</p>
+                )}
+              </div>
+              {collegaGSlot === 'genitore1' && (
+                <div style={{ borderTop: '1px solid #FFD4B3', paddingTop: '0.75rem', marginTop: '0.25rem' }}>
+                  <Field label="Telefono emergenza" required>
+                    <input type="tel" value={collegaGTelEmerg} onChange={e => setCollegaGTelEmerg(e.target.value)}
+                      style={inputSt} placeholder="+39 333..." />
+                  </Field>
+                  <Field label="Medico di base">
+                    <input type="text" value={collegaGMedico} onChange={e => setCollegaGMedico(e.target.value)} style={inputSt} />
+                  </Field>
+                </div>
+              )}
+              {collegaGError && <ErrorBox>{collegaGError}</ErrorBox>}
+              <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem' }}>
+                <button type="button" onClick={closeCollegaG}
+                  style={{ flex: 1, padding: '0.75rem', border: '2px solid #FFD4B3', borderRadius: '10px', background: 'white', color: '#666', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                  Annulla
+                </button>
+                <button type="button" onClick={handleCollegaCercaConfirma}
+                  disabled={!collegaGSelected || collegaGLoading}
+                  style={{ flex: 2, padding: '0.75rem', background: !collegaGSelected || collegaGLoading ? '#FFB8A0' : '#E8562A', border: 'none', borderRadius: '10px', color: 'white', fontSize: '0.875rem', fontWeight: 700, cursor: !collegaGSelected || collegaGLoading ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
+                  {collegaGLoading ? 'Salvataggio...' : 'Conferma'}
+                </button>
+              </div>
+            </>
+          )}
+
+          {/* ── Tab: Crea nuovo ── */}
+          {collegaGTab === 'crea' && (
+            <form onSubmit={handleCollegaCrea}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                <Field label="Nome" required>
+                  <input type="text" required value={nuovoGNome} onChange={e => setNuovoGNome(e.target.value)} style={inputSt} />
+                </Field>
+                <Field label="Cognome" required>
+                  <input type="text" required value={nuovoGCognome} onChange={e => setNuovoGCognome(e.target.value)} style={inputSt} />
+                </Field>
+              </div>
+              <Field label="Email" required>
+                <input type="email" required value={nuovoGEmail} onChange={e => setNuovoGEmail(e.target.value)} style={inputSt} placeholder="genitore@email.it" />
+              </Field>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                <Field label="Telefono">
+                  <input type="tel" value={nuovoGPhone} onChange={e => setNuovoGPhone(e.target.value)} style={inputSt} />
+                </Field>
+                <Field label="Codice fiscale">
+                  <input type="text" maxLength={16} value={nuovoGCF}
+                    onChange={e => setNuovoGCF(e.target.value.toUpperCase())} style={inputSt} placeholder="RSSMRA..." />
+                </Field>
+              </div>
+              {collegaGSlot === 'genitore1' && (
+                <div style={{ borderTop: '1px solid #FFD4B3', paddingTop: '0.75rem', marginTop: '0.25rem' }}>
+                  <Field label="Telefono emergenza" required>
+                    <input type="tel" required value={collegaGTelEmerg} onChange={e => setCollegaGTelEmerg(e.target.value)}
+                      style={inputSt} placeholder="+39 333..." />
+                  </Field>
+                  <Field label="Medico di base">
+                    <input type="text" value={collegaGMedico} onChange={e => setCollegaGMedico(e.target.value)} style={inputSt} />
+                  </Field>
+                </div>
+              )}
+              {nuovoGError && <ErrorBox>{nuovoGError}</ErrorBox>}
+              <ModalActions onCancel={closeCollegaG} loading={nuovoGLoading} submitLabel="Crea e aggiungi" />
+            </form>
+          )}
         </Overlay>
       )}
     </div>
