@@ -62,7 +62,7 @@ function fmtDataIt(iso: string): string {
 function calcolaRitardoArrivo(ora: string): number {
   const [h, m] = ora.split(':').map(Number)
   const minuti = h * 60 + m
-  const ingresso = 9 * 60
+  const ingresso = 9 * 60 + 30
   return Math.max(0, minuti - ingresso)
 }
 

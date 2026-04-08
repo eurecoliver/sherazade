@@ -282,24 +282,32 @@ Nuova architettura menu ciclico 5 settimane (ciclo continuo tra mesi):
 
 ## Ultimo Aggiornamento
 Data: 7 aprile 2026
-Completato: Fix dashboard admin bambini + miglioramenti pappe
+Completato: Presenze v2 (orario 09:30, tab registra admin, ritardi genitore) + anagrafica genitori
 
-### Fix e miglioramenti bambini admin (7 aprile 2026)
-- `FamigliaCreateSerializer`: aggiunto `genitore1/2_nome/cognome`; se utente non esiste viene creato con ruolo GENITORE e password inutilizzabile
-- Frontend admin/bambini: aggiunto modal "Modifica bambino" (PATCH), pulsanti Disattiva/Riattiva e Elimina nel modal dettaglio
-- Vista tabellare toggle (▦/☰): nome, cognome, gruppo, orario uscita, età, data nascita, genitore 1, CF, stato
+### Fix orario ingresso (7 aprile 2026)
+- `backend/apps/attendance/models.py`: `ORA_INGRESSO = time(9, 0)` → `time(9, 30)`
+- `frontend/dashboard/staff/presenze`: `calcolaRitardoArrivo` aggiornato a 09:30
 
-### Fix pappe (7 aprile 2026)
-- `PiattoAssegnazione`: campo `gruppo FK` → `gruppi M2M`; migration 0004
-- Admin calendario: list view con badge gruppi/giorni, ✏️ modifica + 🗑 elimina, form multi-gruppo
-- Cuoca: form "Aggiungi piatto al catalogo" nella dashboard pappe
-- Fix `.results ?? d` per tutte le risposte paginate DRF (filter is not a function)
+### Admin presenze: tab Registra (7 aprile 2026)
+- Aggiunto tab "📝 Registra presenze" alla dashboard admin/presenze
+- Stesso pannello delle presenze staff (BambinoRow, selezione data/sezione, salva bulk)
+- Admin/Direttrice possono ora registrare presenze come lo staff
 
-Prossimo task: deploy + test in produzione
-- Backend: ConfigMenuCiclo, Piatto, PiattoAssegnazione, SostituzionePiatto + migration 0003_pappe_v2
-- RegistroPasto: +colazione_quantita, +monopiatto_quantita, +pane_quantita
-- Admin: /dashboard/admin/pappe (4 tab: Piatti CRUD, Calendario 5×5, Sostituzioni, Config ciclo)
-- Staff: foglio pappe con menu calcolato automaticamente, selezione gruppo, portate filtrate
-- Genitore: menu del giorno con piatti del ciclo + storico pasti con nuovi campi
-- Route Next.js: /api/pappe/{config,piatti,assegnazioni,sostituzioni} + menu-giorno
+### Genitore presenze: ritardi (7 aprile 2026)
+- `Presenza`: aggiunto `minuti_ritardo_arrivo`, `minuti_ritardo_uscita`, `ora_uscita`
+- Card "Oggi": badge ritardo arrivo/uscita se presenti
+- Stats mese: box aggiuntivi totale minuti ritardo arrivo/uscita (solo se > 0)
+- Storico: badge ritardo inline per ogni giorno
+
+### Anagrafica Genitori (7 aprile 2026)
+- Nuova pagina `/dashboard/admin/genitori` con vista card + tabella
+- Filtri: ricerca testo, stato attivo/inattivo, toggle vista
+- Detail modal: info personali, lista figli (cross-reference con famiglie)
+- Edit modal: PATCH su UserAdminViewSet (nome, cognome, email, telefono, is_active)
+- Nuovo genitore: POST con password opzionale (se omessa → unusable password)
+- Disattiva/Riattiva (PATCH is_active) + Elimina (DELETE)
+- Bidirezionale: stesso modello User condiviso con anagrafica bambini
+- `frontend/src/app/api/famiglie/route.ts`: aggiunto GET handler
+- Pulsante "👨‍👩‍👧 Genitori" nella dashboard admin
+
 Prossimo task: deploy + test in produzione

@@ -12,7 +12,7 @@ class Presenza(models.Model):
         VACANZA = 'vacanza', 'Vacanza'
         ALTRO = 'altro', 'Altro'
 
-    ORA_INGRESSO = time(9, 0)
+    ORA_INGRESSO = time(9, 30)
 
     bambino = models.ForeignKey(
         'children.Bambino',

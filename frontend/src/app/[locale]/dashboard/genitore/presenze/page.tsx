@@ -18,6 +18,9 @@ interface Presenza {
   data: string
   presente: boolean
   ora_arrivo: string | null
+  ora_uscita: string | null
+  minuti_ritardo_arrivo: number | null
+  minuti_ritardo_uscita: number | null
   assenza_comunicata: boolean
   motivo_assenza: string
   note: string
@@ -139,6 +142,16 @@ export default function GenitorePresenzePage() {
   const presenzaOggi = dati?.presenze.find(p => p.data === oggi())
   const stats = dati?.stats_mese
 
+  // Ritardi totali del mese corrente (calcolati dai dati già scaricati)
+  const meseCorrente = new Date().getMonth() + 1
+  const annoCorrente = new Date().getFullYear()
+  const presenzeMese = dati?.presenze.filter(p => {
+    const d = new Date(p.data)
+    return d.getMonth() + 1 === meseCorrente && d.getFullYear() === annoCorrente
+  }) ?? []
+  const totRitardoArrivo = presenzeMese.reduce((acc, p) => acc + (p.minuti_ritardo_arrivo ?? 0), 0)
+  const totRitardoUscita = presenzeMese.reduce((acc, p) => acc + (p.minuti_ritardo_uscita ?? 0), 0)
+
   if (loading) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', background: '#F0F4FF' }}>
@@ -243,6 +256,20 @@ export default function GenitorePresenzePage() {
                         {presenzaOggi.assenza_comunicata ? ' — comunicata' : ''}
                       </p>
                     )}
+                    {presenzaOggi.presente && (
+                      <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.3rem', flexWrap: 'wrap' }}>
+                        {(presenzaOggi.minuti_ritardo_arrivo ?? 0) > 0 && (
+                          <span style={{ background: '#FFF3CD', color: '#856404', padding: '0.15rem 0.5rem', borderRadius: '10px', fontSize: '0.75rem', fontWeight: 700 }}>
+                            ⏱ Arrivo +{presenzaOggi.minuti_ritardo_arrivo} min
+                          </span>
+                        )}
+                        {(presenzaOggi.minuti_ritardo_uscita ?? 0) > 0 && (
+                          <span style={{ background: '#FFF5F5', color: '#C53030', padding: '0.15rem 0.5rem', borderRadius: '10px', fontSize: '0.75rem', fontWeight: 700 }}>
+                            ⏱ Uscita +{presenzaOggi.minuti_ritardo_uscita} min
+                          </span>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               ) : (
@@ -317,6 +344,18 @@ export default function GenitorePresenzePage() {
                     <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#C53030' }}>{stats.giorni_assenti}</div>
                     <div style={{ fontSize: '0.78rem', fontWeight: 600, color: '#C53030' }}>Giorni assenti</div>
                   </div>
+                  {totRitardoArrivo > 0 && (
+                    <div style={{ background: '#FFFBEB', borderRadius: '12px', padding: '0.875rem', textAlign: 'center' }}>
+                      <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#856404' }}>{totRitardoArrivo}</div>
+                      <div style={{ fontSize: '0.78rem', fontWeight: 600, color: '#856404' }}>Min ritardo arrivo</div>
+                    </div>
+                  )}
+                  {totRitardoUscita > 0 && (
+                    <div style={{ background: '#FFF5F5', borderRadius: '12px', padding: '0.875rem', textAlign: 'center' }}>
+                      <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#C53030' }}>{totRitardoUscita}</div>
+                      <div style={{ fontSize: '0.78rem', fontWeight: 600, color: '#C53030' }}>Min ritardo uscita</div>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -348,6 +387,16 @@ export default function GenitorePresenzePage() {
                       </div>
                       {p.presente && p.ora_arrivo && (
                         <span style={{ fontSize: '0.775rem', color: '#38A169' }}>⏰ {p.ora_arrivo.slice(0, 5)}</span>
+                      )}
+                      {(p.minuti_ritardo_arrivo ?? 0) > 0 && (
+                        <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#856404', background: '#FFF3CD', padding: '0.1rem 0.4rem', borderRadius: '8px' }}>
+                          +{p.minuti_ritardo_arrivo}min
+                        </span>
+                      )}
+                      {(p.minuti_ritardo_uscita ?? 0) > 0 && (
+                        <span style={{ fontSize: '0.7rem', fontWeight: 700, color: '#C53030', background: '#FFF5F5', padding: '0.1rem 0.4rem', borderRadius: '8px' }}>
+                          usc +{p.minuti_ritardo_uscita}min
+                        </span>
                       )}
                     </div>
                   ))}

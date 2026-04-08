@@ -6,6 +6,100 @@ import { useRouter } from 'next/navigation'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
+interface BambinoReg {
+  id: number
+  nome: string
+  cognome: string
+  sezione: string
+  orario_uscita_previsto: string | null
+}
+
+interface StatoBambino {
+  presente: boolean | null
+  ora_arrivo: string
+  ora_uscita: string
+  motivo_assenza: string
+  note: string
+  assenza_comunicata: boolean
+}
+
+const MOTIVI_REG = [
+  { value: 'malattia', label: 'Malattia' },
+  { value: 'famiglia', label: 'Motivi familiari' },
+  { value: 'vacanza', label: 'Vacanza' },
+  { value: 'altro', label: 'Altro' },
+]
+
+function calcolaRitardoArrivo(ora: string): number {
+  const [h, m] = ora.split(':').map(Number)
+  return Math.max(0, h * 60 + m - (9 * 60 + 30))
+}
+
+function calcolaRitardoUscita(ora: string, previsto: string): number {
+  const [h1, m1] = ora.split(':').map(Number)
+  const [h2, m2] = previsto.split(':').map(Number)
+  return Math.max(0, (h1 * 60 + m1) - (h2 * 60 + m2))
+}
+
+function BambinoRow({ bambino, stato, onChange }: {
+  bambino: BambinoReg
+  stato: StatoBambino
+  onChange: (s: Partial<StatoBambino>) => void
+}) {
+  const isPresente = stato.presente === true
+  const isAssente = stato.presente === false
+  const nonToccato = stato.presente === null
+  const ritardoArrivo = isPresente && stato.ora_arrivo ? calcolaRitardoArrivo(stato.ora_arrivo) : 0
+  const ritardoUscita = isPresente && stato.ora_uscita && bambino.orario_uscita_previsto
+    ? calcolaRitardoUscita(stato.ora_uscita, bambino.orario_uscita_previsto) : 0
+
+  return (
+    <div style={{
+      background: isPresente ? '#F0FFF4' : isAssente ? '#FFF5F5' : 'white',
+      border: `2px solid ${isPresente ? '#68D391' : isAssente ? '#FC8181' : '#E2E8F0'}`,
+      borderRadius: '14px', padding: '0.875rem 1rem', marginBottom: '0.625rem', transition: 'all 0.15s',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+        <div style={{ flex: 1 }}>
+          <span style={{ fontWeight: 700, color: '#333', fontSize: '1rem' }}>{bambino.cognome} {bambino.nome}</span>
+          {bambino.sezione && <span style={{ marginLeft: '0.5rem', fontSize: '0.75rem', color: '#888' }}>({bambino.sezione})</span>}
+          {nonToccato && <span style={{ marginLeft: '0.5rem', fontSize: '0.75rem', color: '#aaa' }}>— da registrare</span>}
+        </div>
+        <button onClick={() => onChange({ presente: isPresente ? null : true })} style={{ padding: '0.5rem 1rem', background: isPresente ? '#48BB78' : '#F0FFF4', color: isPresente ? 'white' : '#48BB78', border: `2px solid ${isPresente ? '#48BB78' : '#68D391'}`, borderRadius: '10px', fontWeight: 700, fontSize: '0.875rem', cursor: 'pointer', fontFamily: 'inherit', minWidth: '5rem' }}>✓ Sì</button>
+        <button onClick={() => onChange({ presente: isAssente ? null : false, motivo_assenza: isAssente ? '' : stato.motivo_assenza || 'malattia' })} style={{ padding: '0.5rem 1rem', background: isAssente ? '#FC8181' : '#FFF5F5', color: isAssente ? 'white' : '#FC8181', border: `2px solid ${isAssente ? '#FC8181' : '#FEB2B2'}`, borderRadius: '10px', fontWeight: 700, fontSize: '0.875rem', cursor: 'pointer', fontFamily: 'inherit', minWidth: '5rem' }}>✗ No</button>
+      </div>
+      {isPresente && (
+        <div style={{ marginTop: '0.75rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
+            <label style={{ fontSize: '0.8rem', color: '#555', display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+              Ora arrivo <input type="time" value={stato.ora_arrivo} onChange={e => onChange({ ora_arrivo: e.target.value })} style={{ padding: '0.25rem 0.5rem', border: '1px solid #CBD5E0', borderRadius: '6px', fontSize: '0.85rem', fontFamily: 'inherit' }} />
+            </label>
+            {ritardoArrivo > 0 && <span style={{ background: '#FFF3CD', color: '#856404', padding: '0.2rem 0.6rem', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 700 }}>⏱ +{ritardoArrivo} min</span>}
+          </div>
+          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
+            <label style={{ fontSize: '0.8rem', color: '#555', display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+              Ora uscita <input type="time" value={stato.ora_uscita} onChange={e => onChange({ ora_uscita: e.target.value })} style={{ padding: '0.25rem 0.5rem', border: '1px solid #CBD5E0', borderRadius: '6px', fontSize: '0.85rem', fontFamily: 'inherit' }} />
+            </label>
+            {bambino.orario_uscita_previsto && <span style={{ fontSize: '0.75rem', color: '#888' }}>Previsto: {bambino.orario_uscita_previsto}</span>}
+            {ritardoUscita > 0 && <span style={{ background: '#FFF5F5', color: '#C53030', padding: '0.2rem 0.6rem', borderRadius: '20px', fontSize: '0.75rem', fontWeight: 700 }}>⏱ +{ritardoUscita} min</span>}
+          </div>
+        </div>
+      )}
+      {isAssente && (
+        <div style={{ marginTop: '0.625rem', display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
+          <select value={stato.motivo_assenza} onChange={e => onChange({ motivo_assenza: e.target.value })} style={{ padding: '0.35rem 0.625rem', border: '1px solid #FEB2B2', borderRadius: '8px', fontSize: '0.85rem', fontFamily: 'inherit', background: '#FFF5F5', color: '#C53030' }}>
+            {MOTIVI_REG.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+          </select>
+          <label style={{ fontSize: '0.8rem', color: '#888', display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
+            <input type="checkbox" checked={stato.assenza_comunicata} onChange={e => onChange({ assenza_comunicata: e.target.checked })} />
+            Genitore ha avvisato
+          </label>
+        </div>
+      )}
+    </div>
+  )
+}
+
 interface BambinoInfo {
   id: number
   nome: string
@@ -75,12 +169,23 @@ export default function AdminPresenzePage() {
   const router = useRouter()
   const locale = useLocale()
 
-  const [tab, setTab] = useState<'oggi' | 'storico'>('oggi')
+  const [tab, setTab] = useState<'oggi' | 'storico' | 'registra'>('oggi')
   const [data, setData] = useState(oggi())
   const [righe, setRighe] = useState<RigaGiornata[]>([])
   const [nonArrivati, setNonArrivati] = useState<NonArrivatiResp | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+
+  // Registra
+  const [righeReg, setRigheReg] = useState<{ bambino: BambinoReg; presenza: Presenza | null }[]>([])
+  const [statiReg, setStatiReg] = useState<Record<number, StatoBambino>>({})
+  const [sezReg, setSezReg] = useState('')
+  const [sezioniReg, setSezioniReg] = useState<string[]>([])
+  const [dataReg, setDataReg] = useState(oggi())
+  const [loadingReg, setLoadingReg] = useState(false)
+  const [savingReg, setSavingReg] = useState(false)
+  const [savedReg, setSavedReg] = useState(false)
+  const [errorReg, setErrorReg] = useState('')
 
   // Storico
   const [reportAnno, setReportAnno] = useState(new Date().getFullYear())
@@ -111,6 +216,66 @@ export default function AdminPresenzePage() {
   useEffect(() => {
     if (tab === 'oggi') caricaOggi(data)
   }, [tab, data, caricaOggi])
+
+  const caricaGiornataReg = useCallback(async (dataStr: string, sez: string) => {
+    setLoadingReg(true)
+    setErrorReg('')
+    setSavedReg(false)
+    try {
+      const params = new URLSearchParams({ data: dataStr })
+      if (sez) params.set('sezione', sez)
+      const res = await fetch(`/api/presenze/giornata?${params}`)
+      if (!res.ok) throw new Error()
+      const dati: { bambino: BambinoReg; presenza: Presenza | null }[] = await res.json()
+      setRigheReg(dati)
+      setSezioniReg([...new Set(dati.map(r => r.bambino.sezione).filter(Boolean))])
+      const nuovi: Record<number, StatoBambino> = {}
+      for (const r of dati) {
+        nuovi[r.bambino.id] = r.presenza
+          ? { presente: r.presenza.presente, ora_arrivo: r.presenza.ora_arrivo ?? '', ora_uscita: r.presenza.ora_uscita ?? '', motivo_assenza: r.presenza.motivo_assenza, note: r.presenza.note, assenza_comunicata: r.presenza.assenza_comunicata }
+          : { presente: null, ora_arrivo: '', ora_uscita: '', motivo_assenza: 'malattia', note: '', assenza_comunicata: false }
+      }
+      setStatiReg(nuovi)
+    } catch {
+      setErrorReg('Errore nel caricamento.')
+    } finally {
+      setLoadingReg(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (tab === 'registra') caricaGiornataReg(dataReg, sezReg)
+  }, [tab, dataReg, sezReg, caricaGiornataReg])
+
+  const salvaReg = async () => {
+    setSavingReg(true)
+    setErrorReg('')
+    try {
+      const presenze = righeReg
+        .filter(r => statiReg[r.bambino.id]?.presente !== null)
+        .map(r => ({
+          bambino: r.bambino.id,
+          presente: statiReg[r.bambino.id].presente,
+          ora_arrivo: statiReg[r.bambino.id].ora_arrivo || null,
+          ora_uscita: statiReg[r.bambino.id].ora_uscita || null,
+          motivo_assenza: statiReg[r.bambino.id].presente ? '' : statiReg[r.bambino.id].motivo_assenza,
+          assenza_comunicata: statiReg[r.bambino.id].assenza_comunicata,
+          note: statiReg[r.bambino.id].note,
+        }))
+      const res = await fetch('/api/presenze/salva-giornata', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ data: dataReg, presenze }),
+      })
+      if (!res.ok) throw new Error()
+      setSavedReg(true)
+      caricaGiornataReg(dataReg, sezReg)
+    } catch {
+      setErrorReg('Errore nel salvataggio.')
+    } finally {
+      setSavingReg(false)
+    }
+  }
 
   const caricaReport = async () => {
     setLoadingReport(true)
@@ -155,8 +320,12 @@ export default function AdminPresenzePage() {
       <div style={{ maxWidth: '900px', margin: '0 auto', padding: '1.25rem 1rem 3rem' }}>
 
         {/* Tab bar */}
-        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.25rem' }}>
-          {(['oggi', 'storico'] as const).map(t => (
+        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.25rem', flexWrap: 'wrap' }}>
+          {([
+            ['oggi', 'Riepilogo giornaliero'],
+            ['registra', '📝 Registra presenze'],
+            ['storico', 'Report mensile'],
+          ] as const).map(([t, label]) => (
             <button
               key={t}
               onClick={() => setTab(t)}
@@ -172,7 +341,7 @@ export default function AdminPresenzePage() {
                 fontFamily: 'inherit',
               }}
             >
-              {t === 'oggi' ? 'Riepilogo giornaliero' : 'Report mensile'}
+              {label}
             </button>
           ))}
         </div>
@@ -291,6 +460,69 @@ export default function AdminPresenzePage() {
                   )
                 })}
               </>
+            )}
+          </>
+        )}
+
+        {/* ── TAB REGISTRA ── */}
+        {tab === 'registra' && (
+          <>
+            <div style={{ background: 'white', borderRadius: '12px', padding: '0.875rem 1rem', marginBottom: '1rem', display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
+              <input type="date" value={dataReg} onChange={e => setDataReg(e.target.value)} style={{ padding: '0.4rem 0.75rem', border: '1px solid #CBD5E0', borderRadius: '8px', fontSize: '0.875rem', fontFamily: 'inherit' }} />
+              <select value={sezReg} onChange={e => setSezReg(e.target.value)} style={{ padding: '0.4rem 0.75rem', border: '1px solid #CBD5E0', borderRadius: '8px', fontSize: '0.875rem', fontFamily: 'inherit', flex: 1, minWidth: '120px' }}>
+                <option value="">Tutte le sezioni</option>
+                {sezioniReg.map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
+
+            {(() => {
+              const presenti = Object.values(statiReg).filter(s => s.presente === true).length
+              const assenti = Object.values(statiReg).filter(s => s.presente === false).length
+              const nonReg = Object.values(statiReg).filter(s => s.presente === null).length
+              return (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.625rem', marginBottom: '1rem' }}>
+                  {[
+                    { label: 'Presenti', count: presenti, color: '#48BB78', bg: '#F0FFF4' },
+                    { label: 'Assenti', count: assenti, color: '#FC8181', bg: '#FFF5F5' },
+                    { label: 'Da fare', count: nonReg, color: '#F6AD55', bg: '#FFFAF0' },
+                  ].map(c => (
+                    <div key={c.label} style={{ background: c.bg, border: `2px solid ${c.color}40`, borderRadius: '12px', padding: '0.75rem', textAlign: 'center' }}>
+                      <div style={{ fontSize: '1.75rem', fontWeight: 800, color: c.color }}>{c.count}</div>
+                      <div style={{ fontSize: '0.75rem', fontWeight: 600, color: c.color }}>{c.label}</div>
+                    </div>
+                  ))}
+                </div>
+              )
+            })()}
+
+            {errorReg && <div style={{ background: '#FADBD8', color: '#C0392B', padding: '0.75rem 1rem', borderRadius: '10px', marginBottom: '1rem', fontSize: '0.875rem' }}>{errorReg}</div>}
+            {savedReg && <div style={{ background: '#D4EDDA', color: '#155724', padding: '0.75rem 1rem', borderRadius: '10px', marginBottom: '1rem', fontSize: '0.875rem', fontWeight: 600 }}>✓ Presenze salvate con successo</div>}
+
+            {loadingReg ? (
+              <div style={{ textAlign: 'center', padding: '3rem', color: '#555', fontWeight: 600 }}>Caricamento...</div>
+            ) : righeReg.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '3rem', background: 'white', borderRadius: '16px', color: '#aaa' }}>Nessun bambino trovato.</div>
+            ) : (
+              righeReg.map(r => (
+                <BambinoRow
+                  key={r.bambino.id}
+                  bambino={r.bambino}
+                  stato={statiReg[r.bambino.id] ?? { presente: null, ora_arrivo: '', ora_uscita: '', motivo_assenza: 'malattia', note: '', assenza_comunicata: false }}
+                  onChange={delta => setStatiReg(prev => ({ ...prev, [r.bambino.id]: { ...prev[r.bambino.id], ...delta } }))}
+                />
+              ))
+            )}
+
+            {!loadingReg && righeReg.length > 0 && (
+              <div style={{ position: 'sticky', bottom: 0, left: 0, right: 0, padding: '1rem 0 0', background: 'transparent', display: 'flex', justifyContent: 'center' }}>
+                <button
+                  onClick={salvaReg}
+                  disabled={savingReg}
+                  style={{ padding: '0.875rem 2.5rem', background: savingReg ? '#A0AEC0' : '#2D3436', color: 'white', border: 'none', borderRadius: '12px', fontSize: '1rem', fontWeight: 700, cursor: savingReg ? 'not-allowed' : 'pointer', fontFamily: 'inherit', maxWidth: '400px', width: '100%' }}
+                >
+                  {savingReg ? 'Salvataggio...' : `Salva presenze (${Object.values(statiReg).filter(s => s.presente !== null).length} di ${righeReg.length})`}
+                </button>
+              </div>
             )}
           </>
         )}
