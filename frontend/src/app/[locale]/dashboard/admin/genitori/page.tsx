@@ -96,6 +96,28 @@ function InfoGrid({ items }: { items: { label: string; value: string; full?: boo
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
+function formatApiErrors(data: unknown): string {
+  if (!data || typeof data !== 'object') return String(data)
+  const msgs: string[] = []
+  for (const [key, val] of Object.entries(data as Record<string, unknown>)) {
+    const label = key === 'non_field_errors' ? '' : `${key}: `
+    const text = Array.isArray(val) ? val.join(', ') : String(val)
+    msgs.push(`${label}${text}`)
+  }
+  return msgs.join('\n') || 'Errore sconosciuto.'
+}
+
+function ErrorAlert({ message }: { message: string }) {
+  if (!message) return null
+  return (
+    <div style={{ background: '#FFF5F5', border: '1px solid #FEB2B2', borderRadius: '10px', padding: '0.75rem 1rem', marginTop: '0.75rem' }}>
+      {message.split('\n').map((line, i) => (
+        <p key={i} style={{ margin: i === 0 ? 0 : '0.25rem 0 0', fontSize: '0.85rem', color: '#C53030', fontWeight: i === 0 ? 600 : 400 }}>{line}</p>
+      ))}
+    </div>
+  )
+}
+
 export default function GenitoriPage() {
   const router = useRouter()
   const locale = useLocale()
@@ -219,7 +241,7 @@ export default function GenitoriPage() {
         body: JSON.stringify(editForm),
       })
       const data = await res.json()
-      if (!res.ok) { setEditError(JSON.stringify(data)); return }
+      if (!res.ok) { setEditError(formatApiErrors(data)); return }
       setShowEdit(false)
       setSelected({ ...selected, ...editForm })
       carica()
@@ -275,7 +297,7 @@ export default function GenitoriPage() {
         body: JSON.stringify({ ...newForm, role: 'genitore', username: newForm.email }),
       })
       const data = await res.json()
-      if (!res.ok) { setNewError(JSON.stringify(data)); return }
+      if (!res.ok) { setNewError(formatApiErrors(data)); return }
       const creato: Genitore = data
       setShowNew(false)
       setNewForm({ ...EMPTY_EDIT, password: '' })
@@ -314,15 +336,19 @@ export default function GenitoriPage() {
             telefono_emergenza: collegaTelEmerg,
           }),
         })
-        if (!res.ok) { const e = await res.json(); setCollegaError(JSON.stringify(e)); return }
+        if (!res.ok) { const e = await res.json(); setCollegaError(formatApiErrors(e)); return }
       } else if (bambino.famiglia.genitore2 === null) {
-        // Aggiungi come genitore2
+        // Aggiungi come genitore2 via email (backend risolve/crea User)
         const res = await fetch(`/api/famiglie/${bambino.famiglia.id}`, {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ genitore2: newGenitore.id }),
+          body: JSON.stringify({
+            genitore2_email: newGenitore.email,
+            genitore2_nome: newGenitore.first_name,
+            genitore2_cognome: newGenitore.last_name,
+          }),
         })
-        if (!res.ok) { const e = await res.json(); setCollegaError(JSON.stringify(e)); return }
+        if (!res.ok) { const e = await res.json(); setCollegaError(formatApiErrors(e)); return }
       } else {
         setCollegaError('Questo bambino ha già due genitori registrati.')
         return
@@ -334,6 +360,28 @@ export default function GenitoriPage() {
     } finally {
       setCollegaLoading(false)
     }
+  }
+
+  const scollegaBambino = async (b: Bambino) => {
+    if (!selected) return
+    const fam = famiglie.find(f => f.bambino === b.id)
+    if (!fam) return
+    const label = `${b.nome} ${b.cognome}`
+    if (!confirm(`Rimuovere la relazione tra ${nomeCompleto(selected)} e ${label}?`)) return
+    try {
+      if (fam.genitore2 === selected.id) {
+        // È genitore2 → PATCH genitore2=null
+        await fetch(`/api/famiglie/${fam.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ genitore2: null }),
+        })
+      } else {
+        // È genitore1 → elimina intera famiglia
+        await fetch(`/api/famiglie/${fam.id}`, { method: 'DELETE' })
+      }
+      carica()
+    } catch { /* ignore */ }
   }
 
   // Crea nuovo bambino e collegalo
@@ -357,7 +405,7 @@ export default function GenitoriPage() {
         }),
       })
       const bData = await bRes.json()
-      if (!bRes.ok) { setNuovoBError(JSON.stringify(bData)); return }
+      if (!bRes.ok) { setNuovoBError(formatApiErrors(bData)); return }
       const bambinoId: number = bData.id
 
       // 2. Crea Famiglia
@@ -372,7 +420,7 @@ export default function GenitoriPage() {
           telefono_emergenza: nuovoBTel,
         }),
       })
-      if (!fRes.ok) { const e = await fRes.json(); setNuovoBError(JSON.stringify(e)); return }
+      if (!fRes.ok) { const e = await fRes.json(); setNuovoBError(formatApiErrors(e)); return }
       setShowCollega(false)
       carica()
     } catch {
@@ -533,9 +581,16 @@ export default function GenitoriPage() {
                 {figli.length > 0 && (
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
                     {figli.map(b => (
-                      <span key={b.id} onClick={() => router.push(`/${locale}/dashboard/admin/bambini`)} title="Vai all'anagrafica bambini" style={{ background: b.gruppo_colore + '20', color: b.gruppo_colore, border: `1px solid ${b.gruppo_colore}50`, padding: '0.35rem 0.875rem', borderRadius: '10px', fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer' }}>
-                        {b.nome} {b.cognome} {b.gruppo_nome ? `(${b.gruppo_nome})` : ''} {!b.attivo ? '⏸' : ''}
-                      </span>
+                      <div key={b.id} style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', background: b.gruppo_colore + '20', border: `1px solid ${b.gruppo_colore}50`, borderRadius: '10px', padding: '0.2rem 0.35rem 0.2rem 0.875rem' }}>
+                        <span style={{ color: b.gruppo_colore, fontSize: '0.85rem', fontWeight: 700 }}>
+                          {b.nome} {b.cognome} {b.gruppo_nome ? `(${b.gruppo_nome})` : ''} {!b.attivo ? '⏸' : ''}
+                        </span>
+                        <button
+                          onClick={() => scollegaBambino(b)}
+                          title="Scollega bambino"
+                          style={{ background: 'none', border: 'none', color: b.gruppo_colore, cursor: 'pointer', fontWeight: 700, fontSize: '0.85rem', padding: '0 0.25rem', lineHeight: 1, opacity: 0.6 }}
+                        >×</button>
+                      </div>
                     ))}
                   </div>
                 )}
@@ -587,7 +642,7 @@ export default function GenitoriPage() {
             <input type="checkbox" checked={editForm.is_active} onChange={e => setEditForm(f => ({ ...f, is_active: e.target.checked }))} />
             Account attivo
           </label>
-          {editError && <p style={{ color: '#C53030', fontSize: '0.8rem', margin: '0.75rem 0 0' }}>{editError}</p>}
+          <ErrorAlert message={editError} />
           <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1.25rem' }}>
             <button onClick={handleEditSubmit} disabled={editLoading} style={{ flex: 1, padding: '0.75rem', background: editLoading ? '#A0AEC0' : '#6C63FF', color: 'white', border: 'none', borderRadius: '10px', fontWeight: 700, fontSize: '0.9rem', cursor: editLoading ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
               {editLoading ? 'Salvataggio...' : 'Salva modifiche'}
@@ -626,7 +681,7 @@ export default function GenitoriPage() {
               <input type="text" value={newForm.indirizzo} onChange={e => setNewForm(f => ({ ...f, indirizzo: e.target.value }))} style={{ width: '100%', padding: '0.5rem 0.75rem', border: '1px solid #E2E8F0', borderRadius: '8px', fontSize: '0.875rem', fontFamily: 'inherit', boxSizing: 'border-box' }} />
             </div>
           </div>
-          {newError && <p style={{ color: '#C53030', fontSize: '0.8rem', margin: '0.75rem 0 0' }}>{newError}</p>}
+          <ErrorAlert message={newError} />
           <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1.25rem' }}>
             <button onClick={handleNewSubmit} disabled={newLoading || !newForm.email} style={{ flex: 1, padding: '0.75rem', background: newLoading || !newForm.email ? '#A0AEC0' : '#6C63FF', color: 'white', border: 'none', borderRadius: '10px', fontWeight: 700, fontSize: '0.9rem', cursor: newLoading || !newForm.email ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
               {newLoading ? 'Creazione...' : 'Crea genitore'}
@@ -720,7 +775,7 @@ export default function GenitoriPage() {
                   </div>
                 ))}
               </div>
-              {nuovoBError && <p style={{ color: '#C53030', fontSize: '0.8rem', margin: '0.625rem 0 0' }}>{nuovoBError}</p>}
+              <ErrorAlert message={nuovoBError} />
               <button onClick={creaNuovoBambino} disabled={nuovoBLoading} style={{ marginTop: '1rem', width: '100%', padding: '0.75rem', background: nuovoBLoading ? '#A0AEC0' : '#6C63FF', color: 'white', border: 'none', borderRadius: '10px', fontWeight: 700, fontSize: '0.9rem', cursor: nuovoBLoading ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
                 {nuovoBLoading ? 'Creazione...' : 'Crea bambino e collega'}
               </button>

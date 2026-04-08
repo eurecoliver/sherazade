@@ -102,12 +102,14 @@ export default function AdminDashboard() {
           >
             ✅ Presenze
           </button>
-          <button
-            onClick={() => router.push(`/${locale}/dashboard/admin/utenti`)}
-            style={{ padding: '0.75rem 1.25rem', background: '#EBF8FF', color: '#2B6CB0', border: '2px solid #90CDF4', borderRadius: '10px', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
-          >
-            👥 Utenti
-          </button>
+          {user.role === 'admin' && (
+            <button
+              onClick={() => router.push(`/${locale}/dashboard/admin/utenti`)}
+              style={{ padding: '0.75rem 1.25rem', background: '#EBF8FF', color: '#2B6CB0', border: '2px solid #90CDF4', borderRadius: '10px', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
+            >
+              👥 Utenti
+            </button>
+          )}
           <button
             onClick={() => router.push(`/${locale}/dashboard/admin/pappe`)}
             style={{ padding: '0.75rem 1.25rem', background: '#FFF9E6', color: '#E67E22', border: '2px solid #FED7AA', borderRadius: '10px', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
