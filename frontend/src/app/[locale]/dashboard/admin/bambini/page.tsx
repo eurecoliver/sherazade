@@ -153,6 +153,7 @@ export default function BambiniPage() {
 
   // Detail modal
   const [selected, setSelected] = useState<Bambino | null>(null)
+  const [detailTab, setDetailTab] = useState<'genitore1' | 'genitore2'>('genitore1')
 
   // Edit bambino
   const [showEdit, setShowEdit] = useState(false)
@@ -727,24 +728,11 @@ export default function BambiniPage() {
 
       {/* ── Modal: Dettaglio bambino ─────────────────────────────────────────── */}
       {selected && (
-        <Overlay onClose={() => { setSelected(null); setShowEdit(false) }}>
+        <Overlay onClose={() => { setSelected(null); setShowEdit(false); setDetailTab('genitore1') }}>
           <ModalHeader
             title={`${selected.nome} ${selected.cognome}`}
-            onClose={() => { setSelected(null); setShowEdit(false) }}
+            onClose={() => { setSelected(null); setShowEdit(false); setDetailTab('genitore1') }}
           />
-
-          {/* Azioni */}
-          <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.25rem', flexWrap: 'wrap' }}>
-            <button onClick={() => openEdit(selected)} style={{ ...secondaryBtn, marginBottom: 0 }}>✏️ Modifica</button>
-            <button onClick={handleToggleAttivo}
-              style={{ ...secondaryBtn, marginBottom: 0, color: selected.attivo ? '#E67E22' : '#27AE60', borderColor: selected.attivo ? '#FDEBD0' : '#D5F5E3' }}>
-              {selected.attivo ? '⏸ Disattiva' : '▶ Riattiva'}
-            </button>
-            <button onClick={handleDelete}
-              style={{ ...secondaryBtn, marginBottom: 0, marginLeft: 'auto', color: '#C0392B', borderColor: '#FADBD8' }}>
-              🗑 Elimina
-            </button>
-          </div>
 
           {/* Avatar + Info base */}
           <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start', marginBottom: '1.25rem' }}>
@@ -786,36 +774,49 @@ export default function BambiniPage() {
           {/* ── Famiglia ──────────────────────────────────────────────────── */}
           <SectionTitle>👨‍👩‍👧 Famiglia</SectionTitle>
           {selected.famiglia ? (
-            <div style={{ background: '#F8F9FA', borderRadius: '10px', padding: '1rem', marginBottom: '1rem', fontSize: '0.875rem' }}>
-              <GenitoreInfo
-                label="Genitore 1"
-                nome={selected.famiglia.genitore1_nome}
-                email={selected.famiglia.genitore1_email}
-                telefono={selected.famiglia.genitore1_telefono}
-                cf={selected.famiglia.genitore1_codice_fiscale}
-                indirizzo={selected.famiglia.genitore1_indirizzo}
-              />
-              {selected.famiglia.genitore2_email && (
-                <GenitoreInfo
-                  label="Genitore 2"
-                  nome={selected.famiglia.genitore2_nome ?? ''}
-                  email={selected.famiglia.genitore2_email}
-                  telefono={selected.famiglia.genitore2_telefono ?? ''}
-                  cf={selected.famiglia.genitore2_codice_fiscale}
-                  indirizzo={selected.famiglia.genitore2_indirizzo}
-                />
-              )}
-              {selected.famiglia.telefono_emergenza && (
-                <p style={{ margin: '0.5rem 0 0', paddingTop: '0.5rem', borderTop: '1px solid #E9ECEF' }}>
-                  <strong>📞 Emergenza:</strong> {selected.famiglia.telefono_emergenza}
-                </p>
-              )}
-              {selected.famiglia.medico_base && (
-                <p style={{ margin: '0.25rem 0 0' }}><strong>🩺 Medico:</strong> {selected.famiglia.medico_base}</p>
-              )}
-              {selected.famiglia.indirizzo && (
-                <p style={{ margin: '0.25rem 0 0' }}><strong>🏠 Indirizzo famiglia:</strong> {selected.famiglia.indirizzo}</p>
-              )}
+            <div style={{ background: '#F8F9FA', borderRadius: '12px', marginBottom: '1rem', overflow: 'hidden' }}>
+              {/* Tab selector */}
+              <div style={{ display: 'flex', borderBottom: '1px solid #E9ECEF' }}>
+                {[
+                  { k: 'genitore1' as const, l: `👤 ${selected.famiglia.genitore1_nome || 'Genitore 1'}` },
+                  ...(selected.famiglia.genitore2_email
+                    ? [{ k: 'genitore2' as const, l: `👤 ${selected.famiglia.genitore2_nome || 'Genitore 2'}` }]
+                    : []),
+                ].map(({ k, l }) => (
+                  <button key={k} onClick={() => setDetailTab(k)} style={{ flex: 1, padding: '0.625rem 0.5rem', background: detailTab === k ? 'white' : 'transparent', border: 'none', borderBottom: detailTab === k ? '2px solid #E8562A' : '2px solid transparent', fontWeight: detailTab === k ? 700 : 400, fontSize: '0.8rem', color: detailTab === k ? '#E8562A' : '#666', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'center', transition: 'all 0.15s', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {l}
+                  </button>
+                ))}
+              </div>
+              {/* Tab content */}
+              <div style={{ padding: '1rem', fontSize: '0.875rem' }}>
+                {detailTab === 'genitore1' && (
+                  <div style={{ display: 'grid', gap: '0.375rem' }}>
+                    {selected.famiglia.genitore1_email && (
+                      <p style={{ margin: 0 }}>✉️ <a href={`mailto:${selected.famiglia.genitore1_email}`} style={{ color: '#E8562A', textDecoration: 'none' }}>{selected.famiglia.genitore1_email}</a></p>
+                    )}
+                    {selected.famiglia.genitore1_telefono && <p style={{ margin: 0 }}>📱 {selected.famiglia.genitore1_telefono}</p>}
+                    {selected.famiglia.genitore1_codice_fiscale && <p style={{ margin: 0, fontFamily: 'monospace', color: '#555' }}>CF: {selected.famiglia.genitore1_codice_fiscale}</p>}
+                    {selected.famiglia.genitore1_indirizzo && <p style={{ margin: 0 }}>🏠 {selected.famiglia.genitore1_indirizzo}</p>}
+                    {selected.famiglia.medico_base && <p style={{ margin: '0.375rem 0 0', paddingTop: '0.375rem', borderTop: '1px solid #E9ECEF' }}>🩺 Medico: {selected.famiglia.medico_base}</p>}
+                    {selected.famiglia.telefono_emergenza && <p style={{ margin: 0 }}>📞 Emergenza: {selected.famiglia.telefono_emergenza}</p>}
+                    {selected.famiglia.indirizzo && <p style={{ margin: 0 }}>🏘 Famiglia: {selected.famiglia.indirizzo}</p>}
+                  </div>
+                )}
+                {detailTab === 'genitore2' && selected.famiglia.genitore2_email && (
+                  <div style={{ display: 'grid', gap: '0.375rem' }}>
+                    {selected.famiglia.genitore2_email && (
+                      <p style={{ margin: 0 }}>✉️ <a href={`mailto:${selected.famiglia.genitore2_email}`} style={{ color: '#E8562A', textDecoration: 'none' }}>{selected.famiglia.genitore2_email}</a></p>
+                    )}
+                    {selected.famiglia.genitore2_telefono && <p style={{ margin: 0 }}>📱 {selected.famiglia.genitore2_telefono}</p>}
+                    {selected.famiglia.genitore2_codice_fiscale && <p style={{ margin: 0, fontFamily: 'monospace', color: '#555' }}>CF: {selected.famiglia.genitore2_codice_fiscale}</p>}
+                    {selected.famiglia.genitore2_indirizzo && <p style={{ margin: 0 }}>🏠 {selected.famiglia.genitore2_indirizzo}</p>}
+                    {selected.famiglia.medico_base && <p style={{ margin: '0.375rem 0 0', paddingTop: '0.375rem', borderTop: '1px solid #E9ECEF' }}>🩺 Medico: {selected.famiglia.medico_base}</p>}
+                    {selected.famiglia.telefono_emergenza && <p style={{ margin: 0 }}>📞 Emergenza: {selected.famiglia.telefono_emergenza}</p>}
+                    {selected.famiglia.indirizzo && <p style={{ margin: 0 }}>🏘 Famiglia: {selected.famiglia.indirizzo}</p>}
+                  </div>
+                )}
+              </div>
             </div>
           ) : (
             <p style={{ color: '#aaa', fontSize: '0.875rem', marginBottom: '0.5rem' }}>Nessuna famiglia registrata.</p>
@@ -971,6 +972,19 @@ export default function BambiniPage() {
               <ModalActions onCancel={() => setShowDelForm(false)} loading={delLoading} submitLabel="Salva delega" />
             </form>
           )}
+
+          {/* Azioni — in fondo al modal */}
+          <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid #F0F0F0', flexWrap: 'wrap' }}>
+            <button onClick={() => openEdit(selected)} style={{ ...secondaryBtn, marginBottom: 0, background: '#E8562A', color: 'white', border: 'none' }}>✏️ Modifica</button>
+            <button onClick={handleToggleAttivo}
+              style={{ ...secondaryBtn, marginBottom: 0, color: selected.attivo ? '#E67E22' : '#27AE60', borderColor: selected.attivo ? '#FDEBD0' : '#D5F5E3' }}>
+              {selected.attivo ? '⏸ Disattiva' : '▶ Riattiva'}
+            </button>
+            <button onClick={handleDelete}
+              style={{ ...secondaryBtn, marginBottom: 0, marginLeft: 'auto', color: '#C0392B', borderColor: '#FADBD8' }}>
+              🗑 Elimina
+            </button>
+          </div>
         </Overlay>
       )}
     </div>

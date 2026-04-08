@@ -16,7 +16,8 @@ class UserAdminSerializer(serializers.ModelSerializer):
         model = User
         fields = [
             'id', 'username', 'email', 'first_name', 'last_name',
-            'role', 'phone', 'is_active', 'two_factor_enabled', 'password',
+            'role', 'phone', 'codice_fiscale', 'indirizzo',
+            'is_active', 'two_factor_enabled', 'password',
         ]
         read_only_fields = ['id']
 

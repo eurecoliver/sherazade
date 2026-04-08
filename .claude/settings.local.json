@@ -15,7 +15,16 @@
       "Bash(ls /Users/oliver/repos/sherazade/frontend/src/app/api/consensi/[id]/)",
       "Bash(cat /Users/oliver/repos/sherazade/frontend/src/app/api/consensi/[id]/route.ts)",
       "Bash(ls /Users/oliver/repos/sherazade/frontend/src/app/[locale]/dashboard/admin/)",
-      "Bash(ls /Users/oliver/repos/sherazade/frontend/src/app/[locale]/dashboard/staff/)"
+      "Bash(ls /Users/oliver/repos/sherazade/frontend/src/app/[locale]/dashboard/staff/)",
+      "Bash(wc:*)",
+      "Read(//tmp/**)",
+      "Bash(sed -n '1,300p' /tmp/bambini_page.tsx)",
+      "Bash(sed -n '301,600p' /tmp/bambini_page.tsx)",
+      "Bash(sed -n '601,900p' /tmp/bambini_page.tsx)",
+      "Bash(sed -n '901,1114p' /tmp/bambini_page.tsx)",
+      "Bash(gzip -k /tmp/bambini_page.tsx)",
+      "Bash(split -l 300 /tmp/bambini_page.tsx /tmp/bambini_part_)",
+      "Bash(ls -la /tmp/bambini_part_*)"
     ]
   }
 }

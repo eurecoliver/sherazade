@@ -310,4 +310,11 @@ Completato: Presenze v2 (orario 09:30, tab registra admin, ritardi genitore) + a
 - `frontend/src/app/api/famiglie/route.ts`: aggiunto GET handler
 - Pulsante "👨‍👩‍👧 Genitori" nella dashboard admin
 
+### Anagrafica v3 — CF/indirizzo genitore + UX modal bambini (8 aprile 2026)
+- `User` model: aggiunti `codice_fiscale` (CharField 16) e `indirizzo` (TextField)
+- Migration `users/0003_user_cf_indirizzo.py`
+- `UserAdminSerializer`: aggiunto `codice_fiscale` e `indirizzo` nei fields
+- Genitori page: CF/indirizzo in dettaglio, modifica e creazione; post-creazione modale "Collega bambino" (cerca esistente o crea nuovo)
+- Bambini page: action buttons spostati in fondo al modal; sezione famiglia con tab Genitore 1 / Genitore 2
+
 Prossimo task: deploy + test in produzione
