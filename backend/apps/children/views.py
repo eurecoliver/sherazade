@@ -3,7 +3,7 @@ from rest_framework import viewsets, filters, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from apps.users.models import Role
+from apps.users.models import Role, User
 from .models import Bambino, Famiglia, DelegaRitiro
 from .permissions import BambinoPermission, IsDirigente
 from .serializers import (
