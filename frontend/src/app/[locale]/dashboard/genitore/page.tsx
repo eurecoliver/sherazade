@@ -133,24 +133,28 @@ export default function GenitoreDashboard() {
           </div>
         )}
 
+        {/* Pulsante principale — La Giornata */}
+        <button
+          onClick={() => router.push(`/${locale}/dashboard/genitore/giornata`)}
+          style={{
+            width: '100%', padding: '1rem 1.25rem', marginBottom: '0.75rem',
+            background: 'linear-gradient(135deg, #E17055 0%, #C0392B 100%)',
+            color: 'white', border: 'none', borderRadius: '14px',
+            fontSize: '1rem', fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit',
+            boxShadow: '0 4px 16px rgba(225,112,85,0.3)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
+          }}
+        >
+          <span style={{ fontSize: '1.25rem' }}>📚</span>
+          La giornata di oggi
+        </button>
+
         <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
           <button
             onClick={() => router.push(`/${locale}/dashboard/genitore/consensi`)}
             style={{ padding: '0.75rem 1.25rem', background: '#FFF3EE', color: '#E17055', border: '2px solid #FFD4B3', borderRadius: '10px', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
           >
-            📷 I miei consensi
-          </button>
-          <button
-            onClick={() => router.push(`/${locale}/dashboard/genitore/diario`)}
-            style={{ padding: '0.75rem 1.25rem', background: '#FFF3EE', color: '#E17055', border: '2px solid #FFD4B3', borderRadius: '10px', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
-          >
-            📖 Diario
-          </button>
-          <button
-            onClick={() => router.push(`/${locale}/dashboard/genitore/pappe`)}
-            style={{ padding: '0.75rem 1.25rem', background: '#FFF3EE', color: '#E17055', border: '2px solid #FFD4B3', borderRadius: '10px', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
-          >
-            🥣 Pappe
+            📷 Consensi
           </button>
           <button
             onClick={() => router.push(`/${locale}/dashboard/genitore/presenze`)}

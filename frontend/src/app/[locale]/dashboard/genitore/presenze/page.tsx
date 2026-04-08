@@ -344,18 +344,14 @@ export default function GenitorePresenzePage() {
                     <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#C53030' }}>{stats.giorni_assenti}</div>
                     <div style={{ fontSize: '0.78rem', fontWeight: 600, color: '#C53030' }}>Giorni assenti</div>
                   </div>
-                  {totRitardoArrivo > 0 && (
-                    <div style={{ background: '#FFFBEB', borderRadius: '12px', padding: '0.875rem', textAlign: 'center' }}>
-                      <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#856404' }}>{totRitardoArrivo}</div>
-                      <div style={{ fontSize: '0.78rem', fontWeight: 600, color: '#856404' }}>Min ritardo arrivo</div>
-                    </div>
-                  )}
-                  {totRitardoUscita > 0 && (
-                    <div style={{ background: '#FFF5F5', borderRadius: '12px', padding: '0.875rem', textAlign: 'center' }}>
-                      <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#C53030' }}>{totRitardoUscita}</div>
-                      <div style={{ fontSize: '0.78rem', fontWeight: 600, color: '#C53030' }}>Min ritardo uscita</div>
-                    </div>
-                  )}
+                  <div style={{ background: totRitardoArrivo > 0 ? '#FFFBEB' : '#F7FAFC', borderRadius: '12px', padding: '0.875rem', textAlign: 'center' }}>
+                    <div style={{ fontSize: '1.75rem', fontWeight: 800, color: totRitardoArrivo > 0 ? '#856404' : '#aaa' }}>{totRitardoArrivo}</div>
+                    <div style={{ fontSize: '0.78rem', fontWeight: 600, color: totRitardoArrivo > 0 ? '#856404' : '#aaa' }}>Min ritardo arrivo</div>
+                  </div>
+                  <div style={{ background: totRitardoUscita > 0 ? '#FFF5F5' : '#F7FAFC', borderRadius: '12px', padding: '0.875rem', textAlign: 'center' }}>
+                    <div style={{ fontSize: '1.75rem', fontWeight: 800, color: totRitardoUscita > 0 ? '#C53030' : '#aaa' }}>{totRitardoUscita}</div>
+                    <div style={{ fontSize: '0.78rem', fontWeight: 600, color: totRitardoUscita > 0 ? '#C53030' : '#aaa' }}>Min ritardo uscita</div>
+                  </div>
                 </div>
               </div>
             )}
