@@ -361,6 +361,42 @@ export default function BambiniPage() {
     finally { setUnlinkLoading(false) }
   }
 
+  const handleRemoveG1 = async () => {
+    if (!selected?.famiglia) return
+    const g2Id = selected.famiglia.genitore2
+    const g2Nome = selected.famiglia.genitore2_nome || selected.famiglia.genitore2_email || 'Genitore 2'
+    const msg = g2Id
+      ? `Rimuovere il Genitore 1? ${g2Nome} diventerà il Genitore 1 e il posto Genitore 2 sarà libero.`
+      : 'Nessun Genitore 2 presente: rimuovere il Genitore 1 eliminerà l\'intera famiglia.'
+    if (!confirm(msg)) return
+    setUnlinkLoading(true)
+    try {
+      if (g2Id) {
+        // Promuovi G2 a G1, libera G2
+        const res = await fetch(`/api/famiglie/${selected.famiglia.id}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ genitore1: g2Id, genitore2: null }),
+        })
+        if (res.ok) {
+          await fetchBambini()
+          const updated = await fetch(`/api/bambini/${selected.id}`)
+          if (updated.ok) setSelected(await updated.json())
+          setDetailTab('genitore1')
+        }
+      } else {
+        // Nessun G2 → elimina famiglia
+        const res = await fetch(`/api/famiglie/${selected.famiglia.id}`, { method: 'DELETE' })
+        if (res.ok || res.status === 204) {
+          await fetchBambini()
+          const updated = await fetch(`/api/bambini/${selected.id}`)
+          if (updated.ok) setSelected(await updated.json())
+        }
+      }
+    } catch { /* ignore */ }
+    finally { setUnlinkLoading(false) }
+  }
+
   const handleRemoveG2 = async () => {
     if (!selected?.famiglia?.genitore2) return
     if (!confirm('Rimuovere il Genitore 2 da questa famiglia?')) return
@@ -965,10 +1001,16 @@ export default function BambiniPage() {
                       {selected.famiglia.medico_base && <p style={{ margin: 0 }}>🩺 Medico: {selected.famiglia.medico_base}</p>}
                       {selected.famiglia.telefono_emergenza && <p style={{ margin: 0, fontWeight: 700, color: '#C0392B' }}>📞 Tel. emergenza: {selected.famiglia.telefono_emergenza}</p>}
                     </div>
-                    <button onClick={() => openEditG('genitore1')}
-                      style={{ marginTop: '0.5rem', padding: '0.375rem 0.75rem', background: 'none', border: '1px solid #FFD4B3', borderRadius: '6px', color: '#E8562A', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left' as const }}>
-                      ✏️ Modifica dati Genitore 1
-                    </button>
+                    <div style={{ marginTop: '0.5rem', display: 'flex', gap: '0.5rem' }}>
+                      <button onClick={() => openEditG('genitore1')}
+                        style={{ padding: '0.375rem 0.75rem', background: 'none', border: '1px solid #FFD4B3', borderRadius: '6px', color: '#E8562A', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                        ✏️ Modifica dati Genitore 1
+                      </button>
+                      <button onClick={handleRemoveG1} disabled={unlinkLoading}
+                        style={{ padding: '0.375rem 0.75rem', background: 'none', border: '1px solid #FADBD8', borderRadius: '6px', color: '#C0392B', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                        🔗 Scollega G1
+                      </button>
+                    </div>
                   </div>
                 )}
                 {detailTab === 'genitore2' && selected.famiglia.genitore2_email && (
