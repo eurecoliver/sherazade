@@ -169,6 +169,36 @@ export default function AdminConsensiPage() {
     } finally { setActionLoading(false) }
   }
 
+  const riabilita = async (consensoId: number) => {
+    if (!confirm('Riabilitare questo consenso? Il consenso tornerà attivo come prima della revoca.')) return
+    setActionLoading(true); setActionError('')
+    try {
+      const res = await fetch(`/api/consensi/${consensoId}/riabilita-consenso`, { method: 'POST' })
+      if (!res.ok) { setActionError('Errore durante la riabilitazione.'); return }
+      await refresh()
+    } finally { setActionLoading(false) }
+  }
+
+  const downloadPdf = async (bambinoId: number, nomeCognome: string) => {
+    try {
+      const res = await fetch(`/api/consensi/pdf?bambino=${bambinoId}`)
+      if (!res.ok) {
+        const data = await res.json().catch(() => null)
+        setActionError(data?.detail ?? 'Errore nella generazione del PDF.')
+        return
+      }
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `consensi_${nomeCognome.replace(/\s+/g, '_')}.pdf`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch {
+      setActionError('Errore nella generazione del PDF.')
+    }
+  }
+
   const revocaTutti = async (bambinoId: number) => {
     if (!confirm('Revocare TUTTI i consensi per questo bambino? Questa azione è irreversibile.')) return
     setActionLoading(true); setActionError('')
@@ -349,8 +379,15 @@ export default function AdminConsensiPage() {
                   </div>
 
                   {c.revocato && (
-                    <div style={{ background: '#FADBD8', borderRadius: '8px', padding: '0.5rem 0.75rem', marginBottom: '0.75rem', fontSize: '0.8rem', color: '#C0392B' }}>
-                      🔴 Revocato il {fmt(c.data_revoca)}
+                    <div style={{ background: '#FADBD8', borderRadius: '8px', padding: '0.5rem 0.75rem', marginBottom: '0.75rem', fontSize: '0.8rem', color: '#C0392B', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem' }}>
+                      <span>🔴 Revocato il {fmt(c.data_revoca)}</span>
+                      <button
+                        onClick={() => riabilita(c.id!)}
+                        disabled={actionLoading}
+                        style={{ padding: '0.3rem 0.75rem', background: '#27AE60', color: 'white', border: 'none', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}
+                      >
+                        ✓ Riabilita
+                      </button>
                     </div>
                   )}
 
@@ -411,13 +448,13 @@ export default function AdminConsensiPage() {
             <div style={{ borderTop: '2px solid #FFE0CC', paddingTop: '1.25rem', marginTop: '0.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.75rem' }}>
               <div>
                 <p style={{ margin: 0, fontSize: '0.8rem', color: '#888' }}>Export PDF riepilogo</p>
-                <a
-                  href={`/api/consensi/pdf?bambino=${selected.id}`}
-                  download
-                  style={{ display: 'inline-block', padding: '0.4rem 0.875rem', border: '2px solid #FFD4B3', borderRadius: '8px', background: 'white', color: '#E8562A', fontSize: '0.775rem', fontWeight: 600, textDecoration: 'none', fontFamily: 'inherit' }}
+                <button
+                  onClick={() => downloadPdf(selected.id, `${selected.nome} ${selected.cognome}`)}
+                  disabled={actionLoading}
+                  style={{ padding: '0.4rem 0.875rem', border: '2px solid #FFD4B3', borderRadius: '8px', background: 'white', color: '#E8562A', fontSize: '0.775rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
                 >
                   📄 Scarica PDF
-                </a>
+                </button>
               </div>
               <button
                 onClick={() => revocaTutti(selected.id)}

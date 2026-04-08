@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useLocale } from 'next-intl'
 import { useRouter } from 'next/navigation'
+import { formatApiErrors } from '@/lib/formatErrors'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -83,11 +84,11 @@ const inputSt: React.CSSProperties = {
   boxSizing: 'border-box', fontFamily: 'inherit',
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({ label, required, children }: { label: string; required?: boolean; children: React.ReactNode }) {
   return (
     <div style={{ marginBottom: '0.75rem' }}>
       <label style={{ display: 'block', marginBottom: '0.3rem', fontWeight: 600, color: '#444', fontSize: '0.8rem' }}>
-        {label}
+        {label}{required && <span style={{ color: '#E8562A', marginLeft: '0.2rem' }}>*</span>}
       </label>
       {children}
     </div>
@@ -799,10 +800,10 @@ export default function BambiniPage() {
             </Field>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-              <Field label="Nome *">
+              <Field label="Nome" required>
                 <input type="text" required value={addForm.nome} onChange={e => setAddForm(p => ({ ...p, nome: e.target.value }))} style={inputSt} />
               </Field>
-              <Field label="Cognome *">
+              <Field label="Cognome" required>
                 <input type="text" required value={addForm.cognome} onChange={e => setAddForm(p => ({ ...p, cognome: e.target.value }))} style={inputSt} />
               </Field>
             </div>
@@ -822,7 +823,7 @@ export default function BambiniPage() {
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-              <Field label="Data di nascita *">
+              <Field label="Data di nascita" required>
                 <input type="date" required value={addForm.data_nascita} onChange={e => setAddForm(p => ({ ...p, data_nascita: e.target.value }))} style={inputSt} />
               </Field>
               <Field label="Codice fiscale">
@@ -843,7 +844,7 @@ export default function BambiniPage() {
                 </select>
               </Field>
             </div>
-            <Field label="Data iscrizione *">
+            <Field label="Data iscrizione" required>
               <input type="date" required value={addForm.data_iscrizione} onChange={e => setAddForm(p => ({ ...p, data_iscrizione: e.target.value }))} style={inputSt} />
             </Field>
             <Field label="Note mediche / allergie">
@@ -876,10 +877,10 @@ export default function BambiniPage() {
             </Field>
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-              <Field label="Nome *">
+              <Field label="Nome" required>
                 <input type="text" required value={editForm.nome} onChange={e => setEditForm(p => ({ ...p, nome: e.target.value }))} style={inputSt} />
               </Field>
-              <Field label="Cognome *">
+              <Field label="Cognome" required>
                 <input type="text" required value={editForm.cognome} onChange={e => setEditForm(p => ({ ...p, cognome: e.target.value }))} style={inputSt} />
               </Field>
             </div>
@@ -893,7 +894,7 @@ export default function BambiniPage() {
               </label>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-              <Field label="Data di nascita *">
+              <Field label="Data di nascita" required>
                 <input type="date" required value={editForm.data_nascita} onChange={e => setEditForm(p => ({ ...p, data_nascita: e.target.value }))} style={inputSt} />
               </Field>
               <Field label="Codice fiscale">
@@ -914,7 +915,7 @@ export default function BambiniPage() {
                 </select>
               </Field>
             </div>
-            <Field label="Data iscrizione *">
+            <Field label="Data iscrizione" required>
               <input type="date" required value={editForm.data_iscrizione} onChange={e => setEditForm(p => ({ ...p, data_iscrizione: e.target.value }))} style={inputSt} />
             </Field>
             <Field label="Note mediche / allergie">
@@ -1065,7 +1066,7 @@ export default function BambiniPage() {
           {editFam && selected.famiglia && (
             <form onSubmit={handleEditFamSubmit} style={{ background: '#FFF8F4', borderRadius: '12px', padding: '1rem', marginBottom: '1rem' }}>
               <p style={{ margin: '0 0 0.75rem', fontWeight: 700, fontSize: '0.85rem', color: '#E8562A' }}>Modifica dati famiglia</p>
-              <Field label="Telefono emergenza *">
+              <Field label="Telefono emergenza" required>
                 <input type="tel" required value={editFamForm.telefono_emergenza}
                   onChange={e => setEditFamForm(p => ({ ...p, telefono_emergenza: e.target.value }))}
                   style={inputSt} placeholder="+39 333..." />
@@ -1115,7 +1116,7 @@ export default function BambiniPage() {
           {showAddG2 && selected.famiglia && (
             <form onSubmit={handleAddG2Submit} style={{ background: '#FFF8F4', borderRadius: '12px', padding: '1rem', marginBottom: '1rem' }}>
               <p style={{ margin: '0 0 0.75rem', fontWeight: 700, fontSize: '0.85rem', color: '#E8562A' }}>Aggiungi Genitore 2</p>
-              <Field label="Email *">
+              <Field label="Email" required>
                 <input type="email" required value={addG2Email}
                   onChange={e => setAddG2Email(e.target.value)}
                   style={inputSt} placeholder="genitore2@email.it" />
@@ -1141,7 +1142,7 @@ export default function BambiniPage() {
           {showFamForm && (
             <form onSubmit={handleFamSubmit} style={{ background: '#FFF8F4', borderRadius: '12px', padding: '1rem', marginBottom: '1rem' }}>
               <p style={{ margin: '0 0 0.75rem', fontWeight: 700, fontSize: '0.85rem', color: '#E8562A' }}>Genitore 1</p>
-              <Field label="Email genitore 1 *">
+              <Field label="Email genitore 1" required>
                 <input type="email" required value={famForm.genitore1_email}
                   onChange={e => setFamForm(p => ({ ...p, genitore1_email: e.target.value }))}
                   style={inputSt} placeholder="genitore@email.it" />
@@ -1175,7 +1176,7 @@ export default function BambiniPage() {
               {hasGenitore2 && (
                 <>
                   <p style={{ margin: '0 0 0.75rem', fontWeight: 700, fontSize: '0.85rem', color: '#E8562A' }}>Genitore 2</p>
-                  <Field label="Email genitore 2 *">
+                  <Field label="Email genitore 2" required>
                     <input type="email" required={hasGenitore2} value={famForm.genitore2_email}
                       onChange={e => setFamForm(p => ({ ...p, genitore2_email: e.target.value }))}
                       style={inputSt} placeholder="genitore2@email.it" />
@@ -1201,7 +1202,7 @@ export default function BambiniPage() {
               )}
 
               <div style={{ borderTop: '1px solid #FFD4B3', paddingTop: '0.75rem', marginTop: '0.25rem' }}>
-                <Field label="Telefono emergenza *">
+                <Field label="Telefono emergenza" required>
                   <input type="tel" required value={famForm.telefono_emergenza}
                     onChange={e => setFamForm(p => ({ ...p, telefono_emergenza: e.target.value }))}
                     style={inputSt} placeholder="+39 333..." />
@@ -1244,18 +1245,18 @@ export default function BambiniPage() {
           {showDelForm && (
             <form onSubmit={handleDelSubmit} style={{ background: '#FFF8F4', borderRadius: '12px', padding: '1rem', marginBottom: '1rem', marginTop: '0.75rem' }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-                <Field label="Nome delegato *">
+                <Field label="Nome delegato" required>
                   <input type="text" required value={delForm.nome_delegato} onChange={e => setDelForm(p => ({ ...p, nome_delegato: e.target.value }))} style={inputSt} />
                 </Field>
-                <Field label="Cognome delegato *">
+                <Field label="Cognome delegato" required>
                   <input type="text" required value={delForm.cognome_delegato} onChange={e => setDelForm(p => ({ ...p, cognome_delegato: e.target.value }))} style={inputSt} />
                 </Field>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-                <Field label="Documento identità *">
+                <Field label="Documento identità" required>
                   <input type="text" required value={delForm.documento_identita} onChange={e => setDelForm(p => ({ ...p, documento_identita: e.target.value }))} style={inputSt} placeholder="CI/Passaporto n°..." />
                 </Field>
-                <Field label="Rapporto familiare *">
+                <Field label="Rapporto familiare" required>
                   <input type="text" required value={delForm.rapporto_familiare} onChange={e => setDelForm(p => ({ ...p, rapporto_familiare: e.target.value }))} style={inputSt} placeholder="Nonno, Zio..." />
                 </Field>
               </div>
@@ -1408,12 +1409,4 @@ const secondaryBtn: React.CSSProperties = {
   cursor: 'pointer', fontFamily: 'inherit', marginBottom: '0.5rem',
 }
 
-function formatErrors(data: unknown): string {
-  if (typeof data === 'string') return data
-  if (data && typeof data === 'object') {
-    return Object.entries(data as Record<string, unknown>)
-      .map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(', ') : v}`)
-      .join(' | ')
-  }
-  return 'Errore sconosciuto.'
-}
+const formatErrors = formatApiErrors

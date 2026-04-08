@@ -227,6 +227,18 @@ class ConsensoFotograficoViewSet(viewsets.ModelViewSet):
         c.save()
         return Response(ConsensoFotograficoSerializer(c).data)
 
+    @action(detail=True, methods=['post'])
+    def riabilita_consenso(self, request, pk=None):
+        """Admin/Direttrice: riabilita un consenso revocato."""
+        from apps.users.models import Role
+        if request.user.role not in (Role.ADMIN, Role.DIRETTRICE):
+            return Response({'detail': 'Non autorizzato.'}, status=status.HTTP_403_FORBIDDEN)
+        c = self.get_object()
+        c.revocato = False
+        c.data_revoca = None
+        c.save()
+        return Response(ConsensoFotograficoSerializer(c).data)
+
     @action(detail=False, methods=['post'])
     def revoca_tutti(self, request):
         """Admin: revoca tutti i consensi di un bambino."""

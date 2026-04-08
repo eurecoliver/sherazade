@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useLocale } from 'next-intl'
 import { useRouter } from 'next/navigation'
+import { formatApiErrors as _formatApiErrors } from '@/lib/formatErrors'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -96,16 +97,7 @@ function InfoGrid({ items }: { items: { label: string; value: string; full?: boo
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
-function formatApiErrors(data: unknown): string {
-  if (!data || typeof data !== 'object') return String(data)
-  const msgs: string[] = []
-  for (const [key, val] of Object.entries(data as Record<string, unknown>)) {
-    const label = key === 'non_field_errors' ? '' : `${key}: `
-    const text = Array.isArray(val) ? val.join(', ') : String(val)
-    msgs.push(`${label}${text}`)
-  }
-  return msgs.join('\n') || 'Errore sconosciuto.'
-}
+const formatApiErrors = _formatApiErrors
 
 function ErrorAlert({ message }: { message: string }) {
   if (!message) return null
@@ -603,6 +595,18 @@ export default function GenitoriPage() {
             <button onClick={() => openEdit(selected)} style={{ padding: '0.625rem 1.25rem', background: '#6C63FF', color: 'white', border: 'none', borderRadius: '10px', fontWeight: 700, fontSize: '0.875rem', cursor: 'pointer', fontFamily: 'inherit' }}>
               ✏️ Modifica
             </button>
+            <button onClick={() => {
+              setNewGenitore(selected)
+              setCollegaTab('cerca')
+              setCollegaSearch('')
+              setCollegaError('')
+              setCollegaTelEmerg('')
+              setNuovoBNome(''); setNuovoBCognome(''); setNuovoBData(''); setNuovoBTel('')
+              setNuovoBError('')
+              setShowCollega(true)
+            }} style={{ padding: '0.625rem 1.25rem', background: '#F0FFF4', color: '#38A169', border: '1px solid #68D391', borderRadius: '10px', fontWeight: 700, fontSize: '0.875rem', cursor: 'pointer', fontFamily: 'inherit' }}>
+              ➕ Collega bambino
+            </button>
             <button onClick={handleToggleAttivo} style={{ padding: '0.625rem 1.25rem', background: selected.is_active ? '#FFF3CD' : '#F0FFF4', color: selected.is_active ? '#856404' : '#38A169', border: `1px solid ${selected.is_active ? '#F6AD55' : '#68D391'}`, borderRadius: '10px', fontWeight: 700, fontSize: '0.875rem', cursor: 'pointer', fontFamily: 'inherit' }}>
               {selected.is_active ? '⏸ Disattiva' : '▶ Riattiva'}
             </button>
@@ -629,7 +633,7 @@ export default function GenitoriPage() {
               { label: 'Codice fiscale', key: 'codice_fiscale' as const, type: 'text' },
             ].map(({ label, key, type }) => (
               <div key={key}>
-                <label style={{ fontSize: '0.8rem', fontWeight: 600, color: '#555', display: 'block', marginBottom: '0.25rem' }}>{label}</label>
+                <label style={{ fontSize: '0.8rem', fontWeight: 600, color: '#555', display: 'block', marginBottom: '0.25rem' }}>{label.replace(' *', '')}{label.includes('*') && <span style={{ color: '#C53030', marginLeft: '0.2rem' }}>*</span>}</label>
                 <input type={type} value={editForm[key] as string} onChange={e => setEditForm(f => ({ ...f, [key]: e.target.value }))} style={{ width: '100%', padding: '0.5rem 0.75rem', border: '1px solid #E2E8F0', borderRadius: '8px', fontSize: '0.875rem', fontFamily: 'inherit', boxSizing: 'border-box' }} />
               </div>
             ))}
@@ -672,7 +676,7 @@ export default function GenitoriPage() {
               { label: 'Password (opz.)', key: 'password' as const, type: 'password', full: false },
             ].map(({ label, key, type, full }) => (
               <div key={key} style={full ? { gridColumn: '1 / -1' } : {}}>
-                <label style={{ fontSize: '0.8rem', fontWeight: 600, color: '#555', display: 'block', marginBottom: '0.25rem' }}>{label}</label>
+                <label style={{ fontSize: '0.8rem', fontWeight: 600, color: '#555', display: 'block', marginBottom: '0.25rem' }}>{label.replace(' *', '')}{label.includes('*') && <span style={{ color: '#C53030', marginLeft: '0.2rem' }}>*</span>}</label>
                 <input type={type} value={newForm[key]} onChange={e => setNewForm(f => ({ ...f, [key]: e.target.value }))} style={{ width: '100%', padding: '0.5rem 0.75rem', border: '1px solid #E2E8F0', borderRadius: '8px', fontSize: '0.875rem', fontFamily: 'inherit', boxSizing: 'border-box' }} />
               </div>
             ))}
@@ -770,7 +774,7 @@ export default function GenitoriPage() {
                   { label: 'Tel. emergenza *', val: nuovoBTel, set: setNuovoBTel, type: 'tel' },
                 ].map(({ label, val, set, type }) => (
                   <div key={label}>
-                    <label style={{ fontSize: '0.8rem', fontWeight: 600, color: '#555', display: 'block', marginBottom: '0.2rem' }}>{label}</label>
+                    <label style={{ fontSize: '0.8rem', fontWeight: 600, color: '#555', display: 'block', marginBottom: '0.2rem' }}>{label.replace(' *', '')}{label.includes('*') && <span style={{ color: '#C53030', marginLeft: '0.2rem' }}>*</span>}</label>
                     <input type={type} value={val} onChange={e => set(e.target.value)} style={{ width: '100%', padding: '0.5rem 0.75rem', border: '1px solid #E2E8F0', borderRadius: '8px', fontSize: '0.875rem', fontFamily: 'inherit', boxSizing: 'border-box' }} />
                   </div>
                 ))}
