@@ -76,6 +76,15 @@ class FamigliaCreateSerializer(serializers.Serializer):
         if changed:
             user.save(update_fields=['first_name', 'last_name'])
 
+    def validate(self, attrs):
+        g1 = attrs.get('genitore1_email')
+        g2 = attrs.get('genitore2_email')
+        if g1 and g2 and g1.pk == g2.pk:
+            raise serializers.ValidationError(
+                {'genitore2_email': 'Il genitore 2 non può essere lo stesso del genitore 1.'}
+            )
+        return attrs
+
     def create(self, validated_data):
         g1 = validated_data['genitore1_email']
         self._update_user_name(g1, validated_data.get('genitore1_nome', ''), validated_data.get('genitore1_cognome', ''))

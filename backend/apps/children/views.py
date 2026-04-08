@@ -116,8 +116,21 @@ class FamigliaViewSet(viewsets.ModelViewSet):
                 changed = True
             if changed:
                 g2.save(update_fields=['first_name', 'last_name'])
+            if g2.pk == instance.genitore1_id:
+                return Response(
+                    {'genitore2_email': 'Il genitore 2 non può essere lo stesso del genitore 1.'},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
             data['genitore2'] = g2.id
             data.pop('genitore2_email', None)
+        # Controllo anche su PATCH diretta con genitore1/genitore2 come ID
+        g1_id = int(data.get('genitore1', instance.genitore1_id or 0))
+        g2_id = data.get('genitore2')
+        if g2_id and int(g2_id) == g1_id:
+            return Response(
+                {'genitore2': 'Il genitore 2 non può essere lo stesso del genitore 1.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         serializer = FamigliaSerializer(instance, data=data, partial=True)
         serializer.is_valid(raise_exception=True)
         serializer.save()
