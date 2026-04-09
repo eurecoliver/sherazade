@@ -2,7 +2,7 @@ import threading
 
 from django.core.mail import send_mail
 from django.conf import settings as django_settings
-from django.db.models import Q
+from django.db.models import Exists, OuterRef, Q
 from rest_framework import viewsets, parsers
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -74,15 +74,24 @@ class CircolareViewSet(viewsets.ModelViewSet):
         # Genitore vede solo circolari per il suo gruppo (o generali)
         if user.role == Role.GENITORE:
             from apps.children.models import Famiglia, Bambino
+
             famiglie = Famiglia.objects.filter(
                 Q(genitore1=user) | Q(genitore2=user)
             )
-            gruppo_ids = Bambino.objects.filter(
-                famiglia__in=famiglie, stato='attivo'
-            ).values_list('gruppo_id', flat=True).distinct()
+            gruppo_ids = list(
+                Bambino.objects.filter(famiglia__in=famiglie, stato='attivo')
+                .exclude(gruppo__isnull=True)
+                .values_list('gruppo_id', flat=True)
+                .distinct()
+            )
+
+            # Usa Exists per "circolare senza gruppi assegnati" — più affidabile
+            # di Q(gruppi__isnull=True) su M2M
+            ThroughModel = Circolare.gruppi.through
+            ha_gruppi = ThroughModel.objects.filter(circolare_id=OuterRef('pk'))
 
             qs = qs.filter(
-                Q(gruppi__isnull=True) | Q(gruppi__id__in=gruppo_ids)
+                Q(~Exists(ha_gruppi)) | Q(gruppi__id__in=gruppo_ids)
             ).distinct()
 
         # Filtri opzionali
