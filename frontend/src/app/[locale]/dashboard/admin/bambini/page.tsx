@@ -695,10 +695,10 @@ export default function BambiniPage() {
         background: 'linear-gradient(135deg, #FF9A3C 0%, #E8562A 100%)',
         padding: '1.5rem 1.5rem 2rem', color: 'white',
       }}>
-        <div style={{ maxWidth: '960px', margin: '0 auto' }}>
+        <div style={{ maxWidth: 'min(1080px, 96vw)', margin: '0 auto' }}>
           <button
             onClick={() => router.push(`/${locale}/dashboard/admin`)}
-            style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.8)', cursor: 'pointer', fontSize: '0.875rem', padding: 0, marginBottom: '0.5rem', fontFamily: 'inherit' }}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem', background: 'rgba(255,255,255,0.15)', color: 'white', border: '1.5px solid rgba(255,255,255,0.3)', borderRadius: '20px', padding: '0.35rem 0.875rem 0.35rem 0.625rem', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 600, fontFamily: 'inherit', marginBottom: '0.875rem' }}
           >
             ← Dashboard
           </button>

@@ -317,4 +317,43 @@ Completato: Presenze v2 (orario 09:30, tab registra admin, ritardi genitore) + a
 - Genitori page: CF/indirizzo in dettaglio, modifica e creazione; post-creazione modale "Collega bambino" (cerca esistente o crea nuovo)
 - Bambini page: action buttons spostati in fondo al modal; sezione famiglia con tab Genitore 1 / Genitore 2
 
+### UX/UI redesign globale — layout responsive + pill back button (9 aprile 2026)
+- **Pattern design unificato** applicato a tutte le dashboard e sotto-pagine del portale
+- **Gradient header** a tutta larghezza per ogni dashboard (colore specifico per ruolo):
+  - Admin: `#6C5CE7 → #4834D4` (viola)
+  - Staff: `#0984E3 → #0652DD` (blu)
+  - Cuoca: `#00B894 → #00917A` (verde)
+  - Genitore: già aggiornato (arancione/rosso/verde a seconda della sezione)
+- **Pill back button** su tutte le sotto-pagine: `rgba(255,255,255,0.15)` + bordo + borderRadius 20px — sostituisce il vecchio pulsante invisibile `background: none, border: none`
+- **maxWidth responsive** con `min(Npx, 96vw)` su tutte le pagine — si adatta automaticamente da mobile a desktop senza media queries
+- **CSS grid auto-fill** per la navigazione: `repeat(auto-fill, minmax(min(180px, 100%), 1fr))` — si espande su desktop, si impila su mobile
+- **`clamp()`** per la tipografia del titolo H1 nelle dashboard principali
+- **Dashboard principali** completamente riscritte (admin, staff, cuoca): header gradiente, saluto utente, logout pill top-right, no max 600px
+- **Cuoca dashboard**: attendance counter come card prominente con icona + numero grande + tasto Pappe del giorno
+
+**File modificati:**
+- `frontend/src/app/[locale]/dashboard/admin/page.tsx` — redesign completo
+- `frontend/src/app/[locale]/dashboard/staff/page.tsx` — redesign completo
+- `frontend/src/app/[locale]/dashboard/cuoca/page.tsx` — redesign completo
+- `frontend/src/app/[locale]/dashboard/admin/bambini/page.tsx` — pill back, maxWidth
+- `frontend/src/app/[locale]/dashboard/admin/consensi/page.tsx` — pill back (via costante), maxWidth
+- `frontend/src/app/[locale]/dashboard/admin/fatture/page.tsx` — pill back, maxWidth
+- `frontend/src/app/[locale]/dashboard/admin/genitori/page.tsx` — pill back, maxWidth
+- `frontend/src/app/[locale]/dashboard/admin/pappe/page.tsx` — pill back, maxWidth
+- `frontend/src/app/[locale]/dashboard/admin/presenze/page.tsx` — pill back, maxWidth
+- `frontend/src/app/[locale]/dashboard/admin/utenti/page.tsx` — gradient header aggiunto, pill back, maxWidth
+- `frontend/src/app/[locale]/dashboard/admin/impostazioni/page.tsx` — gradient header aggiunto, pill back, maxWidth
+- `frontend/src/app/[locale]/dashboard/staff/diario/page.tsx` — pill back, maxWidth
+- `frontend/src/app/[locale]/dashboard/staff/presenze/page.tsx` — pill back
+- `frontend/src/app/[locale]/dashboard/staff/pappe/page.tsx` — pill back, maxWidth
+- `frontend/src/app/[locale]/dashboard/cuoca/pappe/page.tsx` — pill back, maxWidth
+- `frontend/src/app/[locale]/dashboard/genitore/diario/page.tsx` — pill back, maxWidth
+
+### Fatture e consensi (9 aprile 2026)
+- `backend/Dockerfile`: aggiunta `libgdk-pixbuf-2.0-0` (nome corretto per Debian Trixie, rimpiazza `libgdk-pixbuf2.0-0` rinominato) insieme alle altre librerie WeasyPrint
+- `backend/apps/consents/views.py`: endpoint PDF consensi ora accessibile anche al genitore per i propri figli (verifica via `famiglia.genitore1_id/genitore2_id`)
+- `frontend/genitore/consensi/page.tsx`: pulsante "📄 Riepilogo PDF" sempre visibile + "📄 Modulo riattivazione" se consenso revocato
+- `frontend/admin/fatture/page.tsx`: matrice basata su famiglie (solo genitore1), nomi bambini, totale per riga e grand total
+- `frontend/genitore/fatture/page.tsx`: header gradiente verde, pill back button, maxWidth responsive
+
 Prossimo task: deploy + test in produzione

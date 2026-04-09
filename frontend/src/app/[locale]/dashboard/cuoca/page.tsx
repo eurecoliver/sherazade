@@ -44,92 +44,109 @@ export default function CuocaDashboard() {
     )
   }
 
-  const roleLabel = t(`roles.${user.role}` as Parameters<typeof t>[0])
-
   return (
-    <div style={{ minHeight: '100vh', background: '#EAFAF1', padding: '2rem 1rem' }}>
-      <div style={{
-        maxWidth: '600px',
-        margin: '0 auto',
-        background: 'white',
-        borderRadius: '20px',
-        padding: '2.5rem 2rem',
-        boxShadow: '0 8px 30px rgba(0,184,148,0.12)',
-      }}>
-        <div style={{ marginBottom: '2rem' }}>
-          <div style={{ fontSize: '3rem', marginBottom: '0.75rem' }}>🍽️</div>
-          <h1 style={{ margin: 0, fontSize: '1.75rem', fontWeight: 800, color: '#00B894' }}>
-            {t('cuocaTitle')}
-          </h1>
-          <p style={{ margin: '0.5rem 0 0', color: '#888', fontSize: '0.9rem' }}>
-            {roleLabel}
-          </p>
-        </div>
+    <div style={{ minHeight: '100vh', background: '#EAFAF1' }}>
 
-        <div style={{
-          background: '#EAFAF1',
-          borderRadius: '12px',
-          padding: '1.25rem',
-          marginBottom: '1.5rem',
-        }}>
-          <p style={{ margin: 0, color: '#555' }}>
-            {t('welcome')},{' '}
-            <strong style={{ color: '#00B894' }}>
-              {user.first_name || user.email}
-            </strong>
-          </p>
+      {/* ── Header a gradiente ─────────────────────────────────────────────── */}
+      <div style={{ background: 'linear-gradient(135deg, #00B894 0%, #00917A 100%)', padding: '2rem 1.5rem 3rem', color: 'white' }}>
+        <div style={{ maxWidth: 'min(720px, 96vw)', margin: '0 auto' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
+            <div>
+              <p style={{ margin: '0 0 0.25rem', fontSize: '0.85rem', fontWeight: 600, opacity: 0.75, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                Portale Sherazade
+              </p>
+              <h1 style={{ margin: 0, fontSize: 'clamp(1.5rem, 4vw, 2rem)', fontWeight: 800 }}>
+                Ciao, {user.first_name || user.email.split('@')[0]} 👋
+              </h1>
+              <p style={{ margin: '0.25rem 0 0', opacity: 0.85, fontSize: '0.875rem' }}>
+                {t(`roles.${user.role}` as Parameters<typeof t>[0])}
+              </p>
+            </div>
+            <button
+              onClick={handleLogout}
+              style={{ padding: '0.5rem 1.1rem', background: 'rgba(255,255,255,0.15)', color: 'white', border: '1.5px solid rgba(255,255,255,0.35)', borderRadius: '20px', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}
+            >
+              Esci
+            </button>
+          </div>
         </div>
+      </div>
+
+      {/* ── Contenuto principale ───────────────────────────────────────────── */}
+      <div style={{ maxWidth: 'min(720px, 96vw)', margin: '-1.5rem auto 0', padding: '0 1rem 3rem', position: 'relative', zIndex: 1 }}>
 
         {/* Contatore presenti oggi */}
         <div style={{
-          background: presentiOggi !== null ? '#F0FFF4' : '#F7FAFC',
-          border: `2px solid ${presentiOggi !== null ? '#68D391' : '#E2E8F0'}`,
-          borderRadius: '14px',
-          padding: '1rem 1.25rem',
-          marginBottom: '1.5rem',
+          background: 'white',
+          borderRadius: '18px',
+          padding: '1.5rem',
+          marginBottom: '0.75rem',
+          boxShadow: '0 8px 32px rgba(0,184,148,0.15)',
           display: 'flex',
           alignItems: 'center',
-          gap: '0.875rem',
+          gap: '1.25rem',
         }}>
-          <span style={{ fontSize: '1.75rem' }}>🧒</span>
-          <div>
+          <div style={{
+            width: 56, height: 56, borderRadius: '14px',
+            background: 'linear-gradient(135deg, #00B894 0%, #00917A 100%)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: '1.6rem', flexShrink: 0,
+            boxShadow: '0 4px 12px rgba(0,184,148,0.3)',
+          }}>
+            🧒
+          </div>
+          <div style={{ flex: 1 }}>
             <p style={{ margin: 0, fontSize: '0.78rem', fontWeight: 700, color: '#38A169', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
               Bambini presenti oggi
             </p>
-            <p style={{ margin: '0.1rem 0 0', fontSize: '1.5rem', fontWeight: 800, color: '#2F855A', lineHeight: 1 }}>
+            <p style={{ margin: '0.1rem 0 0', fontSize: 'clamp(1.8rem, 5vw, 2.4rem)', fontWeight: 800, color: '#2F855A', lineHeight: 1 }}>
               {presentiOggi !== null ? presentiOggi : '—'}
             </p>
-            <p style={{ margin: '0.1rem 0 0', fontSize: '0.75rem', color: '#888' }}>
-              {presentiOggi !== null ? 'calibra le porzioni di conseguenza' : 'caricamento...'}
+            <p style={{ margin: '0.15rem 0 0', fontSize: '0.78rem', color: '#888' }}>
+              {presentiOggi !== null ? 'calibra le porzioni di conseguenza' : 'caricamento in corso…'}
             </p>
           </div>
         </div>
 
-        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
-          <button
-            onClick={() => router.push(`/${locale}/dashboard/cuoca/pappe`)}
-            style={{ padding: '0.75rem 1.25rem', background: '#EAFAF1', color: '#00B894', border: '2px solid #A8E6CF', borderRadius: '10px', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
-          >
-            🍽️ Pappe del giorno
-          </button>
-        </div>
-
+        {/* Pappe del giorno */}
         <button
-          onClick={handleLogout}
+          onClick={() => router.push(`/${locale}/dashboard/cuoca/pappe`)}
           style={{
-            padding: '0.75rem 1.5rem',
-            background: '#00B894',
-            color: 'white',
+            width: '100%',
+            padding: 'clamp(1rem, 3vw, 1.4rem) 1.5rem',
+            background: 'white',
+            color: '#00917A',
             border: 'none',
-            borderRadius: '10px',
-            fontSize: '0.9rem',
-            fontWeight: 600,
+            borderRadius: '18px',
+            boxShadow: '0 8px 32px rgba(0,184,148,0.12)',
             cursor: 'pointer',
             fontFamily: 'inherit',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '1rem',
+            textAlign: 'left',
           }}
         >
-          {t('logout')}
+          <div style={{
+            width: 52, height: 52, borderRadius: '14px',
+            background: 'linear-gradient(135deg, #00B894 0%, #00917A 100%)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: '1.5rem', flexShrink: 0,
+            boxShadow: '0 4px 12px rgba(0,184,148,0.3)',
+          }}>
+            🍽️
+          </div>
+          <div>
+            <p style={{ margin: 0, fontSize: 'clamp(1rem, 2.5vw, 1.15rem)', fontWeight: 800, color: '#333' }}>
+              Pappe del giorno
+            </p>
+            <p style={{ margin: '0.15rem 0 0', fontSize: '0.82rem', color: '#888' }}>
+              Menu, allergie e registro pasti
+            </p>
+          </div>
+          <span style={{ marginLeft: 'auto', fontSize: '1.2rem', color: '#00B894', opacity: 0.6 }}>›</span>
         </button>
+
       </div>
     </div>
   )

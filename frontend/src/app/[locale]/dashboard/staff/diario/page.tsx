@@ -717,10 +717,10 @@ export default function StaffDiarioPage() {
     <div style={{ minHeight: '100vh', background: '#EAF4FF' }}>
 
       <div style={{ background: 'linear-gradient(135deg, #0984E3 0%, #0652DD 100%)', padding: '1.25rem 1.25rem 1.75rem', color: 'white' }}>
-        <div style={{ maxWidth: '760px', margin: '0 auto' }}>
+        <div style={{ maxWidth: 'min(1080px, 96vw)', margin: '0 auto' }}>
           <button
             onClick={() => router.push(`/${locale}/dashboard/staff`)}
-            style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.8)', cursor: 'pointer', fontSize: '0.875rem', padding: 0, marginBottom: '0.375rem', fontFamily: 'inherit' }}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem', background: 'rgba(255,255,255,0.15)', color: 'white', border: '1.5px solid rgba(255,255,255,0.3)', borderRadius: '20px', padding: '0.35rem 0.875rem 0.35rem 0.625rem', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 600, fontFamily: 'inherit', marginBottom: '0.875rem' }}
           >
             ← Dashboard
           </button>
@@ -731,7 +731,7 @@ export default function StaffDiarioPage() {
         </div>
       </div>
 
-      <div style={{ maxWidth: '760px', margin: '0 auto', padding: '1.25rem 1rem' }}>
+      <div style={{ maxWidth: 'min(1080px, 96vw)', margin: '0 auto', padding: '1.25rem 1rem' }}>
 
         {/* Filtri */}
         <div style={{
