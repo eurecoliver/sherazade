@@ -16,6 +16,7 @@ const NAV_ITEMS = [
   { icon: '✅', label: 'Presenze',         sub: 'Registro giornaliero',       path: '/presenze', bg: '#F0FFF4', color: '#2D6A4F', border: '#9AE6B4' },
   { icon: '📖', label: 'Diario del giorno', sub: 'Attività, foto e note',     path: '/diario',   bg: '#EAF4FF', color: '#0984E3', border: '#BDE0FF' },
   { icon: '🥣', label: 'Foglio pappe',      sub: 'Pasti e menu del giorno',   path: '/pappe',    bg: '#FFF9E6', color: '#E67E22', border: '#FED7AA' },
+  { icon: '📝', label: 'Agenda',            sub: 'Note condivise del turno',  path: '/agenda',   bg: '#FDF2F8', color: '#9B59B6', border: '#E8BFFF' },
 ]
 
 export default function StaffDashboard() {

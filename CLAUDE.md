@@ -83,7 +83,7 @@ IMPORTANTE: Al termine di ogni task, prima di considerarlo completato, aggiorna 
 - Accedere al server: ssh root@159.69.9.230
 - Deploy sul server: cd /var/www/sherazade && bash deploy.sh
 - Avviare Claude Code: cd ~/repos/sherazade && claude
-'- Per analisi massive di codice, lettura log o documentazione, delega SEMPRE l'esplorazione a Gemini usando questo comando: gemini -p "inserisci qui il prompt".'
+- Per analisi massive di codice, lettura log o documentazione, delega SEMPRE l'esplorazione a Gemini usando questo comando: gemini -p "inserisci qui il prompt".
 
 ## Decisioni Tecniche
 
@@ -355,5 +355,43 @@ Completato: Presenze v2 (orario 09:30, tab registra admin, ritardi genitore) + a
 - `frontend/genitore/consensi/page.tsx`: pulsante "📄 Riepilogo PDF" sempre visibile + "📄 Modulo riattivazione" se consenso revocato
 - `frontend/admin/fatture/page.tsx`: matrice basata su famiglie (solo genitore1), nomi bambini, totale per riga e grand total
 - `frontend/genitore/fatture/page.tsx`: header gradiente verde, pill back button, maxWidth responsive
+
+### Agenda giornaliera condivisa — note di turno (9 aprile 2026)
+- Nuova app Django `apps.notes` con modello `NotaGiornata`:
+  - `testo` (TextField), `data` (DateField, default today), `autore` FK User, `gruppo` FK config.Gruppo (null = tutti i gruppi), `creato_at`, `aggiornato_at`, `attivo` (soft-delete)
+  - Index su `['data', 'attivo']` per query efficienti per giornata
+- Permessi: Admin/Direttrice/Coordinatrice/Insegnante: create + list + delete proprie note; Admin/Direttrice: delete qualsiasi nota; Cuoca/Genitore: nessun accesso
+- `destroy()`: soft-delete (`attivo=False`) invece di DELETE fisico — storico preservato nel DB
+- Filtri API: `?data=YYYY-MM-DD` e `?gruppo=<id>` (0 = solo note generali)
+- Serializer: campi `autore_nome`, `autore_ruolo`, `gruppo_nome`, `is_own` (per mostrare/nascondere il pulsante elimina)
+- API Next.js: `GET/POST /api/note`, `DELETE /api/note/[id]`
+- Frontend: pagina `/dashboard/staff/agenda/page.tsx` condivisa tra staff e admin/direttrice (back button role-aware: → admin o → staff a seconda del ruolo)
+- UX: navigazione giorni (prev/next con blocco futuro), tab filtro gruppi colorati, card note con avatar iniziali + badge ruolo + badge gruppo, timestamp, pulsante elimina ×
+- Nota generale mostra badge verde "Tutti i gruppi"; nota per gruppo mostra il colore del gruppo
+- Shortcut tastiera: Ctrl+Enter per pubblicare la nota
+- Form: textarea + select gruppo + bottone pubblica (disabilitato se testo vuoto)
+- Dashboard staff: aggiunto pulsante "📝 Agenda" nei NAV_ITEMS
+- Dashboard admin: aggiunto pulsante "📝 Agenda" con path assoluto verso staff/agenda
+
+**File creati:**
+- `backend/apps/notes/__init__.py`
+- `backend/apps/notes/apps.py`
+- `backend/apps/notes/admin.py`
+- `backend/apps/notes/models.py`
+- `backend/apps/notes/permissions.py`
+- `backend/apps/notes/serializers.py`
+- `backend/apps/notes/views.py`
+- `backend/apps/notes/urls.py`
+- `backend/apps/notes/migrations/0001_initial.py`
+- `backend/apps/notes/migrations/__init__.py`
+- `frontend/src/app/api/note/route.ts`
+- `frontend/src/app/api/note/[id]/route.ts`
+- `frontend/src/app/[locale]/dashboard/staff/agenda/page.tsx`
+
+**File modificati:**
+- `backend/sherazade/settings/base.py`: aggiunto `apps.notes` in LOCAL_APPS
+- `backend/sherazade/urls.py`: aggiunto include apps.notes.urls
+- `frontend/src/app/[locale]/dashboard/staff/page.tsx`: aggiunto Agenda in NAV_ITEMS
+- `frontend/src/app/[locale]/dashboard/admin/page.tsx`: aggiunto bottone Agenda
 
 Prossimo task: deploy + test in produzione
