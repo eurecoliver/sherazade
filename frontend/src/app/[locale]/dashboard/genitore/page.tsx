@@ -29,7 +29,8 @@ const NAV_ITEMS = [
   { icon: '📅', label: 'Presenze',    sub: 'Registro e assenze',          path: '/presenze',  bg: '#F0F4FF', color: '#6C63FF', border: '#C5BFFF' },
   { icon: '🧾', label: 'Fatture',     sub: 'Documenti di pagamento',      path: '/fatture',   bg: '#F0FFF4', color: '#276749', border: '#9AE6B4' },
   { icon: '🥣', label: 'Pappe',       sub: 'Menu e registro pasti',       path: '/pappe',     bg: '#FFF9E6', color: '#E67E22', border: '#FED7AA' },
-  { icon: '📖', label: 'Diario',      sub: 'Attività e note',             path: '/diario',    bg: '#FDF2F8', color: '#9B59B6', border: '#E8BFFF' },
+  { icon: '📖', label: 'Diario',      sub: 'Attività e note',             path: '/diario',     bg: '#FDF2F8', color: '#9B59B6', border: '#E8BFFF' },
+  { icon: '📅', label: 'Calendario', sub: 'Eventi e chiusure del nido',  path: '/calendario', bg: '#EBF8FF', color: '#2B6CB0', border: '#90CDF4' },
 ]
 
 export default function GenitoreDashboard() {

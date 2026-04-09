@@ -44,7 +44,7 @@ Nome interno: Sherazade.
 ## Funzionalità Post-MVP
 - [x] Gestione utenti e gruppi configurabili (feature/utenti)
 - [x] Anagrafica v2 — foto profilo, alias nome, dati famiglia completi (feature/anagrafica-v2)
-- Calendario scolastico ed eventi
+- [x] Calendario scolastico ed eventi
 - Messaggistica broadcast (circolari)
 - Gestione menu settimanale
 - Fatturazione documentale (PDF, no pagamenti online)
@@ -395,3 +395,43 @@ Completato: Presenze v2 (orario 09:30, tab registra admin, ritardi genitore) + a
 - `frontend/src/app/[locale]/dashboard/admin/page.tsx`: aggiunto bottone Agenda
 
 Prossimo task: deploy + test in produzione
+
+### Calendario scolastico (9 aprile 2026)
+- Nuova app Django `apps.calendario` con modelli:
+  - `TipoEvento`: nome (unique), colore hex, icona emoji, attivo, creato_da FK
+  - `EventoCalendario`: titolo, descrizione, tipo FK, data_inizio/fine, tutto_il_giorno bool, ora_inizio/fine, `chiusura_scolastica` bool, gruppi M2M, notifica_inviata bool, creato_da FK
+- Permessi: Admin/Direttrice/Coordinatrice/Insegnante → CRUD; Genitore/Cuoca → read-only
+- `TipoEventoPermission`: solo Admin/Direttrice possono creare/modificare tipi
+- Email notifica genitori via `threading.Thread(daemon=True)` con `send_mail(fail_silently=True)` — non bloccante; attivata solo se `invia_notifica=True` nel POST
+- Action `chiusure`: endpoint dedicato `/api/v1/calendario/chiusure/` per integrare con registro presenze
+- Filtri API: `?mese=YYYY-MM`, `?anno=YYYY`, `?dal=`, `?al=`, `?chiusure=1`
+- Frontend staff/admin: pagina calendario con vista mese (griglia 7×N) e vista lista; modal crea/modifica; modale gestione tipi evento (solo admin/direttrice); badge chiusura scolastica ⚠️
+- Frontend genitore: calendario read-only con vista lista (default) e mese; modal dettaglio; badge "Il nido è chiuso"
+- Backend route prefix: `calendario/tipi` e `calendario` nel DRF router
+
+**File creati:**
+- `backend/apps/calendario/__init__.py`
+- `backend/apps/calendario/apps.py`
+- `backend/apps/calendario/admin.py`
+- `backend/apps/calendario/models.py`
+- `backend/apps/calendario/permissions.py`
+- `backend/apps/calendario/serializers.py`
+- `backend/apps/calendario/views.py`
+- `backend/apps/calendario/urls.py`
+- `backend/apps/calendario/migrations/0001_initial.py`
+- `backend/apps/calendario/migrations/__init__.py`
+- `frontend/src/app/api/calendario/route.ts`
+- `frontend/src/app/api/calendario/[id]/route.ts`
+- `frontend/src/app/api/calendario/tipi/route.ts`
+- `frontend/src/app/api/calendario/tipi/[id]/route.ts`
+- `frontend/src/app/[locale]/dashboard/staff/calendario/page.tsx`
+- `frontend/src/app/[locale]/dashboard/genitore/calendario/page.tsx`
+
+**File modificati:**
+- `backend/sherazade/settings/base.py`: aggiunto `apps.calendario` in LOCAL_APPS
+- `backend/sherazade/urls.py`: aggiunto include apps.calendario.urls
+- `frontend/src/app/[locale]/dashboard/staff/page.tsx`: aggiunto Calendario in NAV_ITEMS
+- `frontend/src/app/[locale]/dashboard/admin/page.tsx`: aggiunto bottone Calendario (path assoluto → staff/calendario)
+- `frontend/src/app/[locale]/dashboard/genitore/page.tsx`: aggiunto Calendario in NAV_ITEMS
+
+Prossimo task: Messaggistica broadcast (circolari)

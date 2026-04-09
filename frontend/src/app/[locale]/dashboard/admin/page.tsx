@@ -22,8 +22,9 @@ const NAV_ITEMS = [
   { icon: '⚙️', label: 'Impostazioni', sub: 'Gruppi e orari uscita',       path: '/impostazioni', bg: '#F3F0FF', color: '#6C5CE7', border: '#D6CCFF' },
 ]
 
-// Agenda: path assoluto perché punta alla pagina staff condivisa
+// Agenda e Calendario: path assoluti perché puntano alle pagine staff condivise
 const AGENDA_ITEM = { icon: '📝', label: 'Agenda', sub: 'Note condivise del turno' }
+const CALENDARIO_ITEM = { icon: '📅', label: 'Calendario', sub: 'Eventi e chiusure scolastiche' }
 
 const ADMIN_ONLY = { icon: '👥', label: 'Utenti', sub: 'Gestione account', path: '/utenti', bg: '#EBF8FF', color: '#2B6CB0', border: '#90CDF4' }
 
@@ -127,6 +128,17 @@ export default function AdminDashboard() {
             <div>
               <p style={{ margin: 0, fontWeight: 700, fontSize: '0.9rem' }}>{AGENDA_ITEM.label}</p>
               <p style={{ margin: 0, fontSize: '0.72rem', opacity: 0.75 }}>{AGENDA_ITEM.sub}</p>
+            </div>
+          </button>
+          {/* Calendario — pagina condivisa con staff */}
+          <button
+            onClick={() => router.push(`/${locale}/dashboard/staff/calendario`)}
+            style={{ padding: '1rem', background: '#EBF8FF', color: '#2B6CB0', border: '2px solid #90CDF4', borderRadius: '14px', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '0.75rem' }}
+          >
+            <span style={{ fontSize: '1.4rem', flexShrink: 0 }}>{CALENDARIO_ITEM.icon}</span>
+            <div>
+              <p style={{ margin: 0, fontWeight: 700, fontSize: '0.9rem' }}>{CALENDARIO_ITEM.label}</p>
+              <p style={{ margin: 0, fontSize: '0.72rem', opacity: 0.75 }}>{CALENDARIO_ITEM.sub}</p>
             </div>
           </button>
         </div>

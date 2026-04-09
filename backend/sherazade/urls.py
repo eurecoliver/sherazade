@@ -14,6 +14,7 @@ urlpatterns = [
     path('api/v1/', include('apps.attendance.urls')),
     path('api/v1/', include('apps.billing.urls')),
     path('api/v1/', include('apps.notes.urls')),
+    path('api/v1/', include('apps.calendario.urls')),
 ]
 
 if settings.DEBUG:
