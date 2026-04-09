@@ -11,7 +11,7 @@ interface Fattura {
   importo: string | null
   note: string
   file_url: string | null
-  caricato_il: string
+  caricato_at: string
   caricato_da_nome: string
 }
 
@@ -116,7 +116,7 @@ export default function GenitoreFatturePage() {
                     </p>
                   )}
                   <p style={{ margin: '0.25rem 0 0', color: '#aaa', fontSize: '0.75rem' }}>
-                    Caricata il {new Date(f.caricato_il).toLocaleDateString('it-IT')}
+                    Caricata il {new Date(f.caricato_at).toLocaleDateString('it-IT')}
                   </p>
                 </div>
 
