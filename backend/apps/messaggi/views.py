@@ -2,7 +2,7 @@ import threading
 
 from django.core.mail import send_mail
 from django.conf import settings as django_settings
-from django.db.models import Exists, OuterRef, Q
+from django.db.models import Count, Q
 from rest_framework import viewsets, parsers
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -85,13 +85,9 @@ class CircolareViewSet(viewsets.ModelViewSet):
                 .distinct()
             )
 
-            # Usa Exists per "circolare senza gruppi assegnati" — più affidabile
-            # di Q(gruppi__isnull=True) su M2M
-            ThroughModel = Circolare.gruppi.through
-            ha_gruppi = ThroughModel.objects.filter(circolare_id=OuterRef('pk'))
-
-            qs = qs.filter(
-                Q(~Exists(ha_gruppi)) | Q(gruppi__id__in=gruppo_ids)
+            # Count('gruppi') = 0 → circolare senza gruppi → visibile a tutti
+            qs = qs.annotate(cnt_gruppi=Count('gruppi')).filter(
+                Q(cnt_gruppi=0) | Q(gruppi__id__in=gruppo_ids)
             ).distinct()
 
         # Filtri opzionali
