@@ -254,13 +254,16 @@ class ConsensoFotograficoViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'])
     def pdf(self, request):
-        """Admin/Direttrice: genera PDF riepilogo consensi per un bambino."""
+        """Admin/Direttrice/Genitore: genera PDF riepilogo consensi per un bambino."""
         from django.http import HttpResponse
         from weasyprint import HTML
         from apps.children.models import Bambino
 
         role = request.user.role
-        if role not in (Role.ADMIN, Role.DIRETTRICE):
+        is_staff = role in (Role.ADMIN, Role.DIRETTRICE)
+        is_genitore = role == Role.GENITORE
+
+        if not is_staff and not is_genitore:
             return Response({'detail': 'Non autorizzato.'}, status=status.HTTP_403_FORBIDDEN)
 
         bambino_id = request.query_params.get('bambino')
@@ -273,6 +276,16 @@ class ConsensoFotograficoViewSet(viewsets.ModelViewSet):
             ).prefetch_related('consensi').get(id=bambino_id)
         except Bambino.DoesNotExist:
             return Response({'detail': 'Bambino non trovato.'}, status=status.HTTP_404_NOT_FOUND)
+
+        # Genitore: può accedere solo ai propri figli
+        if is_genitore:
+            user = request.user
+            try:
+                fam = bambino.famiglia
+                if fam.genitore1_id != user.pk and fam.genitore2_id != user.pk:
+                    return Response({'detail': 'Non autorizzato.'}, status=status.HTTP_403_FORBIDDEN)
+            except Exception:
+                return Response({'detail': 'Non autorizzato.'}, status=status.HTTP_403_FORBIDDEN)
 
         try:
             g1 = bambino.famiglia.genitore1

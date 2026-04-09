@@ -284,8 +284,8 @@ export default function GenitorePappePage() {
     <div style={{ minHeight: '100vh', background: '#FFF3EE' }}>
 
       <div style={{ background: 'linear-gradient(135deg, #E17055 0%, #C0392B 100%)', padding: '1.5rem 1.5rem 2rem', color: 'white' }}>
-        <div style={{ maxWidth: '680px', margin: '0 auto' }}>
-          <button onClick={() => router.push(`/${locale}/dashboard/genitore`)} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.8)', cursor: 'pointer', fontSize: '0.875rem', padding: 0, marginBottom: '0.5rem', fontFamily: 'inherit' }}>
+        <div style={{ maxWidth: 'min(860px, 96vw)', margin: '0 auto' }}>
+          <button onClick={() => router.push(`/${locale}/dashboard/genitore`)} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem', background: 'rgba(255,255,255,0.15)', color: 'white', border: '1.5px solid rgba(255,255,255,0.3)', borderRadius: '20px', padding: '0.35rem 0.875rem 0.35rem 0.625rem', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 600, fontFamily: 'inherit', marginBottom: '0.875rem' }}>
             ← Dashboard
           </button>
           <h1 style={{ margin: 0, fontSize: '1.75rem', fontWeight: 800 }}>🥣 Pappe di {figlioSelezionato?.nome ?? '...'}</h1>
@@ -295,7 +295,7 @@ export default function GenitorePappePage() {
         </div>
       </div>
 
-      <div style={{ maxWidth: '680px', margin: '0 auto', padding: '1.5rem 1rem' }}>
+      <div style={{ maxWidth: 'min(860px, 96vw)', margin: '0 auto', padding: '1.5rem 1rem' }}>
 
         {figli.length > 1 && (
           <div style={{ background: 'white', borderRadius: '14px', padding: '1rem 1.25rem', marginBottom: '1.25rem', boxShadow: '0 2px 8px rgba(225,112,85,0.08)' }}>

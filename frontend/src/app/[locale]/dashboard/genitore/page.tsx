@@ -24,6 +24,14 @@ interface Bambino {
   eta: number
 }
 
+const NAV_ITEMS = [
+  { icon: '📷', label: 'Consensi',    sub: 'Autorizzazioni fotografiche', path: '/consensi',  bg: '#FFF3EE', color: '#E17055', border: '#FFD4B3' },
+  { icon: '📅', label: 'Presenze',    sub: 'Registro e assenze',          path: '/presenze',  bg: '#F0F4FF', color: '#6C63FF', border: '#C5BFFF' },
+  { icon: '🧾', label: 'Fatture',     sub: 'Documenti di pagamento',      path: '/fatture',   bg: '#F0FFF4', color: '#276749', border: '#9AE6B4' },
+  { icon: '🥣', label: 'Pappe',       sub: 'Menu e registro pasti',       path: '/pappe',     bg: '#FFF9E6', color: '#E67E22', border: '#FED7AA' },
+  { icon: '📖', label: 'Diario',      sub: 'Attività e note',             path: '/diario',    bg: '#FDF2F8', color: '#9B59B6', border: '#E8BFFF' },
+]
+
 export default function GenitoreDashboard() {
   const t = useTranslations('Dashboard')
   const router = useRouter()
@@ -49,6 +57,8 @@ export default function GenitoreDashboard() {
     router.push(`/${locale}/login`)
   }
 
+  const base = `/${locale}/dashboard/genitore`
+
   if (!user) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', background: '#FFF3EE' }}>
@@ -57,135 +67,169 @@ export default function GenitoreDashboard() {
     )
   }
 
-  const roleLabel = t(`roles.${user.role}` as Parameters<typeof t>[0])
-
   return (
-    <div style={{ minHeight: '100vh', background: '#FFF3EE', padding: '2rem 1rem' }}>
-      <div style={{
-        maxWidth: '600px',
-        margin: '0 auto',
-        background: 'white',
-        borderRadius: '20px',
-        padding: '2.5rem 2rem',
-        boxShadow: '0 8px 30px rgba(225,112,85,0.12)',
-      }}>
-        <div style={{ marginBottom: '2rem' }}>
-          <div style={{ fontSize: '3rem', marginBottom: '0.75rem' }}>👨‍👩‍👧</div>
-          <h1 style={{ margin: 0, fontSize: '1.75rem', fontWeight: 800, color: '#E17055' }}>
-            {t('genitoreTitle')}
-          </h1>
-          <p style={{ margin: '0.5rem 0 0', color: '#888', fontSize: '0.9rem' }}>
-            {roleLabel}
-          </p>
-        </div>
+    <div style={{ minHeight: '100vh', background: '#FFF3EE' }}>
 
-        <div style={{
-          background: '#FFF3EE',
-          borderRadius: '12px',
-          padding: '1.25rem',
-          marginBottom: bambini.length > 0 ? '1.25rem' : '2rem',
-        }}>
-          <p style={{ margin: 0, color: '#555' }}>
-            {t('welcome')},{' '}
-            <strong style={{ color: '#E17055' }}>
-              {user.first_name || user.email}
-            </strong>
-          </p>
-        </div>
-
-        {/* Figli registrati con alias */}
-        {bambini.length > 0 && (
-          <div style={{ marginBottom: '2rem' }}>
-            <p style={{ margin: '0 0 0.75rem', fontSize: '0.8rem', fontWeight: 700, color: '#888', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-              {bambini.length === 1 ? 'Tuo figlio' : 'I tuoi figli'}
-            </p>
-            {bambini.map(b => {
-              const nomeMostrato = b.alias_attivo && b.alias_nome ? b.alias_nome : b.nome
-              const colore = b.gruppo_colore || '#E17055'
-              const ini = `${nomeMostrato.charAt(0)}${b.cognome.charAt(0)}`.toUpperCase()
-              return (
-                <div key={b.id} style={{
-                  display: 'flex', alignItems: 'center', gap: '0.875rem',
-                  padding: '0.75rem', borderRadius: '12px',
-                  background: '#FFF3EE', marginBottom: '0.5rem',
-                }}>
-                  <div style={{
-                    width: 44, height: 44, borderRadius: '50%', background: colore,
-                    overflow: 'hidden', flexShrink: 0,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    color: 'white', fontWeight: 700, fontSize: '0.95rem',
-                  }}>
-                    {b.foto_profilo
-                      ? <img src={b.foto_profilo} alt={ini} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      : ini}
-                  </div>
-                  <div>
-                    <p style={{ margin: 0, fontWeight: 700, color: '#333' }}>
-                      {nomeMostrato} {b.cognome}
-                    </p>
-                    {b.gruppo_nome && (
-                      <p style={{ margin: 0, fontSize: '0.8rem', color: '#888' }}>{b.gruppo_nome} · {b.eta} anni</p>
-                    )}
-                  </div>
-                </div>
-              )
-            })}
+      {/* ── Header a gradiente ─────────────────────────────────────────────── */}
+      <div style={{ background: 'linear-gradient(135deg, #E17055 0%, #C0392B 100%)', padding: '2rem 1.5rem 3rem', color: 'white' }}>
+        <div style={{ maxWidth: 'min(960px, 96vw)', margin: '0 auto' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
+            <div>
+              <p style={{ margin: '0 0 0.25rem', fontSize: '0.85rem', fontWeight: 600, opacity: 0.75, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                Portale Sherazade
+              </p>
+              <h1 style={{ margin: 0, fontSize: 'clamp(1.5rem, 4vw, 2rem)', fontWeight: 800 }}>
+                Ciao, {user.first_name || user.email.split('@')[0]} 👋
+              </h1>
+              <p style={{ margin: '0.25rem 0 0', opacity: 0.85, fontSize: '0.875rem' }}>
+                {t(`roles.${user.role}` as Parameters<typeof t>[0])}
+              </p>
+            </div>
+            <button
+              onClick={handleLogout}
+              style={{
+                padding: '0.5rem 1.1rem',
+                background: 'rgba(255,255,255,0.15)',
+                color: 'white',
+                border: '1.5px solid rgba(255,255,255,0.35)',
+                borderRadius: '20px',
+                fontSize: '0.82rem',
+                fontWeight: 600,
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+                flexShrink: 0,
+              }}
+            >
+              Esci
+            </button>
           </div>
-        )}
 
-        {/* Pulsante principale — La Giornata */}
-        <button
-          onClick={() => router.push(`/${locale}/dashboard/genitore/giornata`)}
-          style={{
-            width: '100%', padding: '1rem 1.25rem', marginBottom: '0.75rem',
-            background: 'linear-gradient(135deg, #E17055 0%, #C0392B 100%)',
-            color: 'white', border: 'none', borderRadius: '14px',
-            fontSize: '1rem', fontWeight: 800, cursor: 'pointer', fontFamily: 'inherit',
-            boxShadow: '0 4px 16px rgba(225,112,85,0.3)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem',
-          }}
-        >
-          <span style={{ fontSize: '1.25rem' }}>📚</span>
-          La giornata di oggi
-        </button>
-
-        <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
-          <button
-            onClick={() => router.push(`/${locale}/dashboard/genitore/consensi`)}
-            style={{ padding: '0.75rem 1.25rem', background: '#FFF3EE', color: '#E17055', border: '2px solid #FFD4B3', borderRadius: '10px', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
-          >
-            📷 Consensi
-          </button>
-          <button
-            onClick={() => router.push(`/${locale}/dashboard/genitore/presenze`)}
-            style={{ padding: '0.75rem 1.25rem', background: '#F0F4FF', color: '#6C63FF', border: '2px solid #C5BFFF', borderRadius: '10px', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
-          >
-            📅 Presenze
-          </button>
-          <button
-            onClick={() => router.push(`/${locale}/dashboard/genitore/fatture`)}
-            style={{ padding: '0.75rem 1.25rem', background: '#F0FFF4', color: '#276749', border: '2px solid #9AE6B4', borderRadius: '10px', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
-          >
-            🧾 Fatture
-          </button>
+          {/* Figli */}
+          {bambini.length > 0 && (
+            <div style={{
+              marginTop: '1.5rem',
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+              gap: '0.625rem',
+            }}>
+              {bambini.map(b => {
+                const nome = b.alias_attivo && b.alias_nome ? b.alias_nome : b.nome
+                const colore = b.gruppo_colore || '#E17055'
+                const ini = `${nome.charAt(0)}${b.cognome.charAt(0)}`.toUpperCase()
+                return (
+                  <div
+                    key={b.id}
+                    onClick={() => router.push(`${base}/giornata`)}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: '0.75rem',
+                      background: 'rgba(255,255,255,0.15)', borderRadius: '14px',
+                      padding: '0.75rem 1rem', cursor: 'pointer',
+                      border: '1px solid rgba(255,255,255,0.25)',
+                      backdropFilter: 'blur(4px)',
+                    }}
+                  >
+                    <div style={{
+                      width: 40, height: 40, borderRadius: '50%',
+                      background: colore, border: '2px solid rgba(255,255,255,0.6)',
+                      overflow: 'hidden', flexShrink: 0,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      color: 'white', fontWeight: 700, fontSize: '0.9rem',
+                    }}>
+                      {b.foto_profilo
+                        ? <img src={b.foto_profilo} alt={ini} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        : ini}
+                    </div>
+                    <div>
+                      <p style={{ margin: 0, fontWeight: 700, fontSize: '0.9rem', color: 'white' }}>{nome} {b.cognome}</p>
+                      {b.gruppo_nome && (
+                        <p style={{ margin: 0, fontSize: '0.75rem', opacity: 0.8 }}>{b.gruppo_nome} · {b.eta} anni</p>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
         </div>
+      </div>
 
+      {/* ── Contenuto principale ───────────────────────────────────────────── */}
+      <div style={{ maxWidth: 'min(960px, 96vw)', margin: '-1.5rem auto 0', padding: '0 1rem 3rem', position: 'relative', zIndex: 1 }}>
+
+        {/* Pulsante principale — La Giornata (card prominente) */}
         <button
-          onClick={handleLogout}
+          onClick={() => router.push(`${base}/giornata`)}
           style={{
-            padding: '0.75rem 1.5rem',
-            background: '#E17055',
-            color: 'white',
+            width: '100%',
+            padding: 'clamp(1.1rem, 3vw, 1.5rem) 1.5rem',
+            marginBottom: '1rem',
+            background: 'white',
+            color: '#E17055',
             border: 'none',
-            borderRadius: '10px',
-            fontSize: '0.9rem',
-            fontWeight: 600,
+            borderRadius: '18px',
+            boxShadow: '0 8px 32px rgba(225,112,85,0.20)',
             cursor: 'pointer',
             fontFamily: 'inherit',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '1rem',
+            textAlign: 'left',
           }}
         >
-          {t('logout')}
+          <div style={{
+            width: 52, height: 52, borderRadius: '14px',
+            background: 'linear-gradient(135deg, #E17055 0%, #C0392B 100%)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: '1.5rem', flexShrink: 0,
+            boxShadow: '0 4px 12px rgba(225,112,85,0.3)',
+          }}>
+            📚
+          </div>
+          <div>
+            <p style={{ margin: 0, fontSize: 'clamp(1rem, 2.5vw, 1.2rem)', fontWeight: 800, color: '#333' }}>
+              La giornata di oggi
+            </p>
+            <p style={{ margin: '0.15rem 0 0', fontSize: '0.82rem', color: '#888' }}>
+              Diario, pasti, sonno, attività e foto
+            </p>
+          </div>
+          <span style={{ marginLeft: 'auto', fontSize: '1.2rem', color: '#E17055', opacity: 0.6 }}>›</span>
         </button>
+
+        {/* Griglia azioni secondarie */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(min(170px, 100%), 1fr))',
+          gap: '0.75rem',
+          marginBottom: '1.5rem',
+        }}>
+          {NAV_ITEMS.map(item => (
+            <button
+              key={item.path}
+              onClick={() => router.push(`${base}${item.path}`)}
+              style={{
+                padding: '1rem 1rem',
+                background: item.bg,
+                color: item.color,
+                border: `2px solid ${item.border}`,
+                borderRadius: '14px',
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+                textAlign: 'left',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.75rem',
+              }}
+            >
+              <span style={{ fontSize: '1.4rem', flexShrink: 0 }}>{item.icon}</span>
+              <div>
+                <p style={{ margin: 0, fontWeight: 700, fontSize: '0.9rem' }}>{item.label}</p>
+                <p style={{ margin: 0, fontSize: '0.72rem', opacity: 0.75 }}>{item.sub}</p>
+              </div>
+            </button>
+          ))}
+        </div>
+
       </div>
     </div>
   )
