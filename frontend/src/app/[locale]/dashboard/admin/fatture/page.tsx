@@ -6,12 +6,21 @@ import { useRouter } from 'next/navigation'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-interface Genitore {
+interface Famiglia {
   id: number
-  email: string
-  first_name: string
-  last_name: string
-  is_active: boolean
+  genitore1: number        // User ID
+  genitore1_nome: string
+  genitore1_email: string
+  genitore2: number | null
+}
+
+interface Bambino {
+  id: number
+  nome: string
+  cognome: string
+  alias_nome: string
+  alias_attivo: boolean
+  famiglia: { id: number } | null
 }
 
 interface Fattura {
@@ -32,19 +41,10 @@ interface Fattura {
 
 const MESI = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic']
 
-function nomeCompleto(g: Genitore): string {
-  return [g.first_name, g.last_name].filter(Boolean).join(' ') || g.email
-}
-
-function chiaveColonna(anno: number, mese: number): string {
-  return `${anno}-${String(mese).padStart(2, '0')}`
-}
-
 function labelColonna(anno: number, mese: number): string {
   return `${MESI[mese - 1]} ${anno}`
 }
 
-// Genera le ultime N mesi (incluso il corrente)
 function ultimi12Mesi(): { anno: number; mese: number }[] {
   const oggi = new Date()
   const result = []
@@ -52,13 +52,14 @@ function ultimi12Mesi(): { anno: number; mese: number }[] {
     const d = new Date(oggi.getFullYear(), oggi.getMonth() - i, 1)
     result.push({ anno: d.getFullYear(), mese: d.getMonth() + 1 })
   }
-  return result // già in ordine decrescente (più recente prima)
+  return result
 }
 
 // ─── Upload modal ─────────────────────────────────────────────────────────────
 
 interface UploadModalProps {
-  genitore: Genitore
+  genitoreId: number
+  genitoreName: string
   anno: number
   mese: number
   existing: Fattura | null
@@ -66,7 +67,7 @@ interface UploadModalProps {
   onSaved: () => void
 }
 
-function UploadModal({ genitore, anno, mese, existing, onClose, onSaved }: UploadModalProps) {
+function UploadModal({ genitoreId, genitoreName, anno, mese, existing, onClose, onSaved }: UploadModalProps) {
   const fileRef = useRef<HTMLInputElement>(null)
   const [file, setFile] = useState<File | null>(null)
   const [importo, setImporto] = useState(existing?.importo ?? '')
@@ -80,7 +81,7 @@ function UploadModal({ genitore, anno, mese, existing, onClose, onSaved }: Uploa
     setError('')
     try {
       const fd = new FormData()
-      fd.append('genitore', String(genitore.id))
+      fd.append('genitore', String(genitoreId))
       fd.append('anno', String(anno))
       fd.append('mese', String(mese))
       if (importo) fd.append('importo', String(importo))
@@ -130,17 +131,14 @@ function UploadModal({ genitore, anno, mese, existing, onClose, onSaved }: Uploa
             <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#6C63FF' }}>
               🧾 Fattura {labelColonna(anno, mese)}
             </h2>
-            <p style={{ margin: '0.2rem 0 0', fontSize: '0.82rem', color: '#888' }}>{nomeCompleto(genitore)}</p>
+            <p style={{ margin: '0.2rem 0 0', fontSize: '0.82rem', color: '#888' }}>{genitoreName}</p>
           </div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#aaa' }}>×</button>
         </div>
 
         <form onSubmit={handleSubmit}>
-          {/* File upload */}
           <div style={{ marginBottom: '0.875rem' }}>
-            <label style={{ display: 'block', fontWeight: 600, fontSize: '0.8rem', color: '#555', marginBottom: '0.375rem' }}>
-              File PDF
-            </label>
+            <label style={{ display: 'block', fontWeight: 600, fontSize: '0.8rem', color: '#555', marginBottom: '0.375rem' }}>File PDF</label>
             <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
               <input ref={fileRef} type="file" accept=".pdf,.PDF" onChange={e => setFile(e.target.files?.[0] ?? null)} style={{ display: 'none' }} />
               <button type="button" onClick={() => fileRef.current?.click()}
@@ -158,14 +156,12 @@ function UploadModal({ genitore, anno, mese, existing, onClose, onSaved }: Uploa
             {!file && !existing?.file_url && <p style={{ margin: '0.25rem 0 0', fontSize: '0.75rem', color: '#aaa' }}>Lascia vuoto per salvare senza allegato</p>}
           </div>
 
-          {/* Importo */}
           <div style={{ marginBottom: '0.875rem' }}>
             <label style={{ display: 'block', fontWeight: 600, fontSize: '0.8rem', color: '#555', marginBottom: '0.375rem' }}>Importo (€)</label>
             <input type="number" step="0.01" min="0" value={importo} onChange={e => setImporto(e.target.value)}
               placeholder="es. 350.00" style={inp} />
           </div>
 
-          {/* Note */}
           <div style={{ marginBottom: '1rem' }}>
             <label style={{ display: 'block', fontWeight: 600, fontSize: '0.8rem', color: '#555', marginBottom: '0.375rem' }}>Note</label>
             <textarea value={note} onChange={e => setNote(e.target.value)} rows={2}
@@ -205,28 +201,49 @@ export default function FatturePage() {
   const mesi = ultimi12Mesi()
   const [anno, setAnno] = useState(mesi[0].anno)
 
-  const [genitori, setGenitori] = useState<Genitore[]>([])
+  const [famiglie, setFamiglie] = useState<Famiglia[]>([])
+  const [bambiniMap, setBambiniMap] = useState<Record<number, string[]>>({}) // genitore1_id → [nomi bambini]
   const [fatture, setFatture] = useState<Fattura[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
 
-  // Modal upload
-  const [modal, setModal] = useState<{ genitore: Genitore; anno: number; mese: number } | null>(null)
+  const [modal, setModal] = useState<{ genitoreId: number; genitoreName: string; anno: number; mese: number } | null>(null)
 
   const mesiAnno = mesi.filter(m => m.anno === anno)
 
   const carica = useCallback(async () => {
     setLoading(true)
     try {
-      const [gRes, fRes] = await Promise.all([
-        fetch('/api/utenti?role=genitore&ordering=last_name&page_size=500'),
+      const [fRes, bRes, fattureRes] = await Promise.all([
+        fetch('/api/famiglie?page_size=500'),
+        fetch('/api/bambini?page_size=500'),
         fetch(`/api/fatture?anno=${anno}`),
       ])
-      if (gRes.status === 401) { router.push(`/${locale}/login`); return }
-      const gData = await gRes.json()
+      if (fRes.status === 401) { router.push(`/${locale}/login`); return }
+
       const fData = await fRes.json()
-      setGenitori(gData.results ?? gData)
-      setFatture(fData.results ?? fData)
+      const bData = await bRes.json()
+      const fattureData = await fattureRes.json()
+
+      const famList: Famiglia[] = fData.results ?? fData
+      const bamList: Bambino[] = bData.results ?? bData
+
+      // Mappa: genitore1_id → [nomi bambini]
+      const map: Record<number, string[]> = {}
+      for (const b of bamList) {
+        const famId = b.famiglia?.id
+        if (!famId) continue
+        const fam = famList.find(f => f.id === famId)
+        if (!fam) continue
+        const nomeB = b.alias_attivo && b.alias_nome ? b.alias_nome : b.nome
+        const key = fam.genitore1
+        if (!map[key]) map[key] = []
+        map[key].push(`${nomeB} ${b.cognome}`)
+      }
+
+      setFamiglie(famList)
+      setBambiniMap(map)
+      setFatture(fattureData.results ?? fattureData)
     } finally {
       setLoading(false)
     }
@@ -234,25 +251,30 @@ export default function FatturePage() {
 
   useEffect(() => { carica() }, [carica])
 
-  // Indice rapido: genitoreId-mese -> Fattura
+  // Indice rapido: genitore1Id-mese → Fattura
   const fattureMap: Record<string, Fattura> = {}
   fatture.forEach(f => { fattureMap[`${f.genitore}-${f.mese}`] = f })
 
-  const genitoriFiltered = genitori.filter(g => {
+  const famiglieFiltrate = famiglie.filter(fam => {
     if (!search) return true
     const q = search.toLowerCase()
-    return nomeCompleto(g).toLowerCase().includes(q) || g.email.toLowerCase().includes(q)
+    return fam.genitore1_nome.toLowerCase().includes(q) || fam.genitore1_email.toLowerCase().includes(q)
   })
 
-  const modalFattura = modal
-    ? fattureMap[`${modal.genitore.id}-${modal.mese}`] ?? null
-    : null
+  const modalFattura = modal ? fattureMap[`${modal.genitoreId}-${modal.mese}`] ?? null : null
 
-  // Stats per header
-  const totaleAtteso = genitoriFiltered.length * mesiAnno.length
-  const totalePagati = genitoriFiltered.reduce((acc, g) =>
-    acc + mesiAnno.filter(m => fattureMap[`${g.id}-${m.mese}`]).length, 0)
-  const totaleScoperti = totaleAtteso - totalePagati
+  // Totali per riga e complessivo
+  function totaleGenitore(genitoreId: number): number {
+    return mesiAnno.reduce((acc, { mese }) => {
+      const f = fattureMap[`${genitoreId}-${mese}`]
+      return acc + (f?.importo ? parseFloat(f.importo) : 0)
+    }, 0)
+  }
+
+  const totaleComplessivo = famiglieFiltrate.reduce((acc, fam) => acc + totaleGenitore(fam.genitore1), 0)
+  const totaleFatture = famiglieFiltrate.reduce((acc, fam) =>
+    acc + mesiAnno.filter(({ mese }) => fattureMap[`${fam.genitore1}-${mese}`]).length, 0)
+  const totaleMancanti = famiglieFiltrate.length * mesiAnno.length - totaleFatture
 
   if (loading) {
     return (
@@ -274,7 +296,7 @@ export default function FatturePage() {
           </button>
           <h1 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 800 }}>🧾 Gestione Fatture</h1>
           <p style={{ margin: '0.25rem 0 0', opacity: 0.85, fontSize: '0.85rem' }}>
-            {totalePagati} fatture caricate · {totaleScoperti > 0 ? `${totaleScoperti} mancanti` : 'tutto in ordine ✓'}
+            {totaleFatture} fatture caricate · {totaleMancanti > 0 ? `${totaleMancanti} mancanti` : 'tutto in ordine ✓'}
           </p>
         </div>
       </div>
@@ -283,7 +305,7 @@ export default function FatturePage() {
 
         {/* Toolbar */}
         <div style={{ background: 'white', borderRadius: '14px', padding: '0.875rem 1rem', marginBottom: '1rem', display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
-          <input type="search" placeholder="Cerca genitore..." value={search} onChange={e => setSearch(e.target.value)}
+          <input type="search" placeholder="Cerca genitore o bambino..." value={search} onChange={e => setSearch(e.target.value)}
             style={{ flex: 1, minWidth: '160px', padding: '0.5rem 0.875rem', border: '1px solid #E2E8F0', borderRadius: '10px', fontSize: '0.875rem', fontFamily: 'inherit' }} />
           <div style={{ display: 'flex', gap: '0.375rem' }}>
             {[...new Set(mesi.map(m => m.anno))].sort((a, b) => b - a).map(a => (
@@ -298,7 +320,7 @@ export default function FatturePage() {
         {/* Legenda */}
         <div style={{ display: 'flex', gap: '1rem', marginBottom: '0.75rem', fontSize: '0.78rem', color: '#666' }}>
           <span><span style={{ display: 'inline-block', width: 12, height: 12, borderRadius: '50%', background: '#48BB78', marginRight: 4, verticalAlign: 'middle' }} />Caricata</span>
-          <span><span style={{ display: 'inline-block', width: 12, height: 12, borderRadius: '50%', background: '#FC8181', marginRight: 4, verticalAlign: 'middle' }} />Mancante</span>
+          <span><span style={{ display: 'inline-block', width: 12, height: 12, borderRadius: '50%', background: '#FC8181', marginRight: 4, verticalAlign: 'middle' }} />Mancante mese corrente</span>
           <span style={{ color: '#aaa' }}>Clicca su una cella per caricare o modificare</span>
         </div>
 
@@ -308,62 +330,116 @@ export default function FatturePage() {
             <thead>
               <tr style={{ background: '#F7FAFC' }}>
                 <th style={{ padding: '0.75rem 1rem', textAlign: 'left', fontWeight: 700, color: '#555', borderBottom: '2px solid #E2E8F0', whiteSpace: 'nowrap', position: 'sticky', left: 0, background: '#F7FAFC', zIndex: 1 }}>
-                  Genitore
+                  Genitore / Bambini
                 </th>
                 {mesiAnno.map(({ anno: a, mese: m }) => (
                   <th key={m} style={{ padding: '0.625rem 0.5rem', textAlign: 'center', fontWeight: 700, color: '#555', borderBottom: '2px solid #E2E8F0', whiteSpace: 'nowrap', minWidth: 70 }}>
                     {labelColonna(a, m)}
                   </th>
                 ))}
+                <th style={{ padding: '0.625rem 0.75rem', textAlign: 'right', fontWeight: 700, color: '#555', borderBottom: '2px solid #E2E8F0', whiteSpace: 'nowrap', minWidth: 80 }}>
+                  Totale {anno}
+                </th>
               </tr>
             </thead>
             <tbody>
-              {genitoriFiltered.length === 0 ? (
+              {famiglieFiltrate.length === 0 ? (
                 <tr>
-                  <td colSpan={mesiAnno.length + 1} style={{ textAlign: 'center', padding: '3rem', color: '#aaa' }}>
-                    Nessun genitore trovato.
+                  <td colSpan={mesiAnno.length + 2} style={{ textAlign: 'center', padding: '3rem', color: '#aaa' }}>
+                    Nessuna famiglia trovata.
                   </td>
                 </tr>
-              ) : genitoriFiltered.map((g, i) => (
-                <tr key={g.id}
-                  style={{ background: i % 2 === 0 ? 'white' : '#FAFAFA' }}
-                  onMouseEnter={e => (e.currentTarget.style.background = '#EDE9FE')}
-                  onMouseLeave={e => (e.currentTarget.style.background = i % 2 === 0 ? 'white' : '#FAFAFA')}>
-                  {/* Nome genitore — colonna fissa */}
-                  <td style={{ padding: '0.625rem 1rem', borderBottom: '1px solid #F0F0F0', position: 'sticky', left: 0, background: 'inherit', zIndex: 1 }}>
-                    <p style={{ margin: 0, fontWeight: 600, color: '#333', whiteSpace: 'nowrap' }}>{nomeCompleto(g)}</p>
-                    <p style={{ margin: 0, fontSize: '0.72rem', color: '#aaa' }}>{g.email}</p>
+              ) : famiglieFiltrate.map((fam, i) => {
+                const figliBambini = bambiniMap[fam.genitore1] ?? []
+                const totaleR = totaleGenitore(fam.genitore1)
+                return (
+                  <tr key={fam.id}
+                    style={{ background: i % 2 === 0 ? 'white' : '#FAFAFA' }}
+                    onMouseEnter={e => (e.currentTarget.style.background = '#EDE9FE')}
+                    onMouseLeave={e => (e.currentTarget.style.background = i % 2 === 0 ? 'white' : '#FAFAFA')}>
+                    {/* Genitore + bambini — colonna fissa */}
+                    <td style={{ padding: '0.625rem 1rem', borderBottom: '1px solid #F0F0F0', position: 'sticky', left: 0, background: 'inherit', zIndex: 1 }}>
+                      <p style={{ margin: 0, fontWeight: 700, color: '#333', whiteSpace: 'nowrap' }}>
+                        {fam.genitore1_nome || fam.genitore1_email}
+                      </p>
+                      {figliBambini.length > 0 && (
+                        <p style={{ margin: '0.1rem 0 0', fontSize: '0.72rem', color: '#6C63FF', fontWeight: 600 }}>
+                          👶 {figliBambini.join(' · ')}
+                        </p>
+                      )}
+                      <p style={{ margin: '0.05rem 0 0', fontSize: '0.7rem', color: '#aaa' }}>{fam.genitore1_email}</p>
+                    </td>
+                    {/* Celle per ogni mese */}
+                    {mesiAnno.map(({ anno: a, mese: m }) => {
+                      const f = fattureMap[`${fam.genitore1}-${m}`]
+                      const meseCorrente = new Date().getMonth() + 1
+                      const annoCorrente = new Date().getFullYear()
+                      const isCurrent = m === meseCorrente && a === annoCorrente
+                      return (
+                        <td key={m}
+                          onClick={() => setModal({ genitoreId: fam.genitore1, genitoreName: fam.genitore1_nome || fam.genitore1_email, anno: a, mese: m })}
+                          style={{ padding: '0.5rem', textAlign: 'center', borderBottom: '1px solid #F0F0F0', cursor: 'pointer' }}>
+                          {f ? (
+                            <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: '0.15rem' }}>
+                              <span style={{ fontSize: '1rem' }}>✅</span>
+                              {f.importo && <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#27AE60' }}>€{parseFloat(f.importo).toFixed(0)}</span>}
+                            </div>
+                          ) : (
+                            <span style={{
+                              fontSize: '0.72rem', fontWeight: 700, padding: '0.2rem 0.4rem', borderRadius: '6px',
+                              background: isCurrent ? '#FFF5F5' : '#F7FAFC',
+                              color: isCurrent ? '#FC8181' : '#CBD5E0',
+                            }}>
+                              {isCurrent ? '⚠ da fare' : '—'}
+                            </span>
+                          )}
+                        </td>
+                      )
+                    })}
+                    {/* Totale riga */}
+                    <td style={{ padding: '0.5rem 0.75rem', textAlign: 'right', borderBottom: '1px solid #F0F0F0', whiteSpace: 'nowrap' }}>
+                      {totaleR > 0 ? (
+                        <span style={{ fontWeight: 700, color: '#27AE60', fontSize: '0.875rem' }}>
+                          € {totaleR.toFixed(2).replace('.', ',')}
+                        </span>
+                      ) : (
+                        <span style={{ color: '#CBD5E0', fontSize: '0.8rem' }}>—</span>
+                      )}
+                    </td>
+                  </tr>
+                )
+              })}
+            </tbody>
+            {/* Footer: totale complessivo */}
+            {famiglieFiltrate.length > 0 && (
+              <tfoot>
+                <tr style={{ background: '#F7FAFC', borderTop: '2px solid #E2E8F0' }}>
+                  <td style={{ padding: '0.75rem 1rem', fontWeight: 700, color: '#333', position: 'sticky', left: 0, background: '#F7FAFC', fontSize: '0.82rem' }}>
+                    Totale {anno}
                   </td>
-                  {/* Celle per ogni mese */}
-                  {mesiAnno.map(({ anno: a, mese: m }) => {
-                    const f = fattureMap[`${g.id}-${m}`]
-                    const meseCorrente = new Date().getMonth() + 1
-                    const annoCorrente = new Date().getFullYear()
-                    const isCurrent = m === meseCorrente && a === annoCorrente
+                  {mesiAnno.map(({ mese: m }) => {
+                    const tot = famiglieFiltrate.reduce((acc, fam) => {
+                      const f = fattureMap[`${fam.genitore1}-${m}`]
+                      return acc + (f?.importo ? parseFloat(f.importo) : 0)
+                    }, 0)
                     return (
-                      <td key={m}
-                        onClick={() => setModal({ genitore: g, anno: a, mese: m })}
-                        style={{ padding: '0.5rem', textAlign: 'center', borderBottom: '1px solid #F0F0F0', cursor: 'pointer' }}>
-                        {f ? (
-                          <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: '0.15rem' }}>
-                            <span style={{ fontSize: '1rem' }}>✅</span>
-                            {f.importo && <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#27AE60' }}>€{parseFloat(f.importo).toFixed(0)}</span>}
-                          </div>
+                      <td key={m} style={{ padding: '0.5rem', textAlign: 'center' }}>
+                        {tot > 0 ? (
+                          <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#4A5568' }}>€{tot.toFixed(0)}</span>
                         ) : (
-                          <span style={{
-                            fontSize: '0.72rem', fontWeight: 700, padding: '0.2rem 0.4rem', borderRadius: '6px',
-                            background: isCurrent ? '#FFF5F5' : '#F7FAFC',
-                            color: isCurrent ? '#FC8181' : '#CBD5E0',
-                          }}>
-                            {isCurrent ? '⚠ da fare' : '—'}
-                          </span>
+                          <span style={{ fontSize: '0.72rem', color: '#CBD5E0' }}>—</span>
                         )}
                       </td>
                     )
                   })}
+                  <td style={{ padding: '0.75rem', textAlign: 'right' }}>
+                    <span style={{ fontWeight: 800, color: '#6C63FF', fontSize: '1rem' }}>
+                      € {totaleComplessivo.toFixed(2).replace('.', ',')}
+                    </span>
+                  </td>
                 </tr>
-              ))}
-            </tbody>
+              </tfoot>
+            )}
           </table>
         </div>
 
@@ -371,7 +447,7 @@ export default function FatturePage() {
         {(() => {
           const meseC = new Date().getMonth() + 1
           const annoC = new Date().getFullYear()
-          const scoperti = genitoriFiltered.filter(g => !fattureMap[`${g.id}-${meseC}`])
+          const scoperti = famiglieFiltrate.filter(fam => !fattureMap[`${fam.genitore1}-${meseC}`])
           if (scoperti.length === 0) return null
           return (
             <div style={{ marginTop: '1.25rem', background: '#FFF5F5', borderRadius: '14px', padding: '1rem 1.25rem', border: '1px solid #FEB2B2' }}>
@@ -379,10 +455,11 @@ export default function FatturePage() {
                 ⚠ Fatture mancanti per {labelColonna(annoC, meseC)} ({scoperti.length})
               </p>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-                {scoperti.map(g => (
-                  <button key={g.id} onClick={() => setModal({ genitore: g, anno: annoC, mese: meseC })}
+                {scoperti.map(fam => (
+                  <button key={fam.id}
+                    onClick={() => setModal({ genitoreId: fam.genitore1, genitoreName: fam.genitore1_nome || fam.genitore1_email, anno: annoC, mese: meseC })}
                     style={{ padding: '0.3rem 0.75rem', background: 'white', border: '1px solid #FEB2B2', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 600, color: '#C53030', cursor: 'pointer', fontFamily: 'inherit' }}>
-                    {nomeCompleto(g)}
+                    {fam.genitore1_nome || fam.genitore1_email}
                   </button>
                 ))}
               </div>
@@ -394,7 +471,8 @@ export default function FatturePage() {
 
       {modal && (
         <UploadModal
-          genitore={modal.genitore}
+          genitoreId={modal.genitoreId}
+          genitoreName={modal.genitoreName}
           anno={modal.anno}
           mese={modal.mese}
           existing={modalFattura}

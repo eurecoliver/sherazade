@@ -10,7 +10,7 @@ interface Figlio {
   id: number
   nome: string
   cognome: string
-  gruppo_id: number | null
+  gruppo: number | null
 }
 
 interface RegistroPasto {
@@ -68,25 +68,30 @@ const PORTATE_LABEL: Record<string, { label: string; emoji: string }> = {
 }
 
 function fmtData(iso: string) {
-  return new Date(iso).toLocaleDateString('it-IT', {
+  const [y, m, d] = iso.split('-').map(Number)
+  return new Date(y, m - 1, d).toLocaleDateString('it-IT', {
     weekday: 'long', day: 'numeric', month: 'long',
   })
+}
+
+function stripCodice(desc: string): string {
+  return desc.replace(/^[A-Z]+\s*\d+\s*[-–]\s*/, '').trim()
+}
+
+const CAMPO_A_TIPO: Record<string, string> = {
+  colazione_quantita: 'colazione',
+  primo_quantita: 'primo',
+  secondo_quantita: 'secondo',
+  monopiatto_quantita: 'monopiatto',
+  contorno_quantita: 'contorno',
+  pane_quantita: 'pane',
+  frutta_quantita: 'frutta',
+  merenda_quantita: 'merenda',
 }
 
 // ─── PastoCard ────────────────────────────────────────────────────────────────
 
 function PastoCard({ registro, menu }: { registro: RegistroPasto; menu: MenuGiorno | null }) {
-  const CAMPO_A_TIPO: Record<string, string> = {
-    colazione_quantita: 'colazione',
-    primo_quantita: 'primo',
-    secondo_quantita: 'secondo',
-    monopiatto_quantita: 'monopiatto',
-    contorno_quantita: 'contorno',
-    pane_quantita: 'pane',
-    frutta_quantita: 'frutta',
-    merenda_quantita: 'merenda',
-  }
-
   // Portate che hanno almeno una quantità registrata o un piatto nel menu
   const portateAttive = Object.entries(CAMPO_A_TIPO).filter(([campo, tipo]) => {
     const q = (registro as unknown as Record<string, string>)[campo]
@@ -96,16 +101,25 @@ function PastoCard({ registro, menu }: { registro: RegistroPasto; menu: MenuGior
 
   return (
     <div style={{ background: 'white', borderRadius: '20px', padding: '1.5rem', marginBottom: '1.25rem', boxShadow: '0 4px 20px rgba(225,112,85,0.10)' }}>
-      <div style={{ marginBottom: '1.25rem' }}>
-        <p style={{ margin: 0, fontWeight: 800, color: '#333', fontSize: '1rem', textTransform: 'capitalize' }}>
-          {fmtData(registro.data)}
-        </p>
-        <p style={{ margin: '0.2rem 0 0', fontSize: '0.775rem', color: '#aaa' }}>
-          Compilato da {registro.compilato_da_nome}
-        </p>
+      {/* Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.875rem' }}>
+        <div>
+          <p style={{ margin: 0, fontWeight: 800, color: '#333', fontSize: '1rem', textTransform: 'capitalize' }}>
+            {fmtData(registro.data)}
+          </p>
+          <p style={{ margin: '0.2rem 0 0', fontSize: '0.775rem', color: '#aaa' }}>
+            Compilato da {registro.compilato_da_nome}
+          </p>
+        </div>
+        {menu?.settimana_ciclo && (
+          <span style={{ background: '#FFF3EE', color: '#E17055', borderRadius: '6px', padding: '2px 8px', fontSize: '0.72rem', fontWeight: 700, whiteSpace: 'nowrap' }}>
+            Sett. {menu.settimana_ciclo}
+          </span>
+        )}
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+      {/* Portate */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
         {portateAttive.map(([campo, tipo]) => {
           const q = (registro as unknown as Record<string, string>)[campo] ?? ''
           const qi = QUANTITA_ICON[q] ?? QUANTITA_ICON['']
@@ -113,24 +127,27 @@ function PastoCard({ registro, menu }: { registro: RegistroPasto; menu: MenuGior
           const { label, emoji } = PORTATE_LABEL[tipo] ?? { label: tipo, emoji: '🍽️' }
 
           return (
-            <div key={campo} style={{ display: 'flex', alignItems: 'center', gap: '0.875rem' }}>
-              <div style={{ width: 48, height: 48, borderRadius: '12px', background: q ? `${qi.color}18` : '#F5F5F5', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <span style={{ fontSize: '1.2rem', lineHeight: 1 }}>{qi.icon}</span>
-                <span style={{ fontSize: '0.6rem', fontWeight: 700, color: qi.color, marginTop: '0.1rem' }}>{qi.label}</span>
+            <div key={campo} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.375rem 0', borderBottom: '1px solid #F9F9F9' }}>
+              {/* Icona quantità */}
+              <div style={{ width: 44, height: 44, borderRadius: '10px', background: q ? `${qi.color}18` : '#F5F5F5', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <span style={{ fontSize: '1.1rem', lineHeight: 1 }}>{qi.icon}</span>
+                {q && <span style={{ fontSize: '0.55rem', fontWeight: 700, color: qi.color, marginTop: '0.1rem' }}>{qi.label}</span>}
               </div>
-              <div style={{ flex: 1 }}>
-                <p style={{ margin: 0, fontSize: '0.78rem', fontWeight: 700, color: TIPO_COLOR[tipo] ?? '#888', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              {/* Label + piatto */}
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <p style={{ margin: 0, fontSize: '0.72rem', fontWeight: 700, color: TIPO_COLOR[tipo] ?? '#888', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                   {emoji} {label}
                 </p>
                 {piatti.length > 0 && (
-                  <p style={{ margin: '0.1rem 0 0', fontSize: '0.9rem', color: '#444', fontWeight: 500 }}>
-                    {piatti.map(p => p.descrizione).join(', ')}
+                  <p style={{ margin: '0.1rem 0 0', fontSize: '0.875rem', color: '#444', lineHeight: 1.3 }}>
+                    {piatti.map(p => stripCodice(p.descrizione)).join(', ')}
                     {piatti.some(p => p.is_sostituzione) && <span style={{ marginLeft: 4, fontSize: '0.72rem', color: '#6C5CE7' }}>🔄</span>}
                   </p>
                 )}
               </div>
+              {/* Badge quantità */}
               {q && (
-                <span style={{ background: `${qi.color}20`, color: qi.color, padding: '0.25rem 0.625rem', borderRadius: '8px', fontSize: '0.78rem', fontWeight: 700, whiteSpace: 'nowrap' }}>
+                <span style={{ background: `${qi.color}20`, color: qi.color, padding: '0.2rem 0.5rem', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 700, whiteSpace: 'nowrap', flexShrink: 0 }}>
                   {qi.label}
                 </span>
               )}
@@ -155,7 +172,7 @@ function PastoCard({ registro, menu }: { registro: RegistroPasto; menu: MenuGior
   )
 }
 
-// ─── MenuOggiCard ─────────────────────────────────────────────────────────────
+// ─── MenuOggiCard — mostrato solo se non c'è ancora il pasto registrato ───────
 
 function MenuOggiCard({ menu }: { menu: MenuGiorno }) {
   const tipi = Object.entries(menu.piatti).filter(([, list]) => list.length > 0)
@@ -170,17 +187,21 @@ function MenuOggiCard({ menu }: { menu: MenuGiorno }) {
           </span>
         )}
       </div>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.375rem' }}>
-        {tipi.map(([tipo, list]) => (
-          list.map((p, i) => {
-            const { emoji } = PORTATE_LABEL[tipo] ?? { emoji: '🍽️' }
-            return (
-              <span key={`${tipo}-${i}`} style={{ background: `${TIPO_COLOR[tipo] ?? '#888'}18`, color: TIPO_COLOR[tipo] ?? '#888', border: `1px solid ${TIPO_COLOR[tipo] ?? '#888'}44`, borderRadius: '8px', padding: '0.2rem 0.625rem', fontSize: '0.825rem', fontWeight: 600 }}>
-                {emoji} {p.descrizione}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+        {tipi.map(([tipo, list]) => {
+          const { label, emoji } = PORTATE_LABEL[tipo] ?? { emoji: '🍽️', label: tipo }
+          return list.map((p, i) => (
+            <div key={`${tipo}-${i}`} style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', padding: '0.25rem 0', borderBottom: '1px solid #F9F9F9' }}>
+              <span style={{ fontSize: '0.72rem', fontWeight: 700, color: TIPO_COLOR[tipo] ?? '#888', textTransform: 'uppercase', letterSpacing: '0.04em', minWidth: 80 }}>
+                {emoji} {label}
               </span>
-            )
-          })
-        ))}
+              <span style={{ fontSize: '0.875rem', color: '#444' }}>
+                {stripCodice(p.descrizione)}
+                {p.is_sostituzione && <span style={{ marginLeft: 4, fontSize: '0.72rem', color: '#6C5CE7' }}>🔄</span>}
+              </span>
+            </div>
+          ))
+        })}
       </div>
     </div>
   )
@@ -224,8 +245,8 @@ export default function GenitorePappePage() {
       const promises: Promise<Response>[] = [
         fetch(`/api/meals/pasti/mio-figlio?bambino=${figlio.id}`),
       ]
-      if (figlio.gruppo_id) {
-        promises.push(fetch(`/api/pappe/piatti/menu-giorno?data=${oggi}&gruppo=${figlio.gruppo_id}`))
+      if (figlio.gruppo) {
+        promises.push(fetch(`/api/pappe/piatti/menu-giorno?data=${oggi}&gruppo=${figlio.gruppo}`))
       }
       const [pastiRes, menuRes] = await Promise.all(promises)
       if (!pastiRes.ok) throw new Error()

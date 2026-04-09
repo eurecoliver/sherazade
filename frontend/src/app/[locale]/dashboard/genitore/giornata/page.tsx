@@ -15,7 +15,7 @@ interface Figlio {
   foto_profilo: string | null
   gruppo_nome: string
   gruppo_colore: string
-  gruppo_id: number | null
+  gruppo: number | null
 }
 
 interface Tag { id: number; nome: string; colore: string }
@@ -176,8 +176,8 @@ export default function GiornataPage() {
       }
       // Load menu for this day (needs gruppo)
       const f = figli.find(x => x.id === bambinoId)
-      if (f?.gruppo_id) {
-        const mRes = await fetch(`/api/pappe/piatti/menu-giorno?data=${giorno}&gruppo=${f.gruppo_id}`)
+      if (f?.gruppo) {
+        const mRes = await fetch(`/api/pappe/piatti/menu-giorno?data=${giorno}&gruppo=${f.gruppo}`)
         if (mRes.ok) setMenu(await mRes.json())
       }
     } finally {
