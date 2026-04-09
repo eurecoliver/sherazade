@@ -19,6 +19,7 @@ const NAV_ITEMS = [
   { icon: '✅', label: 'Presenze',      sub: 'Registro e report',           path: '/presenze',     bg: '#F0FFF4', color: '#38A169', border: '#9AE6B4' },
   { icon: '🍽️', label: 'Menu',          sub: 'Pappe e ciclo settimanale',   path: '/pappe',        bg: '#FFF9E6', color: '#E67E22', border: '#FED7AA' },
   { icon: '🧾', label: 'Fatture',       sub: 'Documenti di pagamento',      path: '/fatture',      bg: '#F0FFF4', color: '#276749', border: '#9AE6B4' },
+  { icon: '📢', label: 'Circolari',     sub: 'Comunicazioni alle famiglie', path: '/circolari',    bg: '#FFF9E6', color: '#D35400', border: '#FAD7A0' },
   { icon: '⚙️', label: 'Impostazioni', sub: 'Gruppi e orari uscita',       path: '/impostazioni', bg: '#F3F0FF', color: '#6C5CE7', border: '#D6CCFF' },
 ]
 

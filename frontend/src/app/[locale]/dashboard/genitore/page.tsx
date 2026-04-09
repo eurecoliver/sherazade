@@ -31,6 +31,7 @@ const NAV_ITEMS = [
   { icon: '🥣', label: 'Pappe',       sub: 'Menu e registro pasti',       path: '/pappe',     bg: '#FFF9E6', color: '#E67E22', border: '#FED7AA' },
   { icon: '📖', label: 'Diario',      sub: 'Attività e note',             path: '/diario',     bg: '#FDF2F8', color: '#9B59B6', border: '#E8BFFF' },
   { icon: '📅', label: 'Calendario', sub: 'Eventi e chiusure del nido',  path: '/calendario', bg: '#EBF8FF', color: '#2B6CB0', border: '#90CDF4' },
+  { icon: '📢', label: 'Circolari',  sub: 'Comunicazioni dal nido',      path: '/circolari',  bg: '#FFF9E6', color: '#D35400', border: '#FAD7A0' },
 ]
 
 export default function GenitoreDashboard() {

@@ -45,7 +45,7 @@ Nome interno: Sherazade.
 - [x] Gestione utenti e gruppi configurabili (feature/utenti)
 - [x] Anagrafica v2 — foto profilo, alias nome, dati famiglia completi (feature/anagrafica-v2)
 - [x] Calendario scolastico ed eventi
-- Messaggistica broadcast (circolari)
+- [x] Messaggistica broadcast (circolari)
 - Gestione menu settimanale
 - Fatturazione documentale (PDF, no pagamenti online)
 - QR code check-in
@@ -434,4 +434,41 @@ Prossimo task: deploy + test in produzione
 - `frontend/src/app/[locale]/dashboard/admin/page.tsx`: aggiunto bottone Calendario (path assoluto → staff/calendario)
 - `frontend/src/app/[locale]/dashboard/genitore/page.tsx`: aggiunto Calendario in NAV_ITEMS
 
-Prossimo task: Messaggistica broadcast (circolari)
+Prossimo task: QR code check-in
+
+### Messaggistica broadcast — circolari (9 aprile 2026)
+- Nuova app Django `apps.messaggi` con modelli:
+  - `Circolare`: titolo, testo, allegato (FileField), autore FK, gruppi M2M, pubblicata bool, notifica_inviata bool
+  - `LetturaCircolare`: circolare FK + utente FK, unique_together → traccia chi ha letto
+- Permessi: Admin/Direttrice CRUD (incluse bozze); Coordinatrice/Insegnante read-only pubblicate; Genitore read-only (solo gruppo proprio figlio o generali)
+- Bozze visibili solo ad Admin/Direttrice
+- Email notifica genitori in background thread all'invio (filtro per gruppi se specifici)
+- Action `segna-letta`: genitore marca circolare come letta (crea LetturaCircolare)
+- Action `letture`: admin vede chi ha letto (con timestamp)
+- Genitore: filtra circolari per gruppo del figlio (via Famiglia → Bambino → gruppo)
+- Frontend admin: lista con filtri (tutte/pubblicate/bozze), pulsante "Pubblica", pulsante "Letture", modal crea/modifica con upload allegato, selezione gruppi, checkbox pubblica+invia_notifica
+- Frontend genitore: lista con badge "nuove" non lette, pallino rosso per non lette, auto-segna come letta all'apertura, modal lettura con download allegato
+
+**File creati:**
+- `backend/apps/messaggi/__init__.py`
+- `backend/apps/messaggi/apps.py`
+- `backend/apps/messaggi/admin.py`
+- `backend/apps/messaggi/models.py`
+- `backend/apps/messaggi/permissions.py`
+- `backend/apps/messaggi/serializers.py`
+- `backend/apps/messaggi/views.py`
+- `backend/apps/messaggi/urls.py`
+- `backend/apps/messaggi/migrations/0001_initial.py`
+- `backend/apps/messaggi/migrations/__init__.py`
+- `frontend/src/app/api/circolari/route.ts`
+- `frontend/src/app/api/circolari/[id]/route.ts`
+- `frontend/src/app/api/circolari/[id]/segna-letta/route.ts`
+- `frontend/src/app/api/circolari/[id]/letture/route.ts`
+- `frontend/src/app/[locale]/dashboard/admin/circolari/page.tsx`
+- `frontend/src/app/[locale]/dashboard/genitore/circolari/page.tsx`
+
+**File modificati:**
+- `backend/sherazade/settings/base.py`: aggiunto `apps.messaggi` in LOCAL_APPS
+- `backend/sherazade/urls.py`: aggiunto include apps.messaggi.urls
+- `frontend/src/app/[locale]/dashboard/admin/page.tsx`: aggiunto pulsante Circolari
+- `frontend/src/app/[locale]/dashboard/genitore/page.tsx`: aggiunto pulsante Circolari
