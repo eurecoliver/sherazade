@@ -77,27 +77,35 @@ const PORTATE: { campo: string; tipo: string; label: string; emoji: string }[] =
   { campo: 'merenda_quantita',   tipo: 'merenda',   label: 'Merenda',   emoji: '🍪' },
 ]
 
-function isoToday(): string { return new Date().toISOString().split('T')[0] }
+function localIso(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+function isoToday(): string { return localIso(new Date()) }
 
 function fmtDataLong(iso: string): string {
-  return new Date(iso + 'T00:00:00').toLocaleDateString('it-IT', {
+  const [y, m, d] = iso.split('-').map(Number)
+  return new Date(y, m - 1, d).toLocaleDateString('it-IT', {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
   })
 }
 
 function prevDay(iso: string): string {
-  const d = new Date(iso + 'T00:00:00')
-  d.setDate(d.getDate() - 1)
-  return d.toISOString().split('T')[0]
+  const [y, m, d] = iso.split('-').map(Number)
+  return localIso(new Date(y, m - 1, d - 1))
 }
 
 function nextDay(iso: string): string {
-  const d = new Date(iso + 'T00:00:00')
-  d.setDate(d.getDate() + 1)
-  return d.toISOString().split('T')[0]
+  const [y, m, d] = iso.split('-').map(Number)
+  return localIso(new Date(y, m - 1, d + 1))
 }
 
 function fmtOrario(t: string): string { return t.slice(0, 5) }
+
+function stripCodice(desc: string): string {
+  // Rimuove prefissi tipo "N 501 - " o "B123 – " dai nomi piatto
+  return desc.replace(/^[A-Z]+\s*\d+\s*[-–]\s*/, '').trim()
+}
 
 // ─── Lightbox ─────────────────────────────────────────────────────────────────
 
@@ -272,7 +280,7 @@ export default function GiornataPage() {
 
         {loadingDay ? (
           <div style={{ textAlign: 'center', padding: '3rem', color: '#E17055', fontWeight: 600 }}>Caricamento...</div>
-        ) : !registro && !pasto ? (
+        ) : !registro && !pasto && !menu ? (
           <div style={{ textAlign: 'center', padding: '3rem 1.5rem', background: 'white', borderRadius: '20px', boxShadow: '0 4px 20px rgba(225,112,85,0.08)' }}>
             <div style={{ fontSize: '3rem', marginBottom: '0.75rem' }}>📭</div>
             <p style={{ margin: 0, fontWeight: 700, color: '#555', fontSize: '1rem' }}>
@@ -356,35 +364,56 @@ export default function GiornataPage() {
             )}
 
             {/* ── Card Pasto ──────────────────────────────────────────────── */}
-            {pasto ? (
+            {(pasto || menu) ? (
               <div style={{ background: 'white', borderRadius: '20px', padding: '1.5rem', marginBottom: '1rem', boxShadow: '0 4px 20px rgba(225,112,85,0.10)' }}>
-                <p style={{ margin: '0 0 0.25rem', fontWeight: 800, color: '#E17055', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>🥣 Pasto</p>
-                <p style={{ margin: '0 0 1rem', fontSize: '0.75rem', color: '#aaa' }}>Compilato da {pasto.compilato_da_nome}</p>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.875rem' }}>
+                  <div>
+                    <p style={{ margin: 0, fontWeight: 800, color: '#E17055', fontSize: '0.8rem', textTransform: 'uppercase', letterSpacing: '0.05em' }}>🥣 Pasto</p>
+                    <p style={{ margin: '0.15rem 0 0', fontSize: '0.75rem', color: '#aaa' }}>
+                      {pasto ? `Compilato da ${pasto.compilato_da_nome}` : 'Menu previsto — consumo non ancora registrato'}
+                    </p>
+                  </div>
+                  {menu?.settimana_ciclo && (
+                    <span style={{ background: '#FFF3EE', color: '#E17055', borderRadius: '6px', padding: '2px 8px', fontSize: '0.72rem', fontWeight: 700, whiteSpace: 'nowrap' }}>
+                      Sett. {menu.settimana_ciclo}
+                    </span>
+                  )}
+                </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
                   {PORTATE.filter(({ campo, tipo }) => {
-                    const q = (pasto as unknown as Record<string, string>)[campo]
+                    const q = pasto ? (pasto as unknown as Record<string, string>)[campo] : ''
                     const haMenu = (menu?.piatti[tipo]?.length ?? 0) > 0
                     return q || haMenu
                   }).map(({ campo, tipo, label, emoji }) => {
-                    const q = (pasto as unknown as Record<string, string>)[campo] ?? ''
+                    const q = pasto ? ((pasto as unknown as Record<string, string>)[campo] ?? '') : ''
                     const qi = QUANTITA_ICON[q] ?? QUANTITA_ICON['']
                     const piatti = menu?.piatti[tipo] ?? []
                     return (
-                      <div key={campo} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                        <div style={{ width: 44, height: 44, borderRadius: '10px', background: q ? `${qi.color}18` : '#F5F5F5', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                          <span style={{ fontSize: '1.1rem', lineHeight: 1 }}>{qi.icon}</span>
-                          {q && <span style={{ fontSize: '0.55rem', fontWeight: 700, color: qi.color, marginTop: '0.1rem' }}>{qi.label}</span>}
-                        </div>
+                      <div key={campo} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.375rem 0', borderBottom: '1px solid #F9F9F9' }}>
+                        {/* Icona quantità (solo se pasto registrato) */}
+                        {pasto ? (
+                          <div style={{ width: 44, height: 44, borderRadius: '10px', background: q ? `${qi.color}18` : '#F5F5F5', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                            <span style={{ fontSize: '1.1rem', lineHeight: 1 }}>{qi.icon}</span>
+                            {q && <span style={{ fontSize: '0.55rem', fontWeight: 700, color: qi.color, marginTop: '0.1rem' }}>{qi.label}</span>}
+                          </div>
+                        ) : (
+                          <div style={{ width: 36, height: 36, borderRadius: '8px', background: `${TIPO_COLOR[tipo] ?? '#888'}18`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: '1rem' }}>
+                            {emoji}
+                          </div>
+                        )}
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <p style={{ margin: 0, fontSize: '0.75rem', fontWeight: 700, color: TIPO_COLOR[tipo] ?? '#888', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{emoji} {label}</p>
+                          <p style={{ margin: 0, fontSize: '0.72rem', fontWeight: 700, color: TIPO_COLOR[tipo] ?? '#888', textTransform: 'uppercase', letterSpacing: '0.04em' }}>{label}</p>
                           {piatti.length > 0 && (
-                            <p style={{ margin: '0.1rem 0 0', fontSize: '0.875rem', color: '#444', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                              {piatti.map(p => p.descrizione).join(', ')}
+                            <p style={{ margin: '0.1rem 0 0', fontSize: '0.875rem', color: '#444', lineHeight: 1.3 }}>
+                              {piatti.map(p => stripCodice(p.descrizione)).join(', ')}
                             </p>
                           )}
+                          {pasto && !piatti.length && q && (
+                            <p style={{ margin: '0.1rem 0 0', fontSize: '0.8rem', color: '#aaa', fontStyle: 'italic' }}>—</p>
+                          )}
                         </div>
-                        {q && (
+                        {pasto && q && (
                           <span style={{ background: `${qi.color}20`, color: qi.color, padding: '0.2rem 0.5rem', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 700, whiteSpace: 'nowrap', flexShrink: 0 }}>
                             {qi.label}
                           </span>
@@ -394,19 +423,14 @@ export default function GiornataPage() {
                   })}
                 </div>
 
-                {pasto.note_pasto && (
+                {pasto?.note_pasto && (
                   <div style={{ marginTop: '1rem', background: '#FFF3EE', borderRadius: '10px', padding: '0.75rem 1rem' }}>
                     <p style={{ margin: '0 0 0.2rem', fontSize: '0.75rem', fontWeight: 700, color: '#E17055', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Note pasto</p>
                     <p style={{ margin: 0, color: '#555', fontSize: '0.875rem', lineHeight: 1.5 }}>{pasto.note_pasto}</p>
                   </div>
                 )}
               </div>
-            ) : (
-              <div style={{ background: 'white', borderRadius: '20px', padding: '1.25rem 1.5rem', marginBottom: '1rem', boxShadow: '0 4px 20px rgba(225,112,85,0.08)', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                <span style={{ fontSize: '1.5rem', opacity: 0.4 }}>🥣</span>
-                <p style={{ margin: 0, color: '#aaa', fontSize: '0.875rem' }}>Nessun registro pasto per oggi.</p>
-              </div>
-            )}
+            ) : null}
 
             {/* ── Foto ────────────────────────────────────────────────────── */}
             {mediaVisibili.length > 0 && (

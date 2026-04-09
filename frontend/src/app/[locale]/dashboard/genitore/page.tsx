@@ -162,6 +162,12 @@ export default function GenitoreDashboard() {
           >
             📅 Presenze
           </button>
+          <button
+            onClick={() => router.push(`/${locale}/dashboard/genitore/fatture`)}
+            style={{ padding: '0.75rem 1.25rem', background: '#F0FFF4', color: '#276749', border: '2px solid #9AE6B4', borderRadius: '10px', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
+          >
+            🧾 Fatture
+          </button>
         </div>
 
         <button

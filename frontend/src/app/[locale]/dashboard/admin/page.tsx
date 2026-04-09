@@ -117,6 +117,12 @@ export default function AdminDashboard() {
             🍽️ Menu
           </button>
           <button
+            onClick={() => router.push(`/${locale}/dashboard/admin/fatture`)}
+            style={{ padding: '0.75rem 1.25rem', background: '#F0FFF4', color: '#276749', border: '2px solid #9AE6B4', borderRadius: '10px', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
+          >
+            🧾 Fatture
+          </button>
+          <button
             onClick={() => router.push(`/${locale}/dashboard/admin/impostazioni`)}
             style={{ padding: '0.75rem 1.25rem', background: '#F3F0FF', color: '#6C5CE7', border: '2px solid #D6CCFF', borderRadius: '10px', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
           >
