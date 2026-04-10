@@ -13,11 +13,11 @@ interface User {
 }
 
 const NAV_ITEMS = [
-  { icon: '✅', label: 'Presenze',         sub: 'Registro giornaliero',       path: '/presenze', bg: '#F0FFF4', color: '#2D6A4F', border: '#9AE6B4' },
-  { icon: '📖', label: 'Diario del giorno', sub: 'Attività, foto e note',     path: '/diario',   bg: '#EAF4FF', color: '#0984E3', border: '#BDE0FF' },
-  { icon: '🥣', label: 'Foglio pappe',      sub: 'Pasti e menu del giorno',   path: '/pappe',    bg: '#FFF9E6', color: '#E67E22', border: '#FED7AA' },
-  { icon: '📝', label: 'Agenda',            sub: 'Note condivise del turno',  path: '/agenda',     bg: '#FDF2F8', color: '#9B59B6', border: '#E8BFFF' },
-  { icon: '📅', label: 'Calendario',        sub: 'Eventi e chiusure scolastiche', path: '/calendario', bg: '#EBF8FF', color: '#2B6CB0', border: '#90CDF4' },
+  { icon: '✅', label: 'Presenze',         sub: 'Registro giornaliero',           path: '/presenze',   bg: '#F0FFF4', color: '#2D6A4F', border: '#9AE6B4', risorsa: 'presenze' },
+  { icon: '📖', label: 'Diario del giorno', sub: 'Attività, foto e note',         path: '/diario',     bg: '#EAF4FF', color: '#0984E3', border: '#BDE0FF', risorsa: 'diario' },
+  { icon: '🥣', label: 'Foglio pappe',      sub: 'Pasti e menu del giorno',       path: '/pappe',      bg: '#FFF9E6', color: '#E67E22', border: '#FED7AA', risorsa: 'pappe' },
+  { icon: '📝', label: 'Agenda',            sub: 'Note condivise del turno',      path: '/agenda',     bg: '#FDF2F8', color: '#9B59B6', border: '#E8BFFF', risorsa: 'agenda' },
+  { icon: '📅', label: 'Calendario',        sub: 'Eventi e chiusure scolastiche', path: '/calendario', bg: '#EBF8FF', color: '#2B6CB0', border: '#90CDF4', risorsa: 'calendario' },
 ]
 
 export default function StaffDashboard() {
@@ -25,11 +25,17 @@ export default function StaffDashboard() {
   const router = useRouter()
   const locale = useLocale()
   const [user, setUser] = useState<User | null>(null)
+  const [risorse, setRisorse] = useState<string[] | null>(null)
 
   useEffect(() => {
-    fetch('/api/auth/me')
-      .then(res => { if (res.ok) return res.json(); throw new Error() })
-      .then(setUser)
+    Promise.all([
+      fetch('/api/auth/me').then(r => r.ok ? r.json() : Promise.reject()),
+      fetch('/api/config/permessi-utente').then(r => r.ok ? r.json() : { risorse: null }),
+    ])
+      .then(([meData, permData]) => {
+        setUser(meData)
+        setRisorse(permData.risorse ?? null)
+      })
       .catch(() => router.push(`/${locale}/login`))
   }, [locale, router])
 
@@ -47,6 +53,7 @@ export default function StaffDashboard() {
   }
 
   const base = `/${locale}/dashboard/staff`
+  const visibleItems = NAV_ITEMS.filter(item => !risorse || risorse.includes(item.risorsa))
 
   return (
     <div style={{ minHeight: '100vh', background: '#EAF4FF' }}>
@@ -84,7 +91,7 @@ export default function StaffDashboard() {
           gridTemplateColumns: 'repeat(auto-fill, minmax(min(220px, 100%), 1fr))',
           gap: '0.75rem',
         }}>
-          {NAV_ITEMS.map(item => (
+          {visibleItems.map(item => (
             <button
               key={item.path}
               onClick={() => router.push(`${base}${item.path}`)}

@@ -30,6 +30,7 @@ const RISORSE_LABEL: Record<string, string> = {
   circolari:  '📢 Circolari',
   calendario: '🗓️ Calendario',
   agenda:     '📝 Agenda note',
+  fatture:    '🧾 Fatture',
   utenti:     '👤 Gestione utenti',
 }
 
@@ -190,10 +191,7 @@ export default function ImpostazioniPage() {
 
   const selezionaRuolo = (r: Ruolo) => {
     setRuoloSelezionato(r)
-    if (!r.sistema) {
-      const haPermessi = permessi.some(p => p.ruolo === r.codice)
-      if (!haPermessi) fetchPermessiPerRuolo(r.codice)
-    }
+    // Il fetch permessi è gestito dall'useEffect che osserva ruoloSelezionato
   }
 
   const fetchGruppi = useCallback(async () => {
@@ -219,6 +217,12 @@ export default function ImpostazioniPage() {
   useEffect(() => { fetchGruppi() }, [fetchGruppi])
   useEffect(() => { fetchOrari() }, [fetchOrari])
   useEffect(() => { if (activeTab === 'permessi' && ruoli.length === 0) fetchRuoli() }, [activeTab, fetchRuoli, ruoli.length])
+  // Carica permessi appena viene selezionato un ruolo (inclusa auto-selezione al primo caricamento)
+  useEffect(() => {
+    if (ruoloSelezionato && !ruoloSelezionato.sistema) {
+      fetchPermessiPerRuolo(ruoloSelezionato.codice)
+    }
+  }, [ruoloSelezionato, fetchPermessiPerRuolo])
 
   // ── Gruppo CRUD ──
 

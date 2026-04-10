@@ -25,13 +25,13 @@ interface Bambino {
 }
 
 const NAV_ITEMS = [
-  { icon: '📷', label: 'Consensi',    sub: 'Autorizzazioni fotografiche', path: '/consensi',  bg: '#FFF3EE', color: '#E17055', border: '#FFD4B3' },
-  { icon: '📅', label: 'Presenze',    sub: 'Registro e assenze',          path: '/presenze',  bg: '#F0F4FF', color: '#6C63FF', border: '#C5BFFF' },
-  { icon: '🧾', label: 'Fatture',     sub: 'Documenti di pagamento',      path: '/fatture',   bg: '#F0FFF4', color: '#276749', border: '#9AE6B4' },
-  { icon: '🥣', label: 'Pappe',       sub: 'Menu e registro pasti',       path: '/pappe',     bg: '#FFF9E6', color: '#E67E22', border: '#FED7AA' },
-  { icon: '📖', label: 'Diario',      sub: 'Attività e note',             path: '/diario',     bg: '#FDF2F8', color: '#9B59B6', border: '#E8BFFF' },
-  { icon: '📅', label: 'Calendario', sub: 'Eventi e chiusure del nido',  path: '/calendario', bg: '#EBF8FF', color: '#2B6CB0', border: '#90CDF4' },
-  { icon: '📢', label: 'Circolari',  sub: 'Comunicazioni dal nido',      path: '/circolari',  bg: '#FFF9E6', color: '#D35400', border: '#FAD7A0' },
+  { icon: '📷', label: 'Consensi',   sub: 'Autorizzazioni fotografiche', path: '/consensi',   bg: '#FFF3EE', color: '#E17055', border: '#FFD4B3', risorsa: 'consensi' },
+  { icon: '📅', label: 'Presenze',   sub: 'Registro e assenze',          path: '/presenze',   bg: '#F0F4FF', color: '#6C63FF', border: '#C5BFFF', risorsa: 'presenze' },
+  { icon: '🧾', label: 'Fatture',    sub: 'Documenti di pagamento',      path: '/fatture',    bg: '#F0FFF4', color: '#276749', border: '#9AE6B4', risorsa: 'fatture' },
+  { icon: '🥣', label: 'Pappe',      sub: 'Menu e registro pasti',       path: '/pappe',      bg: '#FFF9E6', color: '#E67E22', border: '#FED7AA', risorsa: 'pappe' },
+  { icon: '📖', label: 'Diario',     sub: 'Attività e note',             path: '/diario',     bg: '#FDF2F8', color: '#9B59B6', border: '#E8BFFF', risorsa: 'diario' },
+  { icon: '📅', label: 'Calendario', sub: 'Eventi e chiusure del nido',  path: '/calendario', bg: '#EBF8FF', color: '#2B6CB0', border: '#90CDF4', risorsa: 'calendario' },
+  { icon: '📢', label: 'Circolari',  sub: 'Comunicazioni dal nido',      path: '/circolari',  bg: '#FFF9E6', color: '#D35400', border: '#FAD7A0', risorsa: 'circolari' },
 ]
 
 export default function GenitoreDashboard() {
@@ -41,19 +41,22 @@ export default function GenitoreDashboard() {
   const [user, setUser] = useState<User | null>(null)
   const [bambini, setBambini] = useState<Bambino[]>([])
   const [nonLette, setNonLette] = useState(0)
+  const [risorse, setRisorse] = useState<string[] | null>(null)
 
   useEffect(() => {
     Promise.all([
       fetch('/api/auth/me').then(r => r.ok ? r.json() : Promise.reject()),
       fetch('/api/bambini').then(r => r.ok ? r.json() : []),
       fetch('/api/circolari').then(r => r.ok ? r.json() : []),
+      fetch('/api/config/permessi-utente').then(r => r.ok ? r.json() : { risorse: null }),
     ])
-      .then(([meData, bambiniData, circolariData]) => {
+      .then(([meData, bambiniData, circolariData, permData]) => {
         setUser(meData)
         const list = Array.isArray(bambiniData) ? bambiniData : (bambiniData.results ?? [])
         setBambini(list)
         const circ = Array.isArray(circolariData) ? circolariData : (circolariData.results ?? [])
         setNonLette(circ.filter((c: { letta: boolean }) => !c.letta).length)
+        setRisorse(permData.risorse ?? null)
       })
       .catch(() => router.push(`/${locale}/login`))
   }, [locale, router])
@@ -209,7 +212,7 @@ export default function GenitoreDashboard() {
           gap: '0.75rem',
           marginBottom: '1.5rem',
         }}>
-          {NAV_ITEMS.map(item => {
+          {NAV_ITEMS.filter(item => !risorse || risorse.includes(item.risorsa)).map(item => {
             const isCircolari = item.path === '/circolari'
             const showBadge = isCircolari && nonLette > 0
             return (

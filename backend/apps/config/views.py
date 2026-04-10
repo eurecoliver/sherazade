@@ -2,11 +2,11 @@ from rest_framework import viewsets, mixins
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.views import APIView
 
 from apps.users.models import User
 from .models import Gruppo, OrarioUscita, PermessoRuolo, Ruolo
 from .permissions import IsAdminOrDirettrice, IsAdminOnly
-from .permessi import invalida_cache_permessi
 from .serializers import GruppoSerializer, OrarioUscitaSerializer, PermessoRuoloSerializer, RuoloSerializer
 
 
@@ -68,7 +68,6 @@ class RuoloViewSet(viewsets.ModelViewSet):
             )
         # Elimina i permessi associati
         PermessoRuolo.objects.filter(ruolo=ruolo.codice).delete()
-        invalida_cache_permessi(ruolo.codice)
         return super().destroy(request, *args, **kwargs)
 
 
@@ -89,5 +88,24 @@ class PermessoRuoloViewSet(
         return qs
 
     def perform_update(self, serializer):
-        instance = serializer.save()
-        invalida_cache_permessi(instance.ruolo)
+        serializer.save()
+
+
+class MieiPermessiView(APIView):
+    """
+    Restituisce le risorse su cui l'utente corrente ha il permesso 'leggi'.
+    Admin riceve tutte le risorse (accesso completo hardcoded).
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        if user.role == 'admin':
+            risorse = [r for r, _ in PermessoRuolo.RISORSE]
+        else:
+            risorse = list(
+                PermessoRuolo.objects.filter(
+                    ruolo=user.role, azione='leggi', consentito=True
+                ).values_list('risorsa', flat=True)
+            )
+        return Response({'risorse': risorse})

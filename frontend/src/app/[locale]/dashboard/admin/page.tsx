@@ -13,34 +13,46 @@ interface User {
 }
 
 const NAV_ITEMS = [
-  { icon: '👶', label: 'Bambini',       sub: 'Anagrafica e famiglie',        path: '/bambini',      bg: '#F3F0FF', color: '#6C5CE7', border: '#D6CCFF' },
-  { icon: '👨‍👩‍👧', label: 'Genitori',      sub: 'Gestione famiglie',            path: '/genitori',     bg: '#FDF0FF', color: '#9B59B6', border: '#E8BFFF' },
-  { icon: '📷', label: 'Consensi',      sub: 'Autorizzazioni fotografiche',  path: '/consensi',     bg: '#FFF3EE', color: '#E17055', border: '#FFD4B3' },
-  { icon: '✅', label: 'Presenze',      sub: 'Registro e report',           path: '/presenze',     bg: '#F0FFF4', color: '#38A169', border: '#9AE6B4' },
-  { icon: '🍽️', label: 'Menu',          sub: 'Pappe e ciclo settimanale',   path: '/pappe',        bg: '#FFF9E6', color: '#E67E22', border: '#FED7AA' },
-  { icon: '🧾', label: 'Fatture',       sub: 'Documenti di pagamento',      path: '/fatture',      bg: '#F0FFF4', color: '#276749', border: '#9AE6B4' },
-  { icon: '📢', label: 'Circolari',     sub: 'Comunicazioni alle famiglie', path: '/circolari',    bg: '#FFF9E6', color: '#D35400', border: '#FAD7A0' },
-  { icon: '⚙️', label: 'Impostazioni', sub: 'Gruppi e orari uscita',       path: '/impostazioni', bg: '#F3F0FF', color: '#6C5CE7', border: '#D6CCFF' },
+  { icon: '👶', label: 'Bambini',       sub: 'Anagrafica e famiglie',        path: '/bambini',      bg: '#F3F0FF', color: '#6C5CE7', border: '#D6CCFF', risorsa: 'bambini' },
+  { icon: '👨‍👩‍👧', label: 'Genitori',      sub: 'Gestione famiglie',            path: '/genitori',     bg: '#FDF0FF', color: '#9B59B6', border: '#E8BFFF', risorsa: 'bambini' },
+  { icon: '📷', label: 'Consensi',      sub: 'Autorizzazioni fotografiche',  path: '/consensi',     bg: '#FFF3EE', color: '#E17055', border: '#FFD4B3', risorsa: 'consensi' },
+  { icon: '✅', label: 'Presenze',      sub: 'Registro e report',           path: '/presenze',     bg: '#F0FFF4', color: '#38A169', border: '#9AE6B4', risorsa: 'presenze' },
+  { icon: '🍽️', label: 'Menu',          sub: 'Pappe e ciclo settimanale',   path: '/pappe',        bg: '#FFF9E6', color: '#E67E22', border: '#FED7AA', risorsa: 'pappe' },
+  { icon: '🧾', label: 'Fatture',       sub: 'Documenti di pagamento',      path: '/fatture',      bg: '#F0FFF4', color: '#276749', border: '#9AE6B4', risorsa: 'fatture' },
+  { icon: '📢', label: 'Circolari',     sub: 'Comunicazioni alle famiglie', path: '/circolari',    bg: '#FFF9E6', color: '#D35400', border: '#FAD7A0', risorsa: 'circolari' },
+  { icon: '⚙️', label: 'Impostazioni', sub: 'Gruppi e orari uscita',       path: '/impostazioni', bg: '#F3F0FF', color: '#6C5CE7', border: '#D6CCFF', risorsa: null },
 ]
 
 // Agenda e Calendario: path assoluti perché puntano alle pagine staff condivise
-const AGENDA_ITEM = { icon: '📝', label: 'Agenda', sub: 'Note condivise del turno' }
-const CALENDARIO_ITEM = { icon: '📅', label: 'Calendario', sub: 'Eventi e chiusure scolastiche' }
+const AGENDA_ITEM = { icon: '📝', label: 'Agenda', sub: 'Note condivise del turno', risorsa: 'agenda' }
+const CALENDARIO_ITEM = { icon: '📅', label: 'Calendario', sub: 'Eventi e chiusure scolastiche', risorsa: 'calendario' }
 
-const ADMIN_ONLY = { icon: '👥', label: 'Utenti', sub: 'Gestione account', path: '/utenti', bg: '#EBF8FF', color: '#2B6CB0', border: '#90CDF4' }
+const ADMIN_ONLY = { icon: '👥', label: 'Utenti', sub: 'Gestione account', path: '/utenti', bg: '#EBF8FF', color: '#2B6CB0', border: '#90CDF4', risorsa: 'utenti' }
 
 export default function AdminDashboard() {
   const t = useTranslations('Dashboard')
   const router = useRouter()
   const locale = useLocale()
   const [user, setUser] = useState<User | null>(null)
+  const [risorse, setRisorse] = useState<string[] | null>(null)
 
   useEffect(() => {
-    fetch('/api/auth/me')
-      .then(res => { if (res.ok) return res.json(); throw new Error() })
-      .then(setUser)
+    Promise.all([
+      fetch('/api/auth/me').then(r => r.ok ? r.json() : Promise.reject()),
+      fetch('/api/config/permessi-utente').then(r => r.ok ? r.json() : { risorse: null }),
+    ])
+      .then(([meData, permData]) => {
+        setUser(meData)
+        setRisorse(permData.risorse ?? null)
+      })
       .catch(() => router.push(`/${locale}/login`))
   }, [locale, router])
+
+  const canSee = (risorsa: string | null) => {
+    if (risorsa === null) return true   // Impostazioni sempre visibili
+    if (!risorse) return true           // In attesa dati, mostra tutto
+    return risorse.includes(risorsa)
+  }
 
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' })
@@ -56,7 +68,8 @@ export default function AdminDashboard() {
   }
 
   const base = `/${locale}/dashboard/admin`
-  const items = user.role === 'admin' ? [...NAV_ITEMS.slice(0, 4), ADMIN_ONLY, ...NAV_ITEMS.slice(4)] : NAV_ITEMS
+  const allItems = user.role === 'admin' ? [...NAV_ITEMS.slice(0, 4), ADMIN_ONLY, ...NAV_ITEMS.slice(4)] : NAV_ITEMS
+  const items = allItems.filter(item => canSee(item.risorsa))
 
   return (
     <div style={{ minHeight: '100vh', background: '#F3F0FF' }}>
@@ -121,27 +134,31 @@ export default function AdminDashboard() {
             </button>
           ))}
           {/* Agenda — pagina condivisa con staff */}
-          <button
-            onClick={() => router.push(`/${locale}/dashboard/staff/agenda`)}
-            style={{ padding: '1rem', background: '#FDF2F8', color: '#9B59B6', border: '2px solid #E8BFFF', borderRadius: '14px', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '0.75rem' }}
-          >
-            <span style={{ fontSize: '1.4rem', flexShrink: 0 }}>{AGENDA_ITEM.icon}</span>
-            <div>
-              <p style={{ margin: 0, fontWeight: 700, fontSize: '0.9rem' }}>{AGENDA_ITEM.label}</p>
-              <p style={{ margin: 0, fontSize: '0.72rem', opacity: 0.75 }}>{AGENDA_ITEM.sub}</p>
-            </div>
-          </button>
+          {canSee(AGENDA_ITEM.risorsa) && (
+            <button
+              onClick={() => router.push(`/${locale}/dashboard/staff/agenda`)}
+              style={{ padding: '1rem', background: '#FDF2F8', color: '#9B59B6', border: '2px solid #E8BFFF', borderRadius: '14px', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '0.75rem' }}
+            >
+              <span style={{ fontSize: '1.4rem', flexShrink: 0 }}>{AGENDA_ITEM.icon}</span>
+              <div>
+                <p style={{ margin: 0, fontWeight: 700, fontSize: '0.9rem' }}>{AGENDA_ITEM.label}</p>
+                <p style={{ margin: 0, fontSize: '0.72rem', opacity: 0.75 }}>{AGENDA_ITEM.sub}</p>
+              </div>
+            </button>
+          )}
           {/* Calendario — pagina condivisa con staff */}
-          <button
-            onClick={() => router.push(`/${locale}/dashboard/staff/calendario`)}
-            style={{ padding: '1rem', background: '#EBF8FF', color: '#2B6CB0', border: '2px solid #90CDF4', borderRadius: '14px', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '0.75rem' }}
-          >
-            <span style={{ fontSize: '1.4rem', flexShrink: 0 }}>{CALENDARIO_ITEM.icon}</span>
-            <div>
-              <p style={{ margin: 0, fontWeight: 700, fontSize: '0.9rem' }}>{CALENDARIO_ITEM.label}</p>
-              <p style={{ margin: 0, fontSize: '0.72rem', opacity: 0.75 }}>{CALENDARIO_ITEM.sub}</p>
-            </div>
-          </button>
+          {canSee(CALENDARIO_ITEM.risorsa) && (
+            <button
+              onClick={() => router.push(`/${locale}/dashboard/staff/calendario`)}
+              style={{ padding: '1rem', background: '#EBF8FF', color: '#2B6CB0', border: '2px solid #90CDF4', borderRadius: '14px', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '0.75rem' }}
+            >
+              <span style={{ fontSize: '1.4rem', flexShrink: 0 }}>{CALENDARIO_ITEM.icon}</span>
+              <div>
+                <p style={{ margin: 0, fontWeight: 700, fontSize: '0.9rem' }}>{CALENDARIO_ITEM.label}</p>
+                <p style={{ margin: 0, fontSize: '0.72rem', opacity: 0.75 }}>{CALENDARIO_ITEM.sub}</p>
+              </div>
+            </button>
+          )}
         </div>
 
       </div>
