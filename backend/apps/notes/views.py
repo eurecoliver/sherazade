@@ -5,7 +5,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from .models import NotaGiornata
-from .permissions import NotaPermission, MANAGER_ROLES
+from .permissions import NotaPermission
 from .serializers import NotaGiornataSerializer
 
 
