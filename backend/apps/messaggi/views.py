@@ -22,7 +22,7 @@ def _invia_notifica_circolare(circolare_id: int):
 
         # Calcola genitori destinatari
         if gruppi:
-            bambini_qs = Bambino.objects.filter(gruppo_id__in=gruppi, stato='attivo')
+            bambini_qs = Bambino.objects.filter(gruppo_id__in=gruppi, attivo=True)
             famiglia_ids = bambini_qs.values_list('famiglia_id', flat=True).distinct()
             from apps.children.models import Famiglia
             genitore1_ids = Famiglia.objects.filter(id__in=famiglia_ids).values_list('genitore1_id', flat=True)
@@ -79,7 +79,7 @@ class CircolareViewSet(viewsets.ModelViewSet):
                 Q(genitore1=user) | Q(genitore2=user)
             )
             gruppo_ids = list(
-                Bambino.objects.filter(famiglia__in=famiglie, stato='attivo')
+                Bambino.objects.filter(famiglia__in=famiglie, attivo=True)
                 .exclude(gruppo__isnull=True)
                 .values_list('gruppo_id', flat=True)
                 .distinct()
