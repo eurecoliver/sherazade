@@ -46,10 +46,12 @@ Nome interno: Sherazade.
 - [x] Anagrafica v2 — foto profilo, alias nome, dati famiglia completi (feature/anagrafica-v2)
 - [x] Calendario scolastico ed eventi
 - [x] Messaggistica broadcast (circolari)
-- Gestione menu settimanale
-- Fatturazione documentale (PDF, no pagamenti online)
-- QR code check-in
-- Portfolio digitale del bambino
+- [x] Agenda giornaliera condivisa — note di turno per staff
+- [ ] Ruoli personalizzati con permessi CRUD granulari
+- [ ] QR code check-in
+- [ ] Portfolio digitale del bambino
+- [ ] Fatturazione documentale (PDF, no pagamenti online)
+- [ ] Gestione menu settimanale (sostituita da Pappe v2 con ciclo 5 settimane)
 
 ## Design
 - Interfaccia genitori: calda, colorata, mobile-first
@@ -471,4 +473,15 @@ Prossimo task: QR code check-in
 - `backend/sherazade/settings/base.py`: aggiunto `apps.messaggi` in LOCAL_APPS
 - `backend/sherazade/urls.py`: aggiunto include apps.messaggi.urls
 - `frontend/src/app/[locale]/dashboard/admin/page.tsx`: aggiunto pulsante Circolari
-- `frontend/src/app/[locale]/dashboard/genitore/page.tsx`: aggiunto pulsante Circolari
+- `frontend/src/app/[locale]/dashboard/genitore/page.tsx`: aggiunto pulsante Circolari + badge contatore non lette
+
+### Fix ordine circolari (10 aprile 2026)
+- `backend/apps/messaggi/views.py`: aggiunto `order_by('-creato_at')` esplicito in fondo a `get_queryset()` — `annotate`+`distinct` per il genitore può perdere l'ordering dalla Meta del modello
+
+### Badge circolari non lette sulla dashboard genitore (10 aprile 2026)
+- `frontend/src/app/[locale]/dashboard/genitore/page.tsx`: fetch parallelo a `/api/circolari` al mount; contatore `nonLette`; pill badge arancione accanto al titolo "Circolari" nel grid; bordo accentuato quando ci sono messaggi da leggere
+
+## Ultimo Aggiornamento
+Data: 10 aprile 2026
+Completato: Messaggistica broadcast circolari (admin CRUD + genitore read + letture tracking + badge non lette in dashboard)
+Prossimo task: Ruoli personalizzati con permessi CRUD granulari
