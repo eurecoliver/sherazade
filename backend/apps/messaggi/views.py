@@ -67,8 +67,9 @@ class CircolareViewSet(viewsets.ModelViewSet):
         user = self.request.user
         qs = Circolare.objects.prefetch_related('gruppi', 'letture').select_related('autore')
 
-        # Bozze visibili solo ad admin/direttrice
-        if user.role not in EDITOR_ROLES:
+        # Bozze visibili solo a chi ha scrivi su circolari (admin sempre incluso via check_permesso)
+        from apps.config.permessi import check_permesso
+        if not check_permesso(user, 'circolari', 'scrivi'):
             qs = qs.filter(pubblicata=True)
 
         # Genitore vede solo circolari per il suo gruppo (o generali)
