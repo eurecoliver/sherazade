@@ -2,15 +2,27 @@ from django.conf import settings
 from django.db import models
 
 
+class Ruolo(models.Model):
+    """Ruolo configurabile. Admin è l'unico ruolo hardcoded (sistema=True)."""
+
+    codice  = models.SlugField(max_length=50, unique=True, help_text='Usato come User.role')
+    nome    = models.CharField(max_length=100)
+    sistema = models.BooleanField(default=False, help_text='Se True non può essere eliminato')
+    ordine  = models.PositiveSmallIntegerField(default=0)
+    creato_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = 'Ruolo'
+        verbose_name_plural = 'Ruoli'
+        ordering = ['ordine', 'nome']
+
+    def __str__(self):
+        return self.nome
+
+
 class PermessoRuolo(models.Model):
     """Matrice permessi configurabile per ruolo × risorsa × azione."""
 
-    RUOLI = [
-        ('coordinatrice', 'Coordinatrice'),
-        ('insegnante', 'Insegnante'),
-        ('cuoca', 'Cuoca'),
-        ('genitore', 'Genitore'),
-    ]
     RISORSE = [
         ('bambini',    'Anagrafica bambini'),
         ('consensi',   'Consensi fotografici'),
@@ -28,7 +40,7 @@ class PermessoRuolo(models.Model):
         ('elimina',  'Elimina'),
     ]
 
-    ruolo     = models.CharField(max_length=30, choices=RUOLI)
+    ruolo     = models.CharField(max_length=50, help_text='Codice del Ruolo (es. direttrice, insegnante, custom_xyz)')
     risorsa   = models.CharField(max_length=30, choices=RISORSE)
     azione    = models.CharField(max_length=10, choices=AZIONI)
     consentito = models.BooleanField(default=False)

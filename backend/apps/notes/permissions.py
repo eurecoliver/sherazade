@@ -3,7 +3,6 @@ from apps.config.permessi import check_permesso
 from apps.users.models import Role
 
 SAFE_METHODS = ('GET', 'HEAD', 'OPTIONS')
-MANAGER_ROLES = (Role.ADMIN, Role.DIRETTRICE)
 
 
 class NotaPermission(BasePermission):
@@ -28,10 +27,9 @@ class NotaPermission(BasePermission):
         if request.method == 'DELETE':
             if not check_permesso(request.user, 'agenda', 'elimina'):
                 return False
-            # Admin/Direttrice possono cancellare qualsiasi nota
-            if request.user.role in MANAGER_ROLES:
+            # Admin può cancellare qualsiasi nota (hardcoded); gli altri solo le proprie
+            if request.user.role == Role.ADMIN:
                 return True
-            # Gli altri solo le proprie
             return obj.autore_id == request.user.pk
         if request.method in SAFE_METHODS:
             return check_permesso(request.user, 'agenda', 'leggi')

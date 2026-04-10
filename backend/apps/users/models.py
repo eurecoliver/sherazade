@@ -16,9 +16,9 @@ STAFF_ROLES = {Role.ADMIN, Role.DIRETTRICE, Role.COORDINATRICE, Role.INSEGNANTE,
 
 class User(AbstractUser):
     role = models.CharField(
-        max_length=20,
-        choices=Role.choices,
+        max_length=50,
         default=Role.GENITORE,
+        help_text='Codice del ruolo. Admin è l\'unico ruolo hardcoded; tutti gli altri sono configurabili.',
     )
     phone = models.CharField(max_length=20, blank=True)
     codice_fiscale = models.CharField(max_length=16, blank=True)

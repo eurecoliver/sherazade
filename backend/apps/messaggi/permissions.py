@@ -2,7 +2,7 @@ from rest_framework.permissions import BasePermission, SAFE_METHODS
 from apps.users.models import Role
 from apps.config.permessi import check_permesso
 
-EDITOR_ROLES = (Role.ADMIN, Role.DIRETTRICE)
+ADMIN_ROLE = Role.ADMIN  # Solo admin può vedere le letture (analytics)
 
 
 class CircolarePermission(BasePermission):
@@ -20,7 +20,7 @@ class CircolarePermission(BasePermission):
         if action == 'segna_letta':
             return check_permesso(request.user, 'circolari', 'leggi')
         if action == 'letture':
-            return request.user.role in EDITOR_ROLES
+            return request.user.role == ADMIN_ROLE
         if request.method == 'DELETE':
             return check_permesso(request.user, 'circolari', 'elimina')
         if request.method in SAFE_METHODS:
@@ -34,11 +34,11 @@ class CircolarePermission(BasePermission):
         if action == 'segna_letta':
             return check_permesso(request.user, 'circolari', 'leggi')
         if action == 'letture':
-            return request.user.role in EDITOR_ROLES
+            return request.user.role == ADMIN_ROLE
         if request.method in SAFE_METHODS:
-            # Bozze visibili solo ad Admin/Direttrice
+            # Bozze visibili solo a chi può scrivere circolari
             if not obj.pubblicata:
-                return request.user.role in EDITOR_ROLES
+                return check_permesso(request.user, 'circolari', 'scrivi')
             return check_permesso(request.user, 'circolari', 'leggi')
         if request.method == 'DELETE':
             return check_permesso(request.user, 'circolari', 'elimina')

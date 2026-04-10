@@ -12,13 +12,14 @@ interface PermessoRuolo {
   consentito: boolean
 }
 
-const RUOLI_LABEL: Record<string, string> = {
-  coordinatrice: 'Coordinatrice',
-  insegnante: 'Insegnante',
-  cuoca: 'Cuoca',
-  genitore: 'Genitore',
+interface Ruolo {
+  id: number
+  codice: string
+  nome: string
+  sistema: boolean
+  ordine: number
+  user_count: number
 }
-const RUOLI = Object.keys(RUOLI_LABEL)
 
 const RISORSE_LABEL: Record<string, string> = {
   bambini:    '👶 Anagrafica bambini',
@@ -64,10 +65,19 @@ export default function ImpostazioniPage() {
 
   const [activeTab, setActiveTab] = useState<'gruppi' | 'orari' | 'permessi'>('gruppi')
 
+  // Ruoli state
+  const [ruoli, setRuoli] = useState<Ruolo[]>([])
+  const [loadingRuoli, setLoadingRuoli] = useState(false)
+  const [ruoloSelezionato, setRuoloSelezionato] = useState<Ruolo | null>(null)
+  const [showRuoloModal, setShowRuoloModal] = useState(false)
+  const [editingRuolo, setEditingRuolo] = useState<Ruolo | null>(null)
+  const [ruoloForm, setRuoloForm] = useState({ codice: '', nome: '', ordine: 0 })
+  const [savingRuolo, setSavingRuolo] = useState(false)
+  const [ruoloError, setRuoloError] = useState('')
+  const [deletingRuolo, setDeletingRuolo] = useState<number | null>(null)
+
   // Permessi state
   const [permessi, setPermessi] = useState<PermessoRuolo[]>([])
-  const [loadingPermessi, setLoadingPermessi] = useState(false)
-  const [ruoloSelezionato, setRuoloSelezionato] = useState('coordinatrice')
   const [savingPermesso, setSavingPermesso] = useState<number | null>(null)
 
   // Gruppi state
@@ -88,14 +98,30 @@ export default function ImpostazioniPage() {
   const [savingOrario, setSavingOrario] = useState(false)
   const [orarioError, setOrarioError] = useState('')
 
-  const fetchPermessi = useCallback(async () => {
-    setLoadingPermessi(true)
-    const res = await fetch('/api/config/permessi')
+  const fetchRuoli = useCallback(async () => {
+    setLoadingRuoli(true)
+    const res = await fetch('/api/config/ruoli')
     if (res.ok) {
       const data = await res.json()
-      setPermessi(Array.isArray(data) ? data : data.results ?? [])
+      const list: Ruolo[] = Array.isArray(data) ? data : data.results ?? []
+      setRuoli(list)
+      // Auto-seleziona il primo ruolo non-admin
+      if (!ruoloSelezionato) setRuoloSelezionato(list.find(r => !r.sistema) ?? list[0] ?? null)
     }
-    setLoadingPermessi(false)
+    setLoadingRuoli(false)
+  }, [ruoloSelezionato])
+
+  const fetchPermessiPerRuolo = useCallback(async (codice: string) => {
+    const res = await fetch(`/api/config/permessi?ruolo=${codice}`)
+    if (res.ok) {
+      const data = await res.json()
+      const nuovi: PermessoRuolo[] = Array.isArray(data) ? data : data.results ?? []
+      // Merge con permessi esistenti (altri ruoli restano in cache)
+      setPermessi(prev => {
+        const filtered = prev.filter(p => p.ruolo !== codice)
+        return [...filtered, ...nuovi]
+      })
+    }
   }, [])
 
   const togglePermesso = async (p: PermessoRuolo) => {
@@ -109,6 +135,65 @@ export default function ImpostazioniPage() {
       setPermessi(prev => prev.map(x => x.id === p.id ? { ...x, consentito: !x.consentito } : x))
     }
     setSavingPermesso(null)
+  }
+
+  const openNuovoRuolo = () => {
+    setEditingRuolo(null)
+    setRuoloForm({ codice: '', nome: '', ordine: ruoli.length })
+    setRuoloError('')
+    setShowRuoloModal(true)
+  }
+
+  const openEditRuolo = (r: Ruolo) => {
+    setEditingRuolo(r)
+    setRuoloForm({ codice: r.codice, nome: r.nome, ordine: r.ordine })
+    setRuoloError('')
+    setShowRuoloModal(true)
+  }
+
+  const saveRuolo = async () => {
+    setSavingRuolo(true)
+    setRuoloError('')
+    const url = editingRuolo ? `/api/config/ruoli/${editingRuolo.id}` : '/api/config/ruoli'
+    const method = editingRuolo ? 'PATCH' : 'POST'
+    const body = editingRuolo
+      ? { nome: ruoloForm.nome, ordine: ruoloForm.ordine }
+      : { codice: ruoloForm.codice, nome: ruoloForm.nome, ordine: ruoloForm.ordine }
+    const res = await fetch(url, {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    })
+    if (res.ok) {
+      setShowRuoloModal(false)
+      fetchRuoli()
+    } else {
+      const data = await res.json()
+      setRuoloError(data.detail ?? JSON.stringify(data))
+    }
+    setSavingRuolo(false)
+  }
+
+  const deleteRuolo = async (r: Ruolo) => {
+    if (r.sistema) return
+    setDeletingRuolo(r.id)
+    const res = await fetch(`/api/config/ruoli/${r.id}`, { method: 'DELETE' })
+    if (res.ok || res.status === 204) {
+      setRuoli(prev => prev.filter(x => x.id !== r.id))
+      if (ruoloSelezionato?.id === r.id) setRuoloSelezionato(null)
+    } else {
+      const data = await res.json()
+      alert(data.detail ?? 'Impossibile eliminare il ruolo.')
+    }
+    setDeletingRuolo(null)
+  }
+
+  const selezionaRuolo = (r: Ruolo) => {
+    setRuoloSelezionato(r)
+    if (!r.sistema) {
+      const haPermessi = permessi.some(p => p.ruolo === r.codice)
+      if (!haPermessi) fetchPermessiPerRuolo(r.codice)
+    }
   }
 
   const fetchGruppi = useCallback(async () => {
@@ -133,7 +218,7 @@ export default function ImpostazioniPage() {
 
   useEffect(() => { fetchGruppi() }, [fetchGruppi])
   useEffect(() => { fetchOrari() }, [fetchOrari])
-  useEffect(() => { if (activeTab === 'permessi' && permessi.length === 0) fetchPermessi() }, [activeTab, fetchPermessi, permessi.length])
+  useEffect(() => { if (activeTab === 'permessi' && ruoli.length === 0) fetchRuoli() }, [activeTab, fetchRuoli, ruoli.length])
 
   // ── Gruppo CRUD ──
 
@@ -322,89 +407,123 @@ export default function ImpostazioniPage() {
 
         {/* ── PERMESSI TAB ── */}
         {activeTab === 'permessi' && (
-          <div style={{ background: 'white', borderRadius: '16px', padding: '1.5rem', boxShadow: '0 2px 12px rgba(108,92,231,0.08)' }}>
-            <div style={{ marginBottom: '1.25rem' }}>
-              <h2 style={{ margin: '0 0 0.25rem', fontSize: '1.1rem', fontWeight: 700, color: '#444' }}>Permessi granulari per ruolo</h2>
-              <p style={{ margin: 0, fontSize: '0.8rem', color: '#888' }}>
-                Admin e Direttrice hanno sempre accesso completo. Le modifiche sono immediate.
-              </p>
-            </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
 
-            {/* Selettore ruolo */}
-            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
-              {RUOLI.map(r => (
-                <button
-                  key={r}
-                  onClick={() => setRuoloSelezionato(r)}
-                  style={{
-                    padding: '0.45rem 1rem',
-                    borderRadius: '20px',
-                    border: '2px solid #D6CCFF',
-                    background: ruoloSelezionato === r ? '#6C5CE7' : 'white',
-                    color: ruoloSelezionato === r ? 'white' : '#6C5CE7',
-                    fontWeight: 700,
-                    cursor: 'pointer',
-                    fontSize: '0.85rem',
-                    fontFamily: 'inherit',
-                  }}
-                >
-                  {RUOLI_LABEL[r]}
+            {/* Lista ruoli */}
+            <div style={{ background: 'white', borderRadius: '16px', padding: '1.5rem', boxShadow: '0 2px 12px rgba(108,92,231,0.08)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+                <div>
+                  <h2 style={{ margin: '0 0 0.2rem', fontSize: '1.1rem', fontWeight: 700, color: '#444' }}>Ruoli</h2>
+                  <p style={{ margin: 0, fontSize: '0.78rem', color: '#999' }}>Admin ha sempre accesso completo e non è modificabile.</p>
+                </div>
+                <button onClick={openNuovoRuolo}
+                  style={{ padding: '0.5rem 1rem', background: '#6C5CE7', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 700, cursor: 'pointer', fontSize: '0.85rem', fontFamily: 'inherit' }}>
+                  + Nuovo ruolo
                 </button>
-              ))}
+              </div>
+
+              {loadingRuoli ? (
+                <div style={{ color: '#999', padding: '1rem 0' }}>Caricamento...</div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  {ruoli.map(r => {
+                    const selezionato = ruoloSelezionato?.id === r.id
+                    return (
+                      <div key={r.id}
+                        onClick={() => selezionaRuolo(r)}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: '0.75rem',
+                          padding: '0.75rem 1rem', borderRadius: '10px', cursor: 'pointer',
+                          background: selezionato ? '#F3F0FF' : '#FAFAFA',
+                          border: `2px solid ${selezionato ? '#6C5CE7' : '#EEE'}`,
+                          transition: 'all 0.12s',
+                        }}>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <span style={{ fontWeight: 700, fontSize: '0.9rem', color: '#333' }}>{r.nome}</span>
+                            {r.sistema && <span style={{ fontSize: '0.65rem', background: '#DDD', color: '#666', padding: '0.1rem 0.4rem', borderRadius: '8px', fontWeight: 700 }}>SISTEMA</span>}
+                          </div>
+                          <div style={{ fontSize: '0.75rem', color: '#999' }}>
+                            {r.sistema ? 'Accesso completo · non configurabile' : `${r.user_count} utenti · codice: ${r.codice}`}
+                          </div>
+                        </div>
+                        {!r.sistema && (
+                          <div style={{ display: 'flex', gap: '0.4rem' }} onClick={e => e.stopPropagation()}>
+                            <button onClick={() => openEditRuolo(r)}
+                              style={{ padding: '0.3rem 0.65rem', background: '#F3F0FF', color: '#6C5CE7', border: '1px solid #D6CCFF', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                              Modifica
+                            </button>
+                            <button
+                              onClick={() => {
+                                if (r.user_count > 0) {
+                                  alert(`Ci sono ${r.user_count} utenti con questo ruolo. Riassegnali prima di eliminarlo.`)
+                                  return
+                                }
+                                if (confirm(`Eliminare il ruolo "${r.nome}"?`)) deleteRuolo(r)
+                              }}
+                              disabled={deletingRuolo === r.id}
+                              style={{ padding: '0.3rem 0.65rem', background: '#FFF5F5', color: '#E53E3E', border: '1px solid #FED7D7', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit', opacity: deletingRuolo === r.id ? 0.5 : 1 }}>
+                              Elimina
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
             </div>
 
-            {loadingPermessi ? (
-              <div style={{ color: '#999', padding: '1rem 0' }}>Caricamento...</div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
-                {Object.entries(RISORSE_LABEL).map(([risorsa, risorsaLabel]) => {
-                  const rigaPermessi = AZIONI.map(({ key: azione }) =>
-                    permessi.find(p => p.ruolo === ruoloSelezionato && p.risorsa === risorsa && p.azione === azione)
-                  )
-                  return (
-                    <div key={risorsa} style={{
-                      display: 'flex', alignItems: 'center', gap: '1rem',
-                      padding: '0.75rem 1rem', borderRadius: '10px',
-                      background: '#FAFAFA', border: '1px solid #EEE',
-                      flexWrap: 'wrap',
-                    }}>
-                      <div style={{ flex: 1, minWidth: 160, fontWeight: 600, fontSize: '0.875rem', color: '#333' }}>
-                        {risorsaLabel}
+            {/* Matrice permessi per ruolo selezionato */}
+            {ruoloSelezionato && (
+              <div style={{ background: 'white', borderRadius: '16px', padding: '1.5rem', boxShadow: '0 2px 12px rgba(108,92,231,0.08)' }}>
+                <h3 style={{ margin: '0 0 1rem', fontSize: '1rem', fontWeight: 700, color: '#444' }}>
+                  Permessi — {ruoloSelezionato.nome}
+                </h3>
+
+                {ruoloSelezionato.sistema ? (
+                  <div style={{ padding: '1.5rem', textAlign: 'center', color: '#888', background: '#F9F9F9', borderRadius: '10px', fontSize: '0.9rem' }}>
+                    🔒 Questo ruolo ha accesso completo a tutte le funzionalità e non è configurabile.
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    {Object.entries(RISORSE_LABEL).map(([risorsa, risorsaLabel]) => (
+                      <div key={risorsa} style={{
+                        display: 'flex', alignItems: 'center', gap: '1rem',
+                        padding: '0.625rem 0.875rem', borderRadius: '10px',
+                        background: '#FAFAFA', border: '1px solid #EEE', flexWrap: 'wrap',
+                      }}>
+                        <div style={{ flex: 1, minWidth: 150, fontWeight: 600, fontSize: '0.85rem', color: '#333' }}>
+                          {risorsaLabel}
+                        </div>
+                        <div style={{ display: 'flex', gap: '0.4rem' }}>
+                          {AZIONI.map(({ key: azione, label, color }) => {
+                            const p = permessi.find(x => x.ruolo === ruoloSelezionato.codice && x.risorsa === risorsa && x.azione === azione)
+                            if (!p) return <span key={azione} style={{ width: 60, fontSize: '0.72rem', color: '#CCC', textAlign: 'center' }}>—</span>
+                            const saving = savingPermesso === p.id
+                            return (
+                              <button key={azione}
+                                onClick={() => !saving && togglePermesso(p)}
+                                disabled={saving}
+                                style={{
+                                  width: 64, padding: '0.28rem 0',
+                                  borderRadius: '20px',
+                                  border: `2px solid ${p.consentito ? color : '#DDD'}`,
+                                  background: p.consentito ? color : 'white',
+                                  color: p.consentito ? 'white' : '#BBB',
+                                  fontWeight: 700, cursor: saving ? 'default' : 'pointer',
+                                  fontSize: '0.72rem', fontFamily: 'inherit',
+                                  opacity: saving ? 0.5 : 1, transition: 'all 0.12s',
+                                }}>
+                                {label}
+                              </button>
+                            )
+                          })}
+                        </div>
                       </div>
-                      <div style={{ display: 'flex', gap: '0.5rem' }}>
-                        {AZIONI.map(({ key: azione, label, color }, idx) => {
-                          const p = rigaPermessi[idx]
-                          if (!p) return null
-                          const attivo = p.consentito
-                          const saving = savingPermesso === p.id
-                          return (
-                            <button
-                              key={azione}
-                              onClick={() => !saving && togglePermesso(p)}
-                              disabled={saving}
-                              title={label}
-                              style={{
-                                padding: '0.3rem 0.75rem',
-                                borderRadius: '20px',
-                                border: `2px solid ${attivo ? color : '#DDD'}`,
-                                background: attivo ? color : 'white',
-                                color: attivo ? 'white' : '#999',
-                                fontWeight: 700,
-                                cursor: saving ? 'default' : 'pointer',
-                                fontSize: '0.75rem',
-                                fontFamily: 'inherit',
-                                opacity: saving ? 0.5 : 1,
-                                transition: 'all 0.15s',
-                              }}
-                            >
-                              {label}
-                            </button>
-                          )
-                        })}
-                      </div>
-                    </div>
-                  )
-                })}
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -466,6 +585,57 @@ export default function ImpostazioniPage() {
           </div>
         )}
       </div>
+
+      {/* Ruolo Modal */}
+      {showRuoloModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem' }}>
+          <div style={{ background: 'white', borderRadius: '20px', padding: '2rem', width: '100%', maxWidth: '400px' }}>
+            <h2 style={{ margin: '0 0 1.5rem', color: '#6C5CE7', fontSize: '1.15rem', fontWeight: 800 }}>
+              {editingRuolo ? 'Modifica ruolo' : 'Nuovo ruolo'}
+            </h2>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+              {!editingRuolo && (
+                <div>
+                  <label style={{ fontSize: '0.8rem', fontWeight: 600, color: '#555', display: 'block', marginBottom: '0.25rem' }}>Codice *</label>
+                  <input value={ruoloForm.codice}
+                    onChange={e => setRuoloForm(f => ({ ...f, codice: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '_') }))}
+                    placeholder="es. logopedista, psicologo..."
+                    style={{ width: '100%', padding: '0.6rem', borderRadius: '8px', border: '1.5px solid #D6CCFF', fontSize: '0.9rem', fontFamily: 'inherit', boxSizing: 'border-box' }} />
+                  <p style={{ margin: '0.25rem 0 0', fontSize: '0.72rem', color: '#999' }}>Solo lettere minuscole, numeri e underscore. Non modificabile dopo la creazione.</p>
+                </div>
+              )}
+              <div>
+                <label style={{ fontSize: '0.8rem', fontWeight: 600, color: '#555', display: 'block', marginBottom: '0.25rem' }}>Nome visualizzato *</label>
+                <input value={ruoloForm.nome}
+                  onChange={e => setRuoloForm(f => ({ ...f, nome: e.target.value }))}
+                  placeholder="es. Logopedista, Psicologo..."
+                  style={{ width: '100%', padding: '0.6rem', borderRadius: '8px', border: '1.5px solid #D6CCFF', fontSize: '0.9rem', fontFamily: 'inherit', boxSizing: 'border-box' }} />
+              </div>
+              <div>
+                <label style={{ fontSize: '0.8rem', fontWeight: 600, color: '#555', display: 'block', marginBottom: '0.25rem' }}>Ordine</label>
+                <input type="number" value={ruoloForm.ordine}
+                  onChange={e => setRuoloForm(f => ({ ...f, ordine: parseInt(e.target.value) || 0 }))}
+                  style={{ width: '100%', padding: '0.6rem', borderRadius: '8px', border: '1.5px solid #D6CCFF', fontSize: '0.9rem', fontFamily: 'inherit', boxSizing: 'border-box' }} />
+              </div>
+            </div>
+            {ruoloError && (
+              <div style={{ marginTop: '1rem', padding: '0.75rem', background: '#FFF5F5', borderRadius: '8px', color: '#E53E3E', fontSize: '0.85rem' }}>
+                {ruoloError}
+              </div>
+            )}
+            <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1.5rem' }}>
+              <button onClick={() => setShowRuoloModal(false)}
+                style={{ flex: 1, padding: '0.75rem', background: '#F3F0FF', color: '#6C5CE7', border: '2px solid #D6CCFF', borderRadius: '10px', fontWeight: 600, cursor: 'pointer', fontSize: '0.9rem', fontFamily: 'inherit' }}>
+                Annulla
+              </button>
+              <button onClick={saveRuolo} disabled={savingRuolo}
+                style={{ flex: 2, padding: '0.75rem', background: '#6C5CE7', color: 'white', border: 'none', borderRadius: '10px', fontWeight: 700, cursor: savingRuolo ? 'default' : 'pointer', fontSize: '0.9rem', fontFamily: 'inherit', opacity: savingRuolo ? 0.7 : 1 }}>
+                {savingRuolo ? 'Salvataggio...' : 'Salva'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Gruppo Modal */}
       {showGruppoModal && (

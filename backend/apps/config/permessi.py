@@ -8,7 +8,7 @@ le query al DB.
 """
 from django.core.cache import cache
 
-ADMIN_ROLES = ('admin', 'direttrice')
+ADMIN_ROLES = ('admin',)  # Solo admin bypassa il DB — tutti gli altri ruoli usano PermessoRuolo
 _CACHE_TIMEOUT = 300  # secondi
 
 
