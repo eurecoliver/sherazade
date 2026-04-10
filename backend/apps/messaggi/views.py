@@ -10,7 +10,7 @@ from rest_framework.response import Response
 from apps.users.models import User, Role
 from apps.children.models import Bambino
 from .models import Circolare, LetturaCircolare
-from .permissions import CircolarePermission, EDITOR_ROLES
+from .permissions import CircolarePermission
 from .serializers import CircolareSerializer
 
 
@@ -120,7 +120,7 @@ class CircolareViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['get'], url_path='letture')
     def letture(self, request, pk=None):
         """Admin/Direttrice vede chi ha letto la circolare."""
-        if request.user.role not in EDITOR_ROLES:
+        if request.user.role != Role.ADMIN:
             return Response(status=403)
         circolare = self.get_object()
         letture = circolare.letture.select_related('utente').order_by('letto_at')
