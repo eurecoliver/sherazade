@@ -26,6 +26,9 @@ class CircolarePermission(BasePermission):
     def has_object_permission(self, request, view, obj):
         if not request.user.is_authenticated:
             return False
+        # segna-letta permessa a tutti i lettori anche a livello object
+        if getattr(view, 'action', None) == 'segna_letta':
+            return request.user.role in READER_ROLES
         if request.method in SAFE_METHODS:
             # bozze visibili solo ad admin/direttrice
             if not obj.pubblicata:

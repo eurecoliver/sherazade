@@ -47,8 +47,10 @@ export default function CircolariGenitore() {
   const apri = async (c: Circolare) => {
     setAperta(c)
     if (!c.letta) {
-      await fetch(`/api/circolari/${c.id}/segna-letta`, { method: 'POST' })
-      setCircolari(prev => prev.map(x => x.id === c.id ? { ...x, letta: true } : x))
+      const r = await fetch(`/api/circolari/${c.id}/segna-letta`, { method: 'POST' })
+      if (r.ok) {
+        setCircolari(prev => prev.map(x => x.id === c.id ? { ...x, letta: true } : x))
+      }
     }
   }
 
