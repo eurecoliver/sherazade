@@ -40,16 +40,20 @@ export default function GenitoreDashboard() {
   const locale = useLocale()
   const [user, setUser] = useState<User | null>(null)
   const [bambini, setBambini] = useState<Bambino[]>([])
+  const [nonLette, setNonLette] = useState(0)
 
   useEffect(() => {
     Promise.all([
       fetch('/api/auth/me').then(r => r.ok ? r.json() : Promise.reject()),
       fetch('/api/bambini').then(r => r.ok ? r.json() : []),
+      fetch('/api/circolari').then(r => r.ok ? r.json() : []),
     ])
-      .then(([meData, bambiniData]) => {
+      .then(([meData, bambiniData, circolariData]) => {
         setUser(meData)
         const list = Array.isArray(bambiniData) ? bambiniData : (bambiniData.results ?? [])
         setBambini(list)
+        const circ = Array.isArray(circolariData) ? circolariData : (circolariData.results ?? [])
+        setNonLette(circ.filter((c: { letta: boolean }) => !c.letta).length)
       })
       .catch(() => router.push(`/${locale}/login`))
   }, [locale, router])
@@ -205,31 +209,50 @@ export default function GenitoreDashboard() {
           gap: '0.75rem',
           marginBottom: '1.5rem',
         }}>
-          {NAV_ITEMS.map(item => (
-            <button
-              key={item.path}
-              onClick={() => router.push(`${base}${item.path}`)}
-              style={{
-                padding: '1rem 1rem',
-                background: item.bg,
-                color: item.color,
-                border: `2px solid ${item.border}`,
-                borderRadius: '14px',
-                cursor: 'pointer',
-                fontFamily: 'inherit',
-                textAlign: 'left',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.75rem',
-              }}
-            >
-              <span style={{ fontSize: '1.4rem', flexShrink: 0 }}>{item.icon}</span>
-              <div>
-                <p style={{ margin: 0, fontWeight: 700, fontSize: '0.9rem' }}>{item.label}</p>
-                <p style={{ margin: 0, fontSize: '0.72rem', opacity: 0.75 }}>{item.sub}</p>
-              </div>
-            </button>
-          ))}
+          {NAV_ITEMS.map(item => {
+            const isCircolari = item.path === '/circolari'
+            const showBadge = isCircolari && nonLette > 0
+            return (
+              <button
+                key={item.path}
+                onClick={() => router.push(`${base}${item.path}`)}
+                style={{
+                  padding: '1rem 1rem',
+                  background: item.bg,
+                  color: item.color,
+                  border: `2px solid ${showBadge ? item.color : item.border}`,
+                  borderRadius: '14px',
+                  cursor: 'pointer',
+                  fontFamily: 'inherit',
+                  textAlign: 'left',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.75rem',
+                }}
+              >
+                <span style={{ fontSize: '1.4rem', flexShrink: 0 }}>{item.icon}</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <p style={{ margin: 0, fontWeight: 700, fontSize: '0.9rem' }}>{item.label}</p>
+                    {showBadge && (
+                      <span style={{
+                        background: item.color,
+                        color: 'white',
+                        borderRadius: '10px',
+                        padding: '0.05rem 0.45rem',
+                        fontSize: '0.72rem',
+                        fontWeight: 800,
+                        flexShrink: 0,
+                      }}>
+                        {nonLette}
+                      </span>
+                    )}
+                  </div>
+                  <p style={{ margin: 0, fontSize: '0.72rem', opacity: 0.75 }}>{item.sub}</p>
+                </div>
+              </button>
+            )
+          })}
         </div>
 
       </div>
