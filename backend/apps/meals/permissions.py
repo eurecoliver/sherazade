@@ -1,34 +1,38 @@
 from rest_framework.permissions import BasePermission, SAFE_METHODS
+from apps.config.permessi import check_permesso
 from apps.users.models import Role
 
 
 class AllergiaPermission(BasePermission):
     """
-    Admin/Direttrice/Coordinatrice : CRUD completo.
-    Insegnante : lettura.
-    Cuoca : lettura (per consultare le allergie prima di cucinare).
-    Genitore : lettura + CRUD propri figli.
+    Admin/Direttrice : CRUD completo (hardcoded).
+    Altri ruoli      : controllati da PermessoRuolo ('bambini' — le allergie
+                       sono dati anagrafici del bambino).
+    Genitore         : object-level solo propri figli.
     """
 
     def has_permission(self, request, view):
         if not request.user.is_authenticated:
             return False
-        role = request.user.role
-        if role in (Role.ADMIN, Role.DIRETTRICE, Role.COORDINATRICE):
-            return True
-        if role in (Role.INSEGNANTE, Role.CUOCA):
-            return request.method in SAFE_METHODS
-        if role == Role.GENITORE:
-            return True
-        return False
+        if request.method == 'DELETE':
+            return check_permesso(request.user, 'bambini', 'elimina')
+        if request.method in SAFE_METHODS:
+            return check_permesso(request.user, 'bambini', 'leggi')
+        return check_permesso(request.user, 'bambini', 'scrivi')
 
     def has_object_permission(self, request, view, obj):
-        role = request.user.role
-        if role in (Role.ADMIN, Role.DIRETTRICE, Role.COORDINATRICE):
-            return True
-        if role in (Role.INSEGNANTE, Role.CUOCA):
-            return request.method in SAFE_METHODS
-        if role == Role.GENITORE:
+        if not request.user.is_authenticated:
+            return False
+        if request.method == 'DELETE':
+            if not check_permesso(request.user, 'bambini', 'elimina'):
+                return False
+        elif request.method in SAFE_METHODS:
+            if not check_permesso(request.user, 'bambini', 'leggi'):
+                return False
+        else:
+            if not check_permesso(request.user, 'bambini', 'scrivi'):
+                return False
+        if request.user.role == Role.GENITORE:
             try:
                 return (
                     obj.bambino.famiglia.genitore1 == request.user
@@ -36,25 +40,23 @@ class AllergiaPermission(BasePermission):
                 )
             except Exception:
                 return False
-        return False
+        return True
 
 
 class MenuPermission(BasePermission):
     """
-    Admin/Direttrice/Coordinatrice : CRUD completo.
-    Cuoca : CRUD completo (è chi inserisce i menu).
-    Insegnante/Genitore : sola lettura.
+    Admin/Direttrice : CRUD completo (hardcoded).
+    Altri ruoli      : controllati da PermessoRuolo ('pappe').
     """
 
     def has_permission(self, request, view):
         if not request.user.is_authenticated:
             return False
-        role = request.user.role
-        if role in (Role.ADMIN, Role.DIRETTRICE, Role.COORDINATRICE, Role.CUOCA):
-            return True
-        if role in (Role.INSEGNANTE, Role.GENITORE):
-            return request.method in SAFE_METHODS
-        return False
+        if request.method == 'DELETE':
+            return check_permesso(request.user, 'pappe', 'elimina')
+        if request.method in SAFE_METHODS:
+            return check_permesso(request.user, 'pappe', 'leggi')
+        return check_permesso(request.user, 'pappe', 'scrivi')
 
     def has_object_permission(self, request, view, obj):
         return self.has_permission(request, view)
@@ -62,29 +64,36 @@ class MenuPermission(BasePermission):
 
 class RegistroPastoPermission(BasePermission):
     """
-    Admin/Direttrice/Coordinatrice : CRUD completo.
-    Insegnante : CRUD (compila il foglio pappe).
-    Cuoca : lettura.
-    Genitore : lettura propri figli.
+    Admin/Direttrice : CRUD completo (hardcoded).
+    Altri ruoli      : controllati da PermessoRuolo ('pappe').
+    Genitore         : object-level solo propri figli.
     """
 
     def has_permission(self, request, view):
         if not request.user.is_authenticated:
             return False
-        role = request.user.role
-        if role in (Role.ADMIN, Role.DIRETTRICE, Role.COORDINATRICE, Role.INSEGNANTE):
-            return True
-        if role in (Role.CUOCA, Role.GENITORE):
-            return request.method in SAFE_METHODS or view.action in ('mio_figlio',)
-        return False
+        action = getattr(view, 'action', None)
+        if action == 'mio_figlio':
+            return check_permesso(request.user, 'pappe', 'leggi')
+        if request.method == 'DELETE':
+            return check_permesso(request.user, 'pappe', 'elimina')
+        if request.method in SAFE_METHODS:
+            return check_permesso(request.user, 'pappe', 'leggi')
+        return check_permesso(request.user, 'pappe', 'scrivi')
 
     def has_object_permission(self, request, view, obj):
-        role = request.user.role
-        if role in (Role.ADMIN, Role.DIRETTRICE, Role.COORDINATRICE, Role.INSEGNANTE):
-            return True
-        if role == Role.CUOCA:
-            return request.method in SAFE_METHODS
-        if role == Role.GENITORE:
+        if not request.user.is_authenticated:
+            return False
+        if request.method == 'DELETE':
+            if not check_permesso(request.user, 'pappe', 'elimina'):
+                return False
+        elif request.method in SAFE_METHODS:
+            if not check_permesso(request.user, 'pappe', 'leggi'):
+                return False
+        else:
+            if not check_permesso(request.user, 'pappe', 'scrivi'):
+                return False
+        if request.user.role == Role.GENITORE:
             if request.method not in SAFE_METHODS:
                 return False
             try:
@@ -94,4 +103,4 @@ class RegistroPastoPermission(BasePermission):
                 )
             except Exception:
                 return False
-        return False
+        return True

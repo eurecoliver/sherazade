@@ -2,6 +2,48 @@ from django.conf import settings
 from django.db import models
 
 
+class PermessoRuolo(models.Model):
+    """Matrice permessi configurabile per ruolo × risorsa × azione."""
+
+    RUOLI = [
+        ('coordinatrice', 'Coordinatrice'),
+        ('insegnante', 'Insegnante'),
+        ('cuoca', 'Cuoca'),
+        ('genitore', 'Genitore'),
+    ]
+    RISORSE = [
+        ('bambini',    'Anagrafica bambini'),
+        ('consensi',   'Consensi fotografici'),
+        ('presenze',   'Presenze'),
+        ('diario',     'Diario'),
+        ('pappe',      'Pappe e menu'),
+        ('circolari',  'Circolari'),
+        ('calendario', 'Calendario'),
+        ('agenda',     'Agenda note'),
+        ('utenti',     'Gestione utenti'),
+    ]
+    AZIONI = [
+        ('leggi',    'Visualizza'),
+        ('scrivi',   'Crea e modifica'),
+        ('elimina',  'Elimina'),
+    ]
+
+    ruolo     = models.CharField(max_length=30, choices=RUOLI)
+    risorsa   = models.CharField(max_length=30, choices=RISORSE)
+    azione    = models.CharField(max_length=10, choices=AZIONI)
+    consentito = models.BooleanField(default=False)
+
+    class Meta:
+        unique_together = [('ruolo', 'risorsa', 'azione')]
+        verbose_name = 'Permesso ruolo'
+        verbose_name_plural = 'Permessi ruoli'
+        ordering = ['ruolo', 'risorsa', 'azione']
+
+    def __str__(self):
+        stato = '✓' if self.consentito else '✗'
+        return f'[{stato}] {self.ruolo} → {self.risorsa} → {self.azione}'
+
+
 class Gruppo(models.Model):
     nome = models.CharField(max_length=100, unique=True)
     colore = models.CharField(max_length=7, default='#6B7280')

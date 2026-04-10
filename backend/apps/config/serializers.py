@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import Gruppo, OrarioUscita
+from .models import Gruppo, OrarioUscita, PermessoRuolo
 
 
 class GruppoSerializer(serializers.ModelSerializer):
@@ -19,3 +19,10 @@ class OrarioUscitaSerializer(serializers.ModelSerializer):
     class Meta:
         model = OrarioUscita
         fields = ['id', 'etichetta', 'orario', 'attivo', 'ordine']
+
+
+class PermessoRuoloSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PermessoRuolo
+        fields = ['id', 'ruolo', 'risorsa', 'azione', 'consentito']
+        read_only_fields = ['id', 'ruolo', 'risorsa', 'azione']

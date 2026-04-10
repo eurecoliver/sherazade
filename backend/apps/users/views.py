@@ -11,13 +11,18 @@ from .models import User, Role
 from .serializers import UserSerializer, UserAdminSerializer
 
 
-class IsAdminOrDirettrice(permissions.BasePermission):
+class UtentePermission(permissions.BasePermission):
+    """Accesso a gestione utenti: controllato da PermessoRuolo('utenti')."""
     def has_permission(self, request, view):
-        return (
-            request.user
-            and request.user.is_authenticated
-            and request.user.role in (Role.ADMIN, Role.DIRETTRICE)
-        )
+        if not request.user or not request.user.is_authenticated:
+            return False
+        from apps.config.permessi import check_permesso
+        from rest_framework.permissions import SAFE_METHODS
+        if request.method == 'DELETE':
+            return check_permesso(request.user, 'utenti', 'elimina')
+        if request.method in SAFE_METHODS:
+            return check_permesso(request.user, 'utenti', 'leggi')
+        return check_permesso(request.user, 'utenti', 'scrivi')
 
 
 class LoginView(APIView):
@@ -105,7 +110,7 @@ class ProfileView(generics.RetrieveUpdateAPIView):
 
 class UserAdminViewSet(viewsets.ModelViewSet):
     serializer_class = UserAdminSerializer
-    permission_classes = [permissions.IsAuthenticated, IsAdminOrDirettrice]
+    permission_classes = [permissions.IsAuthenticated, UtentePermission]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['username', 'email', 'first_name', 'last_name']
     ordering_fields = ['last_name', 'first_name', 'role', 'email']

@@ -1,29 +1,38 @@
 from rest_framework.permissions import BasePermission
+from apps.config.permessi import check_permesso
 from apps.users.models import Role
 
-STAFF_ROLES = (Role.ADMIN, Role.DIRETTRICE, Role.COORDINATRICE, Role.INSEGNANTE)
+SAFE_METHODS = ('GET', 'HEAD', 'OPTIONS')
 MANAGER_ROLES = (Role.ADMIN, Role.DIRETTRICE)
 
 
 class NotaPermission(BasePermission):
     """
-    Admin / Direttrice / Coordinatrice / Insegnante : read + create + delete proprie note.
-    Admin / Direttrice : delete qualsiasi nota.
-    Cuoca / Genitore : nessun accesso.
+    Admin/Direttrice : accesso completo + delete qualsiasi nota (hardcoded).
+    Altri ruoli      : controllati da PermessoRuolo ('agenda').
+    Object-level     : staff può cancellare solo le proprie note.
     """
 
     def has_permission(self, request, view):
         if not request.user.is_authenticated:
             return False
-        return request.user.role in STAFF_ROLES
+        if request.method == 'DELETE':
+            return check_permesso(request.user, 'agenda', 'elimina')
+        if request.method in SAFE_METHODS:
+            return check_permesso(request.user, 'agenda', 'leggi')
+        return check_permesso(request.user, 'agenda', 'scrivi')
 
     def has_object_permission(self, request, view, obj):
         if not request.user.is_authenticated:
             return False
-        role = request.user.role
-        if role in MANAGER_ROLES:
-            return True
-        if role in STAFF_ROLES:
-            # può cancellare solo le proprie note
+        if request.method == 'DELETE':
+            if not check_permesso(request.user, 'agenda', 'elimina'):
+                return False
+            # Admin/Direttrice possono cancellare qualsiasi nota
+            if request.user.role in MANAGER_ROLES:
+                return True
+            # Gli altri solo le proprie
             return obj.autore_id == request.user.pk
-        return False
+        if request.method in SAFE_METHODS:
+            return check_permesso(request.user, 'agenda', 'leggi')
+        return check_permesso(request.user, 'agenda', 'scrivi')

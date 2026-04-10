@@ -4,6 +4,40 @@ import { useEffect, useState, useCallback } from 'react'
 import { useLocale } from 'next-intl'
 import { useRouter } from 'next/navigation'
 
+interface PermessoRuolo {
+  id: number
+  ruolo: string
+  risorsa: string
+  azione: string
+  consentito: boolean
+}
+
+const RUOLI_LABEL: Record<string, string> = {
+  coordinatrice: 'Coordinatrice',
+  insegnante: 'Insegnante',
+  cuoca: 'Cuoca',
+  genitore: 'Genitore',
+}
+const RUOLI = Object.keys(RUOLI_LABEL)
+
+const RISORSE_LABEL: Record<string, string> = {
+  bambini:    '👶 Anagrafica bambini',
+  consensi:   '📷 Consensi fotografici',
+  presenze:   '📅 Presenze',
+  diario:     '📖 Diario',
+  pappe:      '🥣 Pappe e menu',
+  circolari:  '📢 Circolari',
+  calendario: '🗓️ Calendario',
+  agenda:     '📝 Agenda note',
+  utenti:     '👤 Gestione utenti',
+}
+
+const AZIONI: { key: string; label: string; color: string }[] = [
+  { key: 'leggi',   label: 'Leggi',    color: '#0984E3' },
+  { key: 'scrivi',  label: 'Scrivi',   color: '#00B894' },
+  { key: 'elimina', label: 'Elimina',  color: '#E17055' },
+]
+
 interface Gruppo {
   id: number
   nome: string
@@ -28,7 +62,13 @@ export default function ImpostazioniPage() {
   const router = useRouter()
   const locale = useLocale()
 
-  const [activeTab, setActiveTab] = useState<'gruppi' | 'orari'>('gruppi')
+  const [activeTab, setActiveTab] = useState<'gruppi' | 'orari' | 'permessi'>('gruppi')
+
+  // Permessi state
+  const [permessi, setPermessi] = useState<PermessoRuolo[]>([])
+  const [loadingPermessi, setLoadingPermessi] = useState(false)
+  const [ruoloSelezionato, setRuoloSelezionato] = useState('coordinatrice')
+  const [savingPermesso, setSavingPermesso] = useState<number | null>(null)
 
   // Gruppi state
   const [gruppi, setGruppi] = useState<Gruppo[]>([])
@@ -47,6 +87,29 @@ export default function ImpostazioniPage() {
   const [orarioForm, setOrarioForm] = useState({ ...EMPTY_ORARIO })
   const [savingOrario, setSavingOrario] = useState(false)
   const [orarioError, setOrarioError] = useState('')
+
+  const fetchPermessi = useCallback(async () => {
+    setLoadingPermessi(true)
+    const res = await fetch('/api/config/permessi')
+    if (res.ok) {
+      const data = await res.json()
+      setPermessi(Array.isArray(data) ? data : data.results ?? [])
+    }
+    setLoadingPermessi(false)
+  }, [])
+
+  const togglePermesso = async (p: PermessoRuolo) => {
+    setSavingPermesso(p.id)
+    const res = await fetch(`/api/config/permessi/${p.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ consentito: !p.consentito }),
+    })
+    if (res.ok) {
+      setPermessi(prev => prev.map(x => x.id === p.id ? { ...x, consentito: !x.consentito } : x))
+    }
+    setSavingPermesso(null)
+  }
 
   const fetchGruppi = useCallback(async () => {
     setLoadingGruppi(true)
@@ -70,6 +133,7 @@ export default function ImpostazioniPage() {
 
   useEffect(() => { fetchGruppi() }, [fetchGruppi])
   useEffect(() => { fetchOrari() }, [fetchOrari])
+  useEffect(() => { if (activeTab === 'permessi' && permessi.length === 0) fetchPermessi() }, [activeTab, fetchPermessi, permessi.length])
 
   // ── Gruppo CRUD ──
 
@@ -175,8 +239,8 @@ export default function ImpostazioniPage() {
       <div style={{ maxWidth: 'min(860px, 96vw)', margin: '0 auto', padding: '1.5rem 1rem 3rem' }}>
 
         {/* Tabs */}
-        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem' }}>
-          {(['gruppi', 'orari'] as const).map(tab => (
+        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
+          {([['gruppi', '🎨 Gruppi'], ['orari', '🕐 Orari uscita'], ['permessi', '🔒 Permessi ruoli']] as const).map(([tab, label]) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -192,7 +256,7 @@ export default function ImpostazioniPage() {
                 fontFamily: 'inherit',
               }}
             >
-              {tab === 'gruppi' ? '🎨 Gruppi' : '🕐 Orari uscita'}
+              {label}
             </button>
           ))}
         </div>
@@ -251,6 +315,96 @@ export default function ImpostazioniPage() {
                     </button>
                   </div>
                 ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── PERMESSI TAB ── */}
+        {activeTab === 'permessi' && (
+          <div style={{ background: 'white', borderRadius: '16px', padding: '1.5rem', boxShadow: '0 2px 12px rgba(108,92,231,0.08)' }}>
+            <div style={{ marginBottom: '1.25rem' }}>
+              <h2 style={{ margin: '0 0 0.25rem', fontSize: '1.1rem', fontWeight: 700, color: '#444' }}>Permessi granulari per ruolo</h2>
+              <p style={{ margin: 0, fontSize: '0.8rem', color: '#888' }}>
+                Admin e Direttrice hanno sempre accesso completo. Le modifiche sono immediate.
+              </p>
+            </div>
+
+            {/* Selettore ruolo */}
+            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '1.5rem' }}>
+              {RUOLI.map(r => (
+                <button
+                  key={r}
+                  onClick={() => setRuoloSelezionato(r)}
+                  style={{
+                    padding: '0.45rem 1rem',
+                    borderRadius: '20px',
+                    border: '2px solid #D6CCFF',
+                    background: ruoloSelezionato === r ? '#6C5CE7' : 'white',
+                    color: ruoloSelezionato === r ? 'white' : '#6C5CE7',
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    fontSize: '0.85rem',
+                    fontFamily: 'inherit',
+                  }}
+                >
+                  {RUOLI_LABEL[r]}
+                </button>
+              ))}
+            </div>
+
+            {loadingPermessi ? (
+              <div style={{ color: '#999', padding: '1rem 0' }}>Caricamento...</div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
+                {Object.entries(RISORSE_LABEL).map(([risorsa, risorsaLabel]) => {
+                  const rigaPermessi = AZIONI.map(({ key: azione }) =>
+                    permessi.find(p => p.ruolo === ruoloSelezionato && p.risorsa === risorsa && p.azione === azione)
+                  )
+                  return (
+                    <div key={risorsa} style={{
+                      display: 'flex', alignItems: 'center', gap: '1rem',
+                      padding: '0.75rem 1rem', borderRadius: '10px',
+                      background: '#FAFAFA', border: '1px solid #EEE',
+                      flexWrap: 'wrap',
+                    }}>
+                      <div style={{ flex: 1, minWidth: 160, fontWeight: 600, fontSize: '0.875rem', color: '#333' }}>
+                        {risorsaLabel}
+                      </div>
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        {AZIONI.map(({ key: azione, label, color }, idx) => {
+                          const p = rigaPermessi[idx]
+                          if (!p) return null
+                          const attivo = p.consentito
+                          const saving = savingPermesso === p.id
+                          return (
+                            <button
+                              key={azione}
+                              onClick={() => !saving && togglePermesso(p)}
+                              disabled={saving}
+                              title={label}
+                              style={{
+                                padding: '0.3rem 0.75rem',
+                                borderRadius: '20px',
+                                border: `2px solid ${attivo ? color : '#DDD'}`,
+                                background: attivo ? color : 'white',
+                                color: attivo ? 'white' : '#999',
+                                fontWeight: 700,
+                                cursor: saving ? 'default' : 'pointer',
+                                fontSize: '0.75rem',
+                                fontFamily: 'inherit',
+                                opacity: saving ? 0.5 : 1,
+                                transition: 'all 0.15s',
+                              }}
+                            >
+                              {label}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )
+                })}
               </div>
             )}
           </div>
