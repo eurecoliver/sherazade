@@ -49,7 +49,7 @@ class Migration(migrations.Migration):
         ),
         migrations.AddIndex(
             model_name='circolare',
-            index=models.Index(fields=['-creato_at'], name='messaggi_ci_creato__idx'),
+            index=models.Index(fields=['creato_at'], name='messaggi_ci_creato__idx'),
         ),
         migrations.AddIndex(
             model_name='circolare',

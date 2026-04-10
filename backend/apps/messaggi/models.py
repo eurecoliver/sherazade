@@ -36,7 +36,7 @@ class Circolare(models.Model):
         verbose_name_plural = 'Circolari'
         ordering = ['-creato_at']
         indexes = [
-            models.Index(fields=['-creato_at']),
+            models.Index(fields=['creato_at']),
             models.Index(fields=['pubblicata']),
         ]
 
