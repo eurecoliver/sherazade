@@ -95,7 +95,7 @@ class CircolareViewSet(viewsets.ModelViewSet):
         if pubblicata is not None:
             qs = qs.filter(pubblicata=pubblicata == '1' or pubblicata == 'true')
 
-        return qs
+        return qs.order_by('-creato_at')
 
     def perform_create(self, serializer):
         circolare = serializer.save()
