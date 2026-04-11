@@ -16,16 +16,13 @@ interface Utente {
   two_factor_enabled: boolean
 }
 
-const ROLE_LABELS: Record<string, string> = {
-  admin: 'Admin',
-  direttrice: 'Direttrice',
-  coordinatrice: 'Coordinatrice',
-  insegnante: 'Insegnante',
-  cuoca: 'Cuoca',
-  genitore: 'Genitore',
+interface Ruolo {
+  id: number
+  codice: string
+  nome: string
+  sistema: boolean
+  ordine: number
 }
-
-const ROLE_OPTIONS = Object.entries(ROLE_LABELS)
 
 const EMPTY_FORM = {
   username: '',
@@ -43,6 +40,7 @@ export default function UtentiPage() {
   const locale = useLocale()
 
   const [utenti, setUtenti] = useState<Utente[]>([])
+  const [ruoli, setRuoli] = useState<Ruolo[]>([])
   const [loading, setLoading] = useState(true)
   const [filterRole, setFilterRole] = useState('')
   const [search, setSearch] = useState('')
@@ -51,6 +49,14 @@ export default function UtentiPage() {
   const [form, setForm] = useState({ ...EMPTY_FORM })
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+
+  const fetchRuoli = useCallback(async () => {
+    const res = await fetch('/api/config/ruoli')
+    if (res.ok) {
+      const data = await res.json()
+      setRuoli(Array.isArray(data) ? data : data.results ?? [])
+    }
+  }, [])
 
   const fetchUtenti = useCallback(async () => {
     setLoading(true)
@@ -65,7 +71,11 @@ export default function UtentiPage() {
     setLoading(false)
   }, [filterRole, search])
 
+  useEffect(() => { fetchRuoli() }, [fetchRuoli])
   useEffect(() => { fetchUtenti() }, [fetchUtenti])
+
+  const nomeRuolo = (codice: string) =>
+    ruoli.find(r => r.codice === codice)?.nome ?? codice
 
   const openNew = () => {
     setEditingId(null)
@@ -124,11 +134,16 @@ export default function UtentiPage() {
     if (res.ok) fetchUtenti()
   }
 
+  // Raggruppa utenti per ruolo
   const grouped: Record<string, Utente[]> = {}
   for (const u of utenti) {
     if (!grouped[u.role]) grouped[u.role] = []
     grouped[u.role].push(u)
   }
+
+  // Ordina le sezioni: prima i ruoli noti (in ordine API), poi eventuali sconosciuti
+  const ruoliCodici = ruoli.map(r => r.codice)
+  const ruoliSconosciuti = Object.keys(grouped).filter(r => !ruoliCodici.includes(r))
 
   return (
     <div style={{ minHeight: '100vh', background: '#F3F0FF' }}>
@@ -173,7 +188,7 @@ export default function UtentiPage() {
             style={{ padding: '0.6rem 1rem', borderRadius: '10px', border: '2px solid #D6CCFF', fontSize: '0.9rem', fontFamily: 'inherit', background: 'white' }}
           >
             <option value="">Tutti i ruoli</option>
-            {ROLE_OPTIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+            {ruoli.map(r => <option key={r.codice} value={r.codice}>{r.nome}</option>)}
           </select>
         </div>
 
@@ -181,47 +196,31 @@ export default function UtentiPage() {
           <div style={{ textAlign: 'center', padding: '3rem', color: '#6C5CE7' }}>Caricamento...</div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-            {Object.entries(ROLE_LABELS).map(([role, label]) => {
-              const list = grouped[role]
+            {/* Sezioni per ruoli noti (in ordine dal DB) */}
+            {ruoli.map(ruolo => {
+              const list = grouped[ruolo.codice]
               if (!list || list.length === 0) return null
               return (
-                <div key={role} style={{ background: 'white', borderRadius: '16px', padding: '1.25rem', boxShadow: '0 2px 12px rgba(108,92,231,0.08)' }}>
+                <div key={ruolo.codice} style={{ background: 'white', borderRadius: '16px', padding: '1.25rem', boxShadow: '0 2px 12px rgba(108,92,231,0.08)' }}>
                   <h3 style={{ margin: '0 0 1rem', color: '#6C5CE7', fontSize: '0.95rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                    {label} ({list.length})
+                    {ruolo.nome} ({list.length})
                   </h3>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                    {list.map(u => (
-                      <div key={u.id} style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.75rem',
-                        padding: '0.75rem',
-                        borderRadius: '10px',
-                        background: u.is_active ? '#FAFAFA' : '#FFF5F5',
-                        border: `1px solid ${u.is_active ? '#EEE' : '#FED7D7'}`,
-                      }}>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ fontWeight: 600, color: u.is_active ? '#333' : '#999', fontSize: '0.9rem' }}>
-                            {u.first_name} {u.last_name || u.username}
-                            {!u.is_active && <span style={{ marginLeft: '0.5rem', color: '#E53E3E', fontSize: '0.75rem' }}>(disabilitato)</span>}
-                          </div>
-                          <div style={{ color: '#888', fontSize: '0.8rem' }}>{u.email}</div>
-                          {u.phone && <div style={{ color: '#888', fontSize: '0.8rem' }}>{u.phone}</div>}
-                        </div>
-                        <button
-                          onClick={() => openEdit(u)}
-                          style={{ padding: '0.4rem 0.8rem', background: '#F3F0FF', color: '#6C5CE7', border: '1px solid #D6CCFF', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
-                        >
-                          Modifica
-                        </button>
-                        <button
-                          onClick={() => toggleAttivo(u)}
-                          style={{ padding: '0.4rem 0.8rem', background: u.is_active ? '#FFF5F5' : '#F0FFF4', color: u.is_active ? '#E53E3E' : '#38A169', border: `1px solid ${u.is_active ? '#FED7D7' : '#9AE6B4'}`, borderRadius: '8px', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
-                        >
-                          {u.is_active ? 'Disabilita' : 'Riabilita'}
-                        </button>
-                      </div>
-                    ))}
+                    {list.map(u => <UtenteRow key={u.id} u={u} onEdit={openEdit} onToggle={toggleAttivo} />)}
+                  </div>
+                </div>
+              )
+            })}
+            {/* Sezioni per ruoli sconosciuti (legacy/rimossi) */}
+            {ruoliSconosciuti.map(codice => {
+              const list = grouped[codice]
+              return (
+                <div key={codice} style={{ background: 'white', borderRadius: '16px', padding: '1.25rem', boxShadow: '0 2px 12px rgba(108,92,231,0.08)', borderLeft: '4px solid #FED7D7' }}>
+                  <h3 style={{ margin: '0 0 1rem', color: '#E53E3E', fontSize: '0.95rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    {codice} — ruolo rimosso ({list.length})
+                  </h3>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    {list.map(u => <UtenteRow key={u.id} u={u} onEdit={openEdit} onToggle={toggleAttivo} />)}
                   </div>
                 </div>
               )
@@ -244,7 +243,7 @@ export default function UtentiPage() {
             background: 'white', borderRadius: '20px', padding: '2rem', width: '100%', maxWidth: '480px', maxHeight: '90vh', overflowY: 'auto',
           }}>
             <h2 style={{ margin: '0 0 1.5rem', color: '#6C5CE7', fontSize: '1.25rem', fontWeight: 800 }}>
-              {editingId ? 'Modifica utente' : 'Nuovo utente'}
+              {editingId ? `Modifica utente — ${nomeRuolo(form.role)}` : 'Nuovo utente'}
             </h2>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
@@ -283,7 +282,7 @@ export default function UtentiPage() {
                 <label style={{ fontSize: '0.8rem', fontWeight: 600, color: '#555', display: 'block', marginBottom: '0.25rem' }}>Ruolo</label>
                 <select value={form.role} onChange={e => setForm(f => ({ ...f, role: e.target.value }))}
                   style={{ width: '100%', padding: '0.6rem', borderRadius: '8px', border: '1.5px solid #D6CCFF', fontSize: '0.9rem', fontFamily: 'inherit', background: 'white', boxSizing: 'border-box' }}>
-                  {ROLE_OPTIONS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+                  {ruoli.map(r => <option key={r.codice} value={r.codice}>{r.nome}</option>)}
                 </select>
               </div>
 
@@ -325,6 +324,41 @@ export default function UtentiPage() {
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+function UtenteRow({ u, onEdit, onToggle }: { u: Utente; onEdit: (u: Utente) => void; onToggle: (u: Utente) => void }) {
+  return (
+    <div style={{
+      display: 'flex',
+      alignItems: 'center',
+      gap: '0.75rem',
+      padding: '0.75rem',
+      borderRadius: '10px',
+      background: u.is_active ? '#FAFAFA' : '#FFF5F5',
+      border: `1px solid ${u.is_active ? '#EEE' : '#FED7D7'}`,
+    }}>
+      <div style={{ flex: 1 }}>
+        <div style={{ fontWeight: 600, color: u.is_active ? '#333' : '#999', fontSize: '0.9rem' }}>
+          {u.first_name} {u.last_name || u.username}
+          {!u.is_active && <span style={{ marginLeft: '0.5rem', color: '#E53E3E', fontSize: '0.75rem' }}>(disabilitato)</span>}
+        </div>
+        <div style={{ color: '#888', fontSize: '0.8rem' }}>{u.email}</div>
+        {u.phone && <div style={{ color: '#888', fontSize: '0.8rem' }}>{u.phone}</div>}
+      </div>
+      <button
+        onClick={() => onEdit(u)}
+        style={{ padding: '0.4rem 0.8rem', background: '#F3F0FF', color: '#6C5CE7', border: '1px solid #D6CCFF', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
+      >
+        Modifica
+      </button>
+      <button
+        onClick={() => onToggle(u)}
+        style={{ padding: '0.4rem 0.8rem', background: u.is_active ? '#FFF5F5' : '#F0FFF4', color: u.is_active ? '#E53E3E' : '#38A169', border: `1px solid ${u.is_active ? '#FED7D7' : '#9AE6B4'}`, borderRadius: '8px', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
+      >
+        {u.is_active ? 'Disabilita' : 'Riabilita'}
+      </button>
     </div>
   )
 }

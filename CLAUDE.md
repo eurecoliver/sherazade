@@ -47,7 +47,7 @@ Nome interno: Sherazade.
 - [x] Calendario scolastico ed eventi
 - [x] Messaggistica broadcast (circolari)
 - [x] Agenda giornaliera condivisa — note di turno per staff
-- [ ] Ruoli personalizzati con permessi CRUD granulari
+- [x] Ruoli personalizzati con permessi CRUD granulari
 - [ ] QR code check-in
 - [ ] Portfolio digitale del bambino
 - [ ] Fatturazione documentale (PDF, no pagamenti online)
@@ -481,7 +481,27 @@ Prossimo task: QR code check-in
 ### Badge circolari non lette sulla dashboard genitore (10 aprile 2026)
 - `frontend/src/app/[locale]/dashboard/genitore/page.tsx`: fetch parallelo a `/api/circolari` al mount; contatore `nonLette`; pill badge arancione accanto al titolo "Circolari" nel grid; bordo accentuato quando ci sono messaggi da leggere
 
+### Ruoli personalizzati con permessi CRUD granulari (11 aprile 2026)
+- Backend `Ruolo` model: CRUD completo, safety check su delete (verifica utenti assegnati)
+- `PermessoRuolo`: matrice granulare ruolo×risorsa×azione configurabile da admin
+- `IsAdminOnly` permission: solo Admin gestisce ruoli/permessi
+- `pagination_class = None` su tutti i viewset config (Ruolo, Gruppo, OrarioUscita) — risposta sempre array, non paginata
+- Migration `users/0004_user_role_free.py`: rimosso vincolo `choices` da `User.role`, max_length 50
+- Migration `config/0005_seed_ruoli.py`: 6 ruoli di sistema + permessi Direttrice (tutti True)
+- Migration `config/0006_add_fatture_risorsa.py`: aggiunta risorsa 'fatture' ai permessi
+- `apps.config.permessi.check_permesso()`: query diretta al DB (rimossa cache incompatibile con multi-worker Gunicorn)
+- Dashboard admin/staff/genitore: caricano `/api/config/permessi-utente/` e filtrano i nav item dinamicamente
+- `utenti/page.tsx`: ruoli completamente dinamici da API — filtro, raggruppamento, dropdown assegnazione tutti caricati da `/api/config/ruoli`; sezione "ruolo rimosso" per utenti con ruoli non più esistenti
+- Fix route `/api/config/ruoli/[id]`: risposta 204 con `new NextResponse(null, { status: 204 })` (HTTP-corretto, no body)
+- Fix `deleteRuolo`: try/catch/finally — `setDeletingRuolo(null)` sempre eseguito
+
+**File modificati:**
+- `backend/apps/config/views.py`: `pagination_class = None` su Ruolo/Gruppo/OrarioUscita viewsets
+- `frontend/src/app/[locale]/dashboard/admin/utenti/page.tsx`: ruoli dinamici da API
+- `frontend/src/app/api/config/ruoli/[id]/route.ts`: fix risposta 204
+- `frontend/src/app/[locale]/dashboard/admin/impostazioni/page.tsx`: fix try/catch deleteRuolo
+
 ## Ultimo Aggiornamento
-Data: 10 aprile 2026
-Completato: Messaggistica broadcast circolari (admin CRUD + genitore read + letture tracking + badge non lette in dashboard)
-Prossimo task: Ruoli personalizzati con permessi CRUD granulari
+Data: 11 aprile 2026
+Completato: Ruoli personalizzati con permessi CRUD granulari (backend + frontend + fix delete + utenti dinamici)
+Prossimo task: QR code check-in

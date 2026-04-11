@@ -178,15 +178,20 @@ export default function ImpostazioniPage() {
   const deleteRuolo = async (r: Ruolo) => {
     if (r.sistema) return
     setDeletingRuolo(r.id)
-    const res = await fetch(`/api/config/ruoli/${r.id}`, { method: 'DELETE' })
-    if (res.ok || res.status === 204) {
-      setRuoli(prev => prev.filter(x => x.id !== r.id))
-      if (ruoloSelezionato?.id === r.id) setRuoloSelezionato(null)
-    } else {
-      const data = await res.json()
-      alert(data.detail ?? 'Impossibile eliminare il ruolo.')
+    try {
+      const res = await fetch(`/api/config/ruoli/${r.id}`, { method: 'DELETE' })
+      if (res.ok || res.status === 204) {
+        setRuoli(prev => prev.filter(x => x.id !== r.id))
+        if (ruoloSelezionato?.id === r.id) setRuoloSelezionato(null)
+      } else {
+        const data = await res.json()
+        alert(data.detail ?? 'Impossibile eliminare il ruolo.')
+      }
+    } catch {
+      alert('Errore di rete. Riprova.')
+    } finally {
+      setDeletingRuolo(null)
     }
-    setDeletingRuolo(null)
   }
 
   const selezionaRuolo = (r: Ruolo) => {

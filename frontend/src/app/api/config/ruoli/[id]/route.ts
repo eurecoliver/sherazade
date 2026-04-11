@@ -29,7 +29,7 @@ export async function DELETE(
       method: 'DELETE',
     })
     if (res.status === 204) {
-      const nextRes = NextResponse.json({}, { status: 204 })
+      const nextRes = new NextResponse(null, { status: 204 })
       if (newAccessToken) nextRes.cookies.set('access_token', newAccessToken, COOKIE_OPTIONS)
       return nextRes
     }

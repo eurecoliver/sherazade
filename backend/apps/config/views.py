@@ -13,6 +13,7 @@ from .serializers import GruppoSerializer, OrarioUscitaSerializer, PermessoRuolo
 class GruppoViewSet(viewsets.ModelViewSet):
     serializer_class = GruppoSerializer
     permission_classes = [IsAuthenticated, IsAdminOrDirettrice]
+    pagination_class = None
 
     def get_queryset(self):
         qs = Gruppo.objects.prefetch_related('bambini')
@@ -27,6 +28,7 @@ class GruppoViewSet(viewsets.ModelViewSet):
 class OrarioUscitaViewSet(viewsets.ModelViewSet):
     serializer_class = OrarioUscitaSerializer
     permission_classes = [IsAuthenticated, IsAdminOrDirettrice]
+    pagination_class = None
 
     def get_queryset(self):
         qs = OrarioUscita.objects.all()
@@ -39,6 +41,7 @@ class RuoloViewSet(viewsets.ModelViewSet):
     """CRUD ruoli. Solo Admin può creare/modificare/eliminare ruoli."""
     serializer_class = RuoloSerializer
     permission_classes = [IsAuthenticated, IsAdminOnly]
+    pagination_class = None
 
     def get_queryset(self):
         return Ruolo.objects.all()
