@@ -82,6 +82,7 @@ class PermessoRuoloViewSet(
     """Lista e aggiornamento permessi granulari per ruolo. Solo Admin."""
     serializer_class = PermessoRuoloSerializer
     permission_classes = [IsAuthenticated, IsAdminOnly]
+    pagination_class = None
 
     def get_queryset(self):
         qs = PermessoRuolo.objects.all()
