@@ -1,7 +1,7 @@
 # Manuale Utente — Portale Sherazade
 
 > Guida operativa per l'utilizzo del portale dell'asilo nido/scuola primaria.
-> Aggiornato al: 14 aprile 2026
+> Aggiornato al: 15 aprile 2026
 
 ---
 
@@ -91,7 +91,7 @@ La dashboard admin ha sfondo viola con tutte le sezioni principali accessibili d
 La dashboard staff ha sfondo blu.
 
 **Operazioni quotidiane tipiche (mattina):**
-1. Aprire **Presenze** → registrare chi è arrivato e l'orario
+1. Aprire **Presenze** → registrare chi è arrivato e l'orario — oppure aprire il tab **QR Check-in** e orientare lo schermo verso l'ingresso per il self check-in dei genitori
 2. Aprire **Agenda** → leggere le note di turno del giorno
 3. Aprire **Pappe** → verificare menu del giorno e allergie dei bambini
 
@@ -128,6 +128,7 @@ La dashboard genitore ha un'interfaccia calda e mobile-first.
 
 | Sezione | Operazioni |
 |---------|-----------|
+| 📱 QR Check-in | Scansionare il QR all'ingresso per registrare entrata/uscita del figlio |
 | 📓 Diario | Vedere foto/video del giorno, umore, attività, sonno, tag |
 | 📋 Presenze | Comunicare un'assenza, vedere storico e statistiche mese |
 | 🍽️ Pappe | Vedere quanto ha mangiato il figlio + menu del giorno |
@@ -277,6 +278,33 @@ Stessa schermata staff + tab aggiuntivo **"Riepilogo giornaliero"**:
 - Tabella per bambino con percentuale di presenza
 - Barra visiva della % presenze
 - Pulsante **Stampa/PDF**
+
+---
+
+#### 📱 QR Check-in (self check-in genitori)
+
+Il sistema permette ai genitori di registrare autonomamente l'entrata e l'uscita del figlio scansionando un QR code.
+
+**Abilitare/disabilitare (Admin/Direttrice):**
+1. Aprire **Presenze** → tab **"📱 QR Check-in"**
+2. Toggle **Abilita / Disabilita** in cima — quando disabilitato il tab sparisce dalla vista staff e la pagina di check-in non è accessibile ai genitori
+
+**Per lo staff (mattina):**
+1. Aprire **Presenze** → tab **"📱 QR Check-in"**
+2. Cliccare **🖨️ Stampa QR** per stampare il foglio da affiggere all'ingresso — oppure orientare lo schermo verso i genitori
+3. Pulsante **🔄 Rinnova token** per generare un nuovo QR (es. se il foglio è stato smarrito)
+4. Il QR è valido solo per il giorno corrente — ogni mattina ne va stampato uno nuovo
+
+**Per il genitore:**
+1. Scansionare il QR code con la fotocamera del telefono
+2. Se non loggato, viene reindirizzato al login e poi torna automaticamente sul QR
+3. Appaiono le card dei propri figli — il sistema rileva automaticamente:
+   - Nessun arrivo registrato → pulsante **"🏫 Registra Entrata"**
+   - Entrata già registrata → pulsante **"👋 Registra Uscita"**
+   - Entrambi già registrati → messaggio "Già registrato per oggi"
+4. Feedback visivo con orario confermato (es. "✓ Entrata registrata alle 08:45")
+
+**Nota:** lo staff può sempre correggere o integrare manualmente gli orari dalla schermata principale del registro presenze.
 
 ---
 

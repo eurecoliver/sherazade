@@ -571,7 +571,8 @@ Completato: Portfolio digitale del bambino (upload foto/video per gruppo, iscriz
 - 4 nuove action su `PresenzaViewSet`: `qr_config` (admin toggle), `qr_token` (staff genera/rinnova QR), `checkin_info` (genitore vede figli + stato), `perform_checkin` (registra arrivo o uscita in automatico)
 - Logica auto: nessun record → crea con ora_arrivo; record senza uscita → imposta ora_uscita; entrambi → 409 Conflict
 - Toggle admin: quando `qr_abilitato=False` il tab QR sparisce dalla vista staff, la pagina `/checkin` risponde 403
-- Frontend: tab "📱 QR Check-in" dentro la pagina presenze (staff + admin); visibile solo se abilitato (o se admin/direttrice per gestione)
+- Frontend: tab "📱 QR Check-in" aggiunto sia a `staff/presenze` che ad `admin/presenze`; logica estratta nel componente condiviso `src/components/TabQRCheckin.tsx`
+- Permessi: `qr_config` GET richiede solo `check_permesso('presenze','leggi')` — permette allo staff di leggere la config; PATCH riservato ad Admin/Direttrice con check inside la view
 - Pagina `/[locale]/checkin`: mobile-first, card per figlio, bottone dinamico Entrata/Uscita, feedback visivo immediato
 - Middleware aggiornato: `/checkin` è protetto, salva `callbackUrl` nel redirect al login
 - Login aggiornato: post-login redirect verso `callbackUrl` se presente (preserva token QR dopo autenticazione)
@@ -594,7 +595,13 @@ Completato: Portfolio digitale del bambino (upload foto/video per gruppo, iscriz
 - `frontend/src/middleware.ts`: protegge `/checkin` con callbackUrl
 - `frontend/src/app/[locale]/login/page.tsx`: gestisce callbackUrl post-login
 
+### Fix permessi e refactoring QR Check-in (15 aprile 2026)
+- `backend/apps/attendance/permissions.py`: `qr_config` GET ora usa `check_permesso('presenze','leggi')` — fix 403 per staff non-admin
+- `backend/apps/attendance/views.py`: check `role in (ADMIN, DIRETTRICE)` spostato dentro l'action per il PATCH
+- `frontend/src/components/TabQRCheckin.tsx`: componente condiviso estratto dalla pagina staff
+- `frontend/src/app/[locale]/dashboard/admin/presenze/page.tsx`: aggiunto tab "📱 QR Check-in"
+
 ## Ultimo Aggiornamento
-Data: 14 aprile 2026
-Completato: QR code check-in (token giornaliero, arrivo/uscita automatico, toggle admin, pagina genitore mobile-first)
+Data: 15 aprile 2026
+Completato: Fix QR Check-in (403 permessi, tab aggiunto in admin/presenze, componente condiviso TabQRCheckin)
 Prossimo task: —
