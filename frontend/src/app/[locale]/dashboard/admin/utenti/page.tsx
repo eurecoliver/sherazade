@@ -41,6 +41,7 @@ export default function UtentiPage() {
 
   const [utenti, setUtenti] = useState<Utente[]>([])
   const [ruoli, setRuoli] = useState<Ruolo[]>([])
+  const [currentRole, setCurrentRole] = useState('')
   const [loading, setLoading] = useState(true)
   const [filterRole, setFilterRole] = useState('')
   const [search, setSearch] = useState('')
@@ -71,6 +72,9 @@ export default function UtentiPage() {
     setLoading(false)
   }, [filterRole, search])
 
+  useEffect(() => {
+    fetch('/api/auth/me').then(r => r.ok ? r.json() : null).then(me => { if (me) setCurrentRole(me.role) })
+  }, [])
   useEffect(() => { fetchRuoli() }, [fetchRuoli])
   useEffect(() => { fetchUtenti() }, [fetchUtenti])
 
@@ -206,7 +210,7 @@ export default function UtentiPage() {
                     {ruolo.nome} ({list.length})
                   </h3>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                    {list.map(u => <UtenteRow key={u.id} u={u} onEdit={openEdit} onToggle={toggleAttivo} />)}
+                    {list.map(u => <UtenteRow key={u.id} u={u} currentRole={currentRole} onEdit={openEdit} onToggle={toggleAttivo} />)}
                   </div>
                 </div>
               )
@@ -220,7 +224,7 @@ export default function UtentiPage() {
                     {codice} — ruolo rimosso ({list.length})
                   </h3>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                    {list.map(u => <UtenteRow key={u.id} u={u} onEdit={openEdit} onToggle={toggleAttivo} />)}
+                    {list.map(u => <UtenteRow key={u.id} u={u} currentRole={currentRole} onEdit={openEdit} onToggle={toggleAttivo} />)}
                   </div>
                 </div>
               )
@@ -328,7 +332,11 @@ export default function UtentiPage() {
   )
 }
 
-function UtenteRow({ u, onEdit, onToggle }: { u: Utente; onEdit: (u: Utente) => void; onToggle: (u: Utente) => void }) {
+function UtenteRow({ u, currentRole, onEdit, onToggle }: { u: Utente; currentRole: string; onEdit: (u: Utente) => void; onToggle: (u: Utente) => void }) {
+  // Un utente admin può essere modificato solo da un altro admin
+  const isAdminTarget = u.role === 'admin'
+  const canModify = !isAdminTarget || currentRole === 'admin'
+
   return (
     <div style={{
       display: 'flex',
@@ -343,22 +351,27 @@ function UtenteRow({ u, onEdit, onToggle }: { u: Utente; onEdit: (u: Utente) => 
         <div style={{ fontWeight: 600, color: u.is_active ? '#333' : '#999', fontSize: '0.9rem' }}>
           {u.first_name} {u.last_name || u.username}
           {!u.is_active && <span style={{ marginLeft: '0.5rem', color: '#E53E3E', fontSize: '0.75rem' }}>(disabilitato)</span>}
+          {isAdminTarget && <span style={{ marginLeft: '0.5rem', color: '#6C5CE7', fontSize: '0.75rem', fontWeight: 700 }}>🛡️ Admin</span>}
         </div>
         <div style={{ color: '#888', fontSize: '0.8rem' }}>{u.email}</div>
         {u.phone && <div style={{ color: '#888', fontSize: '0.8rem' }}>{u.phone}</div>}
       </div>
-      <button
-        onClick={() => onEdit(u)}
-        style={{ padding: '0.4rem 0.8rem', background: '#F3F0FF', color: '#6C5CE7', border: '1px solid #D6CCFF', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
-      >
-        Modifica
-      </button>
-      <button
-        onClick={() => onToggle(u)}
-        style={{ padding: '0.4rem 0.8rem', background: u.is_active ? '#FFF5F5' : '#F0FFF4', color: u.is_active ? '#E53E3E' : '#38A169', border: `1px solid ${u.is_active ? '#FED7D7' : '#9AE6B4'}`, borderRadius: '8px', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
-      >
-        {u.is_active ? 'Disabilita' : 'Riabilita'}
-      </button>
+      {canModify && (
+        <>
+          <button
+            onClick={() => onEdit(u)}
+            style={{ padding: '0.4rem 0.8rem', background: '#F3F0FF', color: '#6C5CE7', border: '1px solid #D6CCFF', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
+          >
+            Modifica
+          </button>
+          <button
+            onClick={() => onToggle(u)}
+            style={{ padding: '0.4rem 0.8rem', background: u.is_active ? '#FFF5F5' : '#F0FFF4', color: u.is_active ? '#E53E3E' : '#38A169', border: `1px solid ${u.is_active ? '#FED7D7' : '#9AE6B4'}`, borderRadius: '8px', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
+          >
+            {u.is_active ? 'Disabilita' : 'Riabilita'}
+          </button>
+        </>
+      )}
     </div>
   )
 }

@@ -24,6 +24,13 @@ class UtentePermission(permissions.BasePermission):
             return check_permesso(request.user, 'utenti', 'leggi')
         return check_permesso(request.user, 'utenti', 'scrivi')
 
+    def has_object_permission(self, request, view, obj):
+        from rest_framework.permissions import SAFE_METHODS
+        # Solo admin può modificare/eliminare altri utenti admin
+        if obj.role == 'admin' and request.user.role != 'admin':
+            return request.method in SAFE_METHODS
+        return True
+
 
 class LoginView(APIView):
     permission_classes = [permissions.AllowAny]
