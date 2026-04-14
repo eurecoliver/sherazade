@@ -50,7 +50,7 @@ Nome interno: Sherazade.
 - [x] Ruoli personalizzati con permessi CRUD granulari
 - [ ] QR code check-in
 - [ ] Portfolio digitale del bambino
-- [ ] Fatturazione documentale (PDF, no pagamenti online)
+- [x] Fatturazione documentale (PDF, no pagamenti online)
 - [ ] Gestione menu settimanale (sostituita da Pappe v2 con ciclo 5 settimane)
 
 ## Design
@@ -525,7 +525,10 @@ Prossimo task: QR code check-in
 - `backend/apps/config/views.py`
 - `backend/apps/users/views.py`
 
+### Fix nome utente in Gestione Utenti (14 aprile 2026)
+- `utenti/page.tsx`: nome loggato mostra `first_name` se presente, altrimenti `nomeRuolo(role)`; visibile appena `currentRole` è disponibile (non dipende da `currentName`)
+
 ## Ultimo Aggiornamento
 Data: 14 aprile 2026
-Completato: Fix ruoli custom (redirect + dashboard dinamica) + protezione account admin in Gestione Utenti
-Prossimo task: QR code check-in
+Completato: Fix nome utente header Gestione Utenti + fatturazione documentale segnata completata
+Prossimo task: Portfolio digitale del bambino

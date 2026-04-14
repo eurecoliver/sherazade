@@ -77,7 +77,7 @@ export default function UtentiPage() {
     fetch('/api/auth/me').then(r => r.ok ? r.json() : null).then(me => {
       if (me) {
         setCurrentRole(me.role)
-        setCurrentName(me.first_name || me.email?.split('@')[0] || '')
+        setCurrentName(me.first_name || '')
       }
     })
   }, [])
@@ -168,9 +168,9 @@ export default function UtentiPage() {
             >
               ← Dashboard
             </button>
-            {currentName && (
+            {currentRole && (
               <span style={{ fontSize: '0.82rem', fontWeight: 600, opacity: 0.85 }}>
-                👤 {currentName}
+                👤 {currentName || nomeRuolo(currentRole)}
               </span>
             )}
           </div>
