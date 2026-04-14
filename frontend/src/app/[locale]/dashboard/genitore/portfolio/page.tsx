@@ -124,9 +124,8 @@ export default function GenitorePortfolioPage() {
       .then(r => r.ok ? r.json() : [])
       .then((data: Iscrizione[]) => {
         setIscrizioni(Array.isArray(data) ? data : [])
-        // Seleziona l'anno più recente tra quelli iscritti
         if (data.length > 0) {
-          // Trova l'anno attivo o il primo
+          // Seleziona anno attivo (o primo) tra quelli con iscrizione
           const annoAttivo = anni.find(a => a.attivo && data.some(i => i.anno === a.id))
           const firstAnno = data[0]
           if (annoAttivo) {
@@ -137,23 +136,42 @@ export default function GenitorePortfolioPage() {
             setSelectedGruppo(firstAnno.gruppo)
           }
         } else {
-          setSelectedAnno(null)
-          setSelectedGruppo(null)
+          // Nessuna iscrizione: fallback su anno attivo + gruppo corrente bambino
+          const annoAttivo = anni.find(a => a.attivo) ?? anni[0]
+          if (annoAttivo) setSelectedAnno(annoAttivo.id)
+          // Il gruppo verrà settato dall'effect sotto quando bambinoSel è pronto
         }
       })
   }, [selectedBambino, anni])
 
-  // ── Anni filtrati per iscrizioni ───────────────────────────────────────────
+  const bambinoSel = bambini.find(b => b.id === selectedBambino)
 
-  const anniVisibili = anni.filter(a => iscrizioni.some(i => i.anno === a.id))
+  // ── Anni filtrati per iscrizioni (fallback: tutti gli anni) ───────────────
+
+  const hasIscrizioni = iscrizioni.length > 0
+  const anniVisibili = hasIscrizioni
+    ? anni.filter(a => iscrizioni.some(i => i.anno === a.id))
+    : anni  // fallback: mostra tutti gli anni, usa gruppo corrente del bambino
 
   // ── Quando cambia anno, aggiorna gruppo ────────────────────────────────────
 
   useEffect(() => {
     if (!selectedAnno) return
     const iscr = iscrizioni.find(i => i.anno === selectedAnno)
-    if (iscr) setSelectedGruppo(iscr.gruppo)
-  }, [selectedAnno, iscrizioni])
+    if (iscr) {
+      setSelectedGruppo(iscr.gruppo)
+    } else if (!hasIscrizioni && bambinoSel?.gruppo) {
+      // Fallback: usa il gruppo corrente del bambino
+      setSelectedGruppo(bambinoSel.gruppo)
+    }
+  }, [selectedAnno, iscrizioni, hasIscrizioni, bambinoSel])
+
+  // ── Bootstrap gruppo quando nessuna iscrizione ────────────────────────────
+
+  useEffect(() => {
+    if (iscrizioni.length > 0 || !bambinoSel?.gruppo || selectedGruppo !== null) return
+    setSelectedGruppo(bambinoSel.gruppo)
+  }, [bambinoSel, iscrizioni, selectedGruppo])
 
   // ── Giorni con contenuto ───────────────────────────────────────────────────
 
@@ -211,8 +229,6 @@ export default function GenitorePortfolioPage() {
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
   }, [lightbox, closeLightbox])
-
-  const bambinoSel = bambini.find(b => b.id === selectedBambino)
 
   // ── Render ─────────────────────────────────────────────────────────────────
 
