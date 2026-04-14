@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useLocale } from 'next-intl'
 import { useRouter } from 'next/navigation'
 import UserChip from '@/components/UserChip'
+import TabQRCheckin from '@/components/TabQRCheckin'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -170,7 +171,7 @@ export default function AdminPresenzePage() {
   const router = useRouter()
   const locale = useLocale()
 
-  const [tab, setTab] = useState<'oggi' | 'storico' | 'registra'>('oggi')
+  const [tab, setTab] = useState<'oggi' | 'storico' | 'registra' | 'qr'>('oggi')
   const [data, setData] = useState(oggi())
   const [righe, setRighe] = useState<RigaGiornata[]>([])
   const [nonArrivati, setNonArrivati] = useState<NonArrivatiResp | null>(null)
@@ -334,6 +335,7 @@ export default function AdminPresenzePage() {
             ['oggi', 'Riepilogo giornaliero'],
             ['registra', '📝 Registra presenze'],
             ['storico', 'Report mensile'],
+            ['qr', '📱 QR Check-in'],
           ] as const).map(([t, label]) => (
             <button
               key={t}
@@ -608,6 +610,11 @@ export default function AdminPresenzePage() {
               </div>
             )}
           </>
+        )}
+
+        {/* ── TAB QR ── */}
+        {tab === 'qr' && (
+          <TabQRCheckin isAdmin={true} />
         )}
       </div>
     </div>

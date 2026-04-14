@@ -376,6 +376,8 @@ class PresenzaViewSet(viewsets.ModelViewSet):
         """
         config = ConfigurazioneCheckin.get()
         if request.method == 'PATCH':
+            if request.user.role not in (Role.ADMIN, Role.DIRETTRICE):
+                return Response({'detail': 'Riservato ad Admin/Direttrice.'}, status=status.HTTP_403_FORBIDDEN)
             serializer = ConfigurazioneCheckinSerializer(config, data=request.data, partial=True)
             serializer.is_valid(raise_exception=True)
             serializer.save()
