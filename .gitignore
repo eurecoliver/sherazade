@@ -12,7 +12,7 @@ env/
 *.log
 local_settings.py
 db.sqlite3
-media/
+backend/media/
 staticfiles/
 
 # Environment

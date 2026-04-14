@@ -32,6 +32,7 @@ const RISORSE_LABEL: Record<string, string> = {
   calendario: '🗓️ Calendario',
   agenda:     '📝 Agenda note',
   fatture:    '🧾 Fatture',
+  portfolio:  '📸 Portfolio digitale',
   utenti:     '👤 Gestione utenti',
 }
 
