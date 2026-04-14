@@ -104,6 +104,8 @@ export default function StaffPortfolioPage() {
   const [showAnniModal, setShowAnniModal] = useState(false)
   const [newAnno, setNewAnno] = useState({ nome: '', data_inizio: '', data_fine: '', descrizione: '' })
   const [savingAnno, setSavingAnno] = useState(false)
+  const [editingAnno, setEditingAnno] = useState<AnnoScolastico | null>(null)
+  const [deletingAnnoId, setDeletingAnnoId] = useState<number | null>(null)
 
   const fileInputRef = useRef<HTMLInputElement>(null)
   const stripRef = useRef<HTMLDivElement>(null)
@@ -226,9 +228,15 @@ export default function StaffPortfolioPage() {
       }
     }
 
-    // Pulisce gli upload completati dopo 3s
+    // Pulisce gli upload completati dopo 3s e ri-fetcha per thumbnail generate in background
     setTimeout(() => {
       setUploads(prev => prev.filter(u => !u.done))
+      if (!selectedAnno || !selectedData) return
+      const params = new URLSearchParams({ anno: String(selectedAnno), data: selectedData })
+      if (selectedGruppo) params.set('gruppo', String(selectedGruppo))
+      fetch(`/api/portfolio/media?${params}`)
+        .then(r => r.ok ? r.json() : [])
+        .then(data => setMedia(Array.isArray(data) ? data : (data.results ?? [])))
     }, 3000)
   }, [selectedAnno, selectedGruppo, selectedData, giorni])
 
@@ -248,18 +256,41 @@ export default function StaffPortfolioPage() {
 
   const handleSaveAnno = async () => {
     setSavingAnno(true)
-    const res = await fetch('/api/portfolio/anni', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(newAnno),
-    })
-    if (res.ok) {
-      const created = await res.json()
-      setAnni(prev => [created, ...prev])
-      setNewAnno({ nome: '', data_inizio: '', data_fine: '', descrizione: '' })
-      setShowAnniModal(false)
+    if (editingAnno) {
+      const res = await fetch(`/api/portfolio/anni/${editingAnno.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newAnno),
+      })
+      if (res.ok) {
+        const updated = await res.json()
+        setAnni(prev => prev.map(a => a.id === updated.id ? updated : a))
+        setEditingAnno(null)
+        setNewAnno({ nome: '', data_inizio: '', data_fine: '', descrizione: '' })
+      }
+    } else {
+      const res = await fetch('/api/portfolio/anni', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newAnno),
+      })
+      if (res.ok) {
+        const created = await res.json()
+        setAnni(prev => [created, ...prev])
+        setNewAnno({ nome: '', data_inizio: '', data_fine: '', descrizione: '' })
+      }
     }
     setSavingAnno(false)
+  }
+
+  const handleDeleteAnno = async (id: number) => {
+    setDeletingAnnoId(id)
+    const res = await fetch(`/api/portfolio/anni/${id}`, { method: 'DELETE' })
+    if (res.ok) {
+      setAnni(prev => prev.filter(a => a.id !== id))
+      if (selectedAnno === id) setSelectedAnno(anni.find(a => a.id !== id)?.id ?? null)
+    }
+    setDeletingAnnoId(null)
   }
 
   // ── Lightbox navigation ────────────────────────────────────────────────────
@@ -466,7 +497,24 @@ export default function StaffPortfolioPage() {
         </div>
 
         {/* ── Upload zone ── */}
-        {canEdit && (
+        {canEdit && selectedGruppo === null && (
+          <div style={{
+            background: '#FFFBEB',
+            border: '1.5px solid #FCD34D',
+            borderRadius: 12,
+            padding: '14px 20px',
+            marginBottom: 16,
+            fontSize: 14,
+            color: '#92400E',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 10,
+          }}>
+            <span style={{ fontSize: 20 }}>⚠️</span>
+            <span>Seleziona un gruppo specifico per caricare foto e video.</span>
+          </div>
+        )}
+        {canEdit && selectedGruppo !== null && (
           <div
             onDragOver={e => { e.preventDefault(); setDragging(true) }}
             onDragLeave={() => setDragging(false)}
@@ -586,7 +634,7 @@ export default function StaffPortfolioPage() {
           }} onClick={e => e.stopPropagation()}>
             <h2 style={{ margin: '0 0 20px', fontSize: 20, color: '#1F2937' }}>📅 Gestione anni scolastici</h2>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 20, maxHeight: 220, overflowY: 'auto' }}>
               {anni.map(a => (
                 <div key={a.id} style={{
                   display: 'flex', alignItems: 'center', gap: 10,
@@ -595,13 +643,29 @@ export default function StaffPortfolioPage() {
                   <span style={{ flex: 1, fontWeight: 600, fontSize: 14, color: '#1F2937' }}>
                     {a.attivo ? '● ' : ''}{a.nome}
                   </span>
-                  <span style={{ fontSize: 12, color: '#6B7280' }}>{a.data_inizio} → {a.data_fine}</span>
+                  <span style={{ fontSize: 12, color: '#6B7280', marginRight: 4 }}>{a.data_inizio} → {a.data_fine}</span>
+                  <button
+                    onClick={() => {
+                      setEditingAnno(a)
+                      setNewAnno({ nome: a.nome, data_inizio: a.data_inizio, data_fine: a.data_fine, descrizione: a.descrizione ?? '' })
+                    }}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 15, padding: '2px 4px', borderRadius: 4, color: '#0984E3' }}
+                    title="Modifica"
+                  >✏️</button>
+                  <button
+                    onClick={() => { if (confirm(`Eliminare "${a.nome}"?`)) handleDeleteAnno(a.id) }}
+                    disabled={deletingAnnoId === a.id}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 15, padding: '2px 4px', borderRadius: 4, color: '#EF4444' }}
+                    title="Elimina"
+                  >{deletingAnnoId === a.id ? '…' : '🗑️'}</button>
                 </div>
               ))}
             </div>
 
             <div style={{ borderTop: '1px solid #E5E7EB', paddingTop: 20 }}>
-              <h3 style={{ margin: '0 0 12px', fontSize: 15, color: '#374151' }}>Nuovo anno / periodo</h3>
+              <h3 style={{ margin: '0 0 12px', fontSize: 15, color: '#374151' }}>
+                {editingAnno ? `✏️ Modifica: ${editingAnno.nome}` : 'Nuovo anno / periodo'}
+              </h3>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 <input
                   placeholder="Nome (es. 2024-2025, Campo Solare Agosto 2025)"
@@ -635,18 +699,30 @@ export default function StaffPortfolioPage() {
                   onChange={e => setNewAnno(p => ({ ...p, descrizione: e.target.value }))}
                   style={{ border: '1.5px solid #E5E7EB', borderRadius: 8, padding: '8px 12px', fontSize: 14 }}
                 />
-                <button
-                  onClick={handleSaveAnno}
-                  disabled={savingAnno || !newAnno.nome || !newAnno.data_inizio || !newAnno.data_fine}
-                  style={{
-                    background: '#0984E3', color: '#fff',
-                    border: 'none', borderRadius: 10, padding: '10px',
-                    fontSize: 14, fontWeight: 600, cursor: 'pointer',
-                    opacity: savingAnno || !newAnno.nome ? 0.6 : 1,
-                  }}
-                >
-                  {savingAnno ? 'Salvataggio…' : 'Crea anno / periodo'}
-                </button>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  {editingAnno && (
+                    <button
+                      onClick={() => { setEditingAnno(null); setNewAnno({ nome: '', data_inizio: '', data_fine: '', descrizione: '' }) }}
+                      style={{
+                        flex: 1, background: '#F3F4F6', color: '#374151',
+                        border: 'none', borderRadius: 10, padding: '10px',
+                        fontSize: 14, cursor: 'pointer',
+                      }}
+                    >Annulla</button>
+                  )}
+                  <button
+                    onClick={handleSaveAnno}
+                    disabled={savingAnno || !newAnno.nome || !newAnno.data_inizio || !newAnno.data_fine}
+                    style={{
+                      flex: 2, background: '#0984E3', color: '#fff',
+                      border: 'none', borderRadius: 10, padding: '10px',
+                      fontSize: 14, fontWeight: 600, cursor: 'pointer',
+                      opacity: savingAnno || !newAnno.nome ? 0.6 : 1,
+                    }}
+                  >
+                    {savingAnno ? 'Salvataggio…' : editingAnno ? 'Salva modifiche' : 'Crea anno / periodo'}
+                  </button>
+                </div>
               </div>
             </div>
 
