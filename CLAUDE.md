@@ -501,7 +501,31 @@ Prossimo task: QR code check-in
 - `frontend/src/app/api/config/ruoli/[id]/route.ts`: fix risposta 204
 - `frontend/src/app/[locale]/dashboard/admin/impostazioni/page.tsx`: fix try/catch deleteRuolo
 
+### Fix ruoli custom — redirect e visibilità dashboard (14 aprile 2026)
+- `login/page.tsx`: ruoli non riconosciuti (custom) → `/dashboard/admin` invece di `/dashboard/genitore`; rimosso tipo hardcoded `Role`
+- `admin/page.tsx`: voce "Utenti" inclusa sempre in `allItems`, filtrata da `canSee('utenti')` come gli altri item (non più `user.role === 'admin'` hardcoded)
+- `RuoloViewSet.get_permissions()`: GET aperto a tutti gli autenticati — fix "ruolo rimosso" per utenti custom che accedono a `/utenti`
+- `RuoloViewSet.destroy()`: blocco esplicito su `ruolo.codice == 'admin'` oltre al flag `sistema`
+- `impostazioni/page.tsx`: bottone elimina e guard `deleteRuolo` escludono `r.codice === 'admin'`
+
+### Protezione account admin in Gestione Utenti (14 aprile 2026)
+- `UtentePermission.has_object_permission()`: blocca PATCH/DELETE su utenti con `role='admin'` da parte di non-admin (403)
+- `UserAdminViewSet.perform_create/perform_update()`: blocca assegnazione `role='admin'` da parte di non-admin (403)
+- `utenti/page.tsx`:
+  - `UtenteRow` riceve `currentRole`; nasconde bottoni Modifica/Disabilita per utenti admin se `currentRole !== 'admin'`
+  - Dropdown ruoli esclude `admin` se `currentRole !== 'admin'`
+  - Mostra badge 🛡️ Admin su utenti con `role='admin'`
+  - Nome utente loggato (👤 nome) visibile in alto a destra nell'header della pagina
+
+**File modificati:**
+- `frontend/src/app/[locale]/login/page.tsx`
+- `frontend/src/app/[locale]/dashboard/admin/page.tsx`
+- `frontend/src/app/[locale]/dashboard/admin/utenti/page.tsx`
+- `frontend/src/app/[locale]/dashboard/admin/impostazioni/page.tsx`
+- `backend/apps/config/views.py`
+- `backend/apps/users/views.py`
+
 ## Ultimo Aggiornamento
-Data: 11 aprile 2026
-Completato: Ruoli personalizzati con permessi CRUD granulari (backend + frontend + fix delete + utenti dinamici)
+Data: 14 aprile 2026
+Completato: Fix ruoli custom (redirect + dashboard dinamica) + protezione account admin in Gestione Utenti
 Prossimo task: QR code check-in

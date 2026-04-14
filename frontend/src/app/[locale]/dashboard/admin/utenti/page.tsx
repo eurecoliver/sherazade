@@ -42,6 +42,7 @@ export default function UtentiPage() {
   const [utenti, setUtenti] = useState<Utente[]>([])
   const [ruoli, setRuoli] = useState<Ruolo[]>([])
   const [currentRole, setCurrentRole] = useState('')
+  const [currentName, setCurrentName] = useState('')
   const [loading, setLoading] = useState(true)
   const [filterRole, setFilterRole] = useState('')
   const [search, setSearch] = useState('')
@@ -73,7 +74,12 @@ export default function UtentiPage() {
   }, [filterRole, search])
 
   useEffect(() => {
-    fetch('/api/auth/me').then(r => r.ok ? r.json() : null).then(me => { if (me) setCurrentRole(me.role) })
+    fetch('/api/auth/me').then(r => r.ok ? r.json() : null).then(me => {
+      if (me) {
+        setCurrentRole(me.role)
+        setCurrentName(me.first_name || me.email?.split('@')[0] || '')
+      }
+    })
   }, [])
   useEffect(() => { fetchRuoli() }, [fetchRuoli])
   useEffect(() => { fetchUtenti() }, [fetchUtenti])
@@ -155,12 +161,19 @@ export default function UtentiPage() {
       {/* Header */}
       <div style={{ background: 'linear-gradient(135deg, #6C5CE7 0%, #4834D4 100%)', padding: '1.5rem 1.5rem 2rem', color: 'white' }}>
         <div style={{ maxWidth: 'min(1080px, 96vw)', margin: '0 auto' }}>
-          <button
-            onClick={() => router.push(`/${locale}/dashboard/admin`)}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem', background: 'rgba(255,255,255,0.15)', color: 'white', border: '1.5px solid rgba(255,255,255,0.3)', borderRadius: '20px', padding: '0.35rem 0.875rem 0.35rem 0.625rem', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 600, fontFamily: 'inherit', marginBottom: '0.875rem' }}
-          >
-            ← Dashboard
-          </button>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.875rem' }}>
+            <button
+              onClick={() => router.push(`/${locale}/dashboard/admin`)}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem', background: 'rgba(255,255,255,0.15)', color: 'white', border: '1.5px solid rgba(255,255,255,0.3)', borderRadius: '20px', padding: '0.35rem 0.875rem 0.35rem 0.625rem', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 600, fontFamily: 'inherit' }}
+            >
+              ← Dashboard
+            </button>
+            {currentName && (
+              <span style={{ fontSize: '0.82rem', fontWeight: 600, opacity: 0.85 }}>
+                👤 {currentName}
+              </span>
+            )}
+          </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: '0.75rem' }}>
             <div>
               <h1 style={{ margin: 0, fontSize: 'clamp(1.3rem, 3vw, 1.75rem)', fontWeight: 800 }}>👥 Gestione Utenti</h1>
