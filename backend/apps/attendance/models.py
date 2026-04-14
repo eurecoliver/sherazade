@@ -1,7 +1,74 @@
-from datetime import datetime, time
+import secrets
+from datetime import datetime, time, date
 
 from django.conf import settings
 from django.db import models
+
+
+class ConfigurazioneCheckin(models.Model):
+    """Singleton — un solo record (id=1) per gestire le impostazioni globali del check-in."""
+    qr_abilitato = models.BooleanField(default=True, verbose_name='QR Check-in abilitato')
+
+    class Meta:
+        verbose_name = 'Configurazione Check-in'
+
+    @classmethod
+    def get(cls):
+        obj, _ = cls.objects.get_or_create(id=1)
+        return obj
+
+    def save(self, *args, **kwargs):
+        self.pk = 1
+        super().save(*args, **kwargs)
+
+
+class DailyQRCodeToken(models.Model):
+    """Token giornaliero per il QR code check-in. Uno per data."""
+    data = models.DateField(unique=True)
+    token = models.CharField(max_length=64, unique=True)
+    creato_at = models.DateTimeField(auto_now_add=True)
+    creato_da = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='qr_tokens_generati',
+    )
+
+    class Meta:
+        verbose_name = 'Token QR Giornaliero'
+        verbose_name_plural = 'Token QR Giornalieri'
+        ordering = ['-data']
+
+    def __str__(self):
+        return f'Token QR {self.data}'
+
+    @classmethod
+    def get_or_create_today(cls, user=None):
+        today = date.today()
+        obj, created = cls.objects.get_or_create(
+            data=today,
+            defaults={
+                'token': secrets.token_urlsafe(32),
+                'creato_da': user,
+            },
+        )
+        return obj, created
+
+    @classmethod
+    def rinnova_oggi(cls, user=None):
+        """Forza la generazione di un nuovo token per oggi."""
+        today = date.today()
+        cls.objects.filter(data=today).delete()
+        return cls.objects.create(
+            data=today,
+            token=secrets.token_urlsafe(32),
+            creato_da=user,
+        )
+
+    @classmethod
+    def valida(cls, token: str) -> bool:
+        """True se il token esiste ed è di oggi."""
+        return cls.objects.filter(token=token, data=date.today()).exists()
 
 
 class Presenza(models.Model):

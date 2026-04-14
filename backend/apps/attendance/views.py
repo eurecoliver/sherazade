@@ -9,9 +9,12 @@ from rest_framework.response import Response
 
 from apps.children.models import Bambino
 from apps.users.models import Role
-from .models import Presenza
+from .models import Presenza, DailyQRCodeToken, ConfigurazioneCheckin
 from .permissions import PresenzaPermission
-from .serializers import PresenzaSerializer, PresenzaWriteSerializer
+from .serializers import (
+    PresenzaSerializer, PresenzaWriteSerializer,
+    DailyQRCodeTokenSerializer, ConfigurazioneCheckinSerializer,
+)
 
 
 class PresenzaViewSet(viewsets.ModelViewSet):
@@ -360,4 +363,170 @@ class PresenzaViewSet(viewsets.ModelViewSet):
                 'giorni_presenti': giorni_presenti,
                 'giorni_assenti': giorni_assenti,
             },
+        })
+
+    # ─── QR Check-in ──────────────────────────────────────────────────────────
+
+    @action(detail=False, methods=['get', 'patch'], url_path='qr-config')
+    def qr_config(self, request):
+        """
+        Admin/Direttrice: legge o modifica la configurazione globale del QR check-in.
+        GET  → { qr_abilitato: bool }
+        PATCH → { qr_abilitato: bool }
+        """
+        config = ConfigurazioneCheckin.get()
+        if request.method == 'PATCH':
+            serializer = ConfigurazioneCheckinSerializer(config, data=request.data, partial=True)
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            return Response(serializer.data)
+        return Response(ConfigurazioneCheckinSerializer(config).data)
+
+    @action(detail=False, methods=['get', 'post'], url_path='qr-token')
+    def qr_token(self, request):
+        """
+        Staff/Admin: restituisce il token QR di oggi. POST forza il rinnovo del token.
+        Richiede che il QR check-in sia abilitato.
+        """
+        if not ConfigurazioneCheckin.get().qr_abilitato:
+            return Response({'detail': 'QR check-in disabilitato.'}, status=status.HTTP_403_FORBIDDEN)
+
+        if request.method == 'POST':
+            token_obj = DailyQRCodeToken.rinnova_oggi(user=request.user)
+        else:
+            token_obj, _ = DailyQRCodeToken.get_or_create_today(user=request.user)
+
+        return Response(DailyQRCodeTokenSerializer(token_obj).data)
+
+    @action(detail=False, methods=['get'], url_path='checkin-info')
+    def checkin_info(self, request):
+        """
+        Genitore (o qualsiasi utente loggato): valida il token e restituisce
+        i propri figli con lo stato presenza odierna.
+        Query param: ?token=XXX
+        """
+        if not ConfigurazioneCheckin.get().qr_abilitato:
+            return Response({'detail': 'QR check-in disabilitato.'}, status=status.HTTP_403_FORBIDDEN)
+
+        token = request.query_params.get('token', '')
+        if not token or not DailyQRCodeToken.valida(token):
+            return Response({'detail': 'Token non valido o scaduto.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        user = request.user
+        bambini_qs = (
+            Bambino.objects
+            .filter(
+                Q(famiglia__genitore1=user) | Q(famiglia__genitore2=user),
+                attivo=True,
+            )
+            .select_related('gruppo', 'orario_uscita')
+        )
+
+        oggi_str = str(date.today())
+        presenze_oggi = {
+            p.bambino_id: p
+            for p in Presenza.objects.filter(
+                bambino__in=bambini_qs, data=oggi_str
+            )
+        }
+
+        result = []
+        for b in bambini_qs:
+            presenza = presenze_oggi.get(b.id)
+            stato = 'nessuno'
+            if presenza:
+                if presenza.ora_uscita:
+                    stato = 'uscito'
+                elif presenza.presente:
+                    stato = 'presente'
+                else:
+                    stato = 'assente'
+
+            result.append({
+                'bambino_id': b.id,
+                'nome': b.display_name if hasattr(b, 'display_name') else b.nome,
+                'cognome': b.cognome,
+                'gruppo': b.sezione,
+                'stato': stato,
+                'ora_arrivo': presenza.ora_arrivo.strftime('%H:%M') if presenza and presenza.ora_arrivo else None,
+                'ora_uscita': presenza.ora_uscita.strftime('%H:%M') if presenza and presenza.ora_uscita else None,
+            })
+
+        return Response({'figli': result, 'data': oggi_str})
+
+    @action(detail=False, methods=['post'], url_path='perform-checkin')
+    def perform_checkin(self, request):
+        """
+        Genitore: registra arrivo o uscita tramite QR.
+        Body: { token, bambino_id }
+        Logica auto: nessun arrivo → registra arrivo; arrivo senza uscita → registra uscita; entrambi → errore.
+        """
+        if not ConfigurazioneCheckin.get().qr_abilitato:
+            return Response({'detail': 'QR check-in disabilitato.'}, status=status.HTTP_403_FORBIDDEN)
+
+        token = request.data.get('token', '')
+        bambino_id = request.data.get('bambino_id')
+
+        if not token or not DailyQRCodeToken.valida(token):
+            return Response({'detail': 'Token non valido o scaduto.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not bambino_id:
+            return Response({'detail': 'Campo "bambino_id" obbligatorio.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Verifica parentela
+        user = request.user
+        try:
+            bambino = Bambino.objects.select_related(
+                'famiglia__genitore1', 'famiglia__genitore2'
+            ).get(id=bambino_id, attivo=True)
+            famiglia = bambino.famiglia
+            if famiglia.genitore1_id != user.pk and famiglia.genitore2_id != user.pk:
+                return Response({'detail': 'Non autorizzato.'}, status=status.HTTP_403_FORBIDDEN)
+        except Exception:
+            return Response({'detail': 'Non autorizzato.'}, status=status.HTTP_403_FORBIDDEN)
+
+        oggi_str = date.today()
+        from datetime import datetime as dt
+        ora_ora = dt.now().time().replace(second=0, microsecond=0)
+
+        presenza, created = Presenza.objects.get_or_create(
+            bambino_id=bambino_id,
+            data=oggi_str,
+            defaults={
+                'presente': True,
+                'ora_arrivo': ora_ora,
+                'registrato_da': user,
+            },
+        )
+
+        if created:
+            azione = 'arrivo'
+        elif not presenza.presente:
+            # Era segnato assente: non sovrascrivere senza conferma
+            return Response(
+                {'detail': f'{bambino.nome} è già segnato assente oggi. Contatta lo staff per correggere.'},
+                status=status.HTTP_409_CONFLICT,
+            )
+        elif presenza.ora_arrivo is None:
+            presenza.ora_arrivo = ora_ora
+            presenza.presente = True
+            presenza.registrato_da = user
+            presenza.save()
+            azione = 'arrivo'
+        elif presenza.ora_uscita is None:
+            presenza.ora_uscita = ora_ora
+            presenza.registrato_da = user
+            presenza.save()
+            azione = 'uscita'
+        else:
+            return Response(
+                {'detail': f'{bambino.nome} è già stato registrato in entrata e uscita oggi.'},
+                status=status.HTTP_409_CONFLICT,
+            )
+
+        return Response({
+            'azione': azione,
+            'bambino': bambino.nome,
+            'ora': ora_ora.strftime('%H:%M'),
+            'presenza': PresenzaSerializer(presenza).data,
         })

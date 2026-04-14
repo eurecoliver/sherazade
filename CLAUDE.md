@@ -48,10 +48,10 @@ Nome interno: Sherazade.
 - [x] Messaggistica broadcast (circolari)
 - [x] Agenda giornaliera condivisa — note di turno per staff
 - [x] Ruoli personalizzati con permessi CRUD granulari
-- [ ] QR code check-in
+- [x] QR code check-in
 - [x] Portfolio digitale del bambino
 - [x] Fatturazione documentale (PDF, no pagamenti online)
-- [ ] Gestione menu settimanale (sostituita da Pappe v2 con ciclo 5 settimane)
+- [x] Gestione menu settimanale (sostituita da Pappe v2 con ciclo 5 settimane)
 
 ## Design
 - Interfaccia genitori: calda, colorata, mobile-first
@@ -281,10 +281,6 @@ Nuova architettura menu ciclico 5 settimane (ciclo continuo tra mesi):
 #### Modifiche anagrafica/permessi (da fare in parallelo alle fasi)
 - Anagrafica admin: popup bidirezionale bambino↔famiglia già parzialmente presente, verificare completezza
 - Admin: permessi CRUD completi su tutti i campi inclusi consensi
-
-## Ultimo Aggiornamento
-Data: 7 aprile 2026
-Completato: Presenze v2 (orario 09:30, tab registra admin, ritardi genitore) + anagrafica genitori
 
 ### Fix orario ingresso (7 aprile 2026)
 - `backend/apps/attendance/models.py`: `ORA_INGRESSO = time(9, 0)` → `time(9, 30)`
@@ -568,4 +564,37 @@ Prossimo task: QR code check-in
 ## Ultimo Aggiornamento
 Data: 14 aprile 2026
 Completato: Portfolio digitale del bambino (upload foto/video per gruppo, iscrizioni storiche, thumbnail automatica, gallery masonry, lightbox)
-Prossimo task: QR code check-in
+
+### QR code check-in (14 aprile 2026)
+- Nuovi modelli in `attendance`: `ConfigurazioneCheckin` (singleton, `qr_abilitato` bool) e `DailyQRCodeToken` (token UUID giornaliero, unico per data)
+- Token generato con `secrets.token_urlsafe(32)` — valido solo per la giornata corrente
+- 4 nuove action su `PresenzaViewSet`: `qr_config` (admin toggle), `qr_token` (staff genera/rinnova QR), `checkin_info` (genitore vede figli + stato), `perform_checkin` (registra arrivo o uscita in automatico)
+- Logica auto: nessun record → crea con ora_arrivo; record senza uscita → imposta ora_uscita; entrambi → 409 Conflict
+- Toggle admin: quando `qr_abilitato=False` il tab QR sparisce dalla vista staff, la pagina `/checkin` risponde 403
+- Frontend: tab "📱 QR Check-in" dentro la pagina presenze (staff + admin); visibile solo se abilitato (o se admin/direttrice per gestione)
+- Pagina `/[locale]/checkin`: mobile-first, card per figlio, bottone dinamico Entrata/Uscita, feedback visivo immediato
+- Middleware aggiornato: `/checkin` è protetto, salva `callbackUrl` nel redirect al login
+- Login aggiornato: post-login redirect verso `callbackUrl` se presente (preserva token QR dopo autenticazione)
+- Libreria `qrcode.react` installata nel frontend
+- Migration: `attendance/0004_qr_checkin.py`
+
+**File creati:**
+- `backend/apps/attendance/migrations/0004_qr_checkin.py`
+- `frontend/src/app/api/presenze/qrconfig/route.ts`
+- `frontend/src/app/api/presenze/qrtoken/route.ts`
+- `frontend/src/app/api/presenze/checkin/route.ts`
+- `frontend/src/app/[locale]/checkin/page.tsx`
+
+**File modificati:**
+- `backend/apps/attendance/models.py`: aggiunti `ConfigurazioneCheckin` e `DailyQRCodeToken`
+- `backend/apps/attendance/serializers.py`: aggiunti serializer per nuovi modelli
+- `backend/apps/attendance/views.py`: 4 nuove action QR
+- `backend/apps/attendance/permissions.py`: registrate nuove action
+- `frontend/src/app/[locale]/dashboard/staff/presenze/page.tsx`: tab QR + tab switcher + toggle admin
+- `frontend/src/middleware.ts`: protegge `/checkin` con callbackUrl
+- `frontend/src/app/[locale]/login/page.tsx`: gestisce callbackUrl post-login
+
+## Ultimo Aggiornamento
+Data: 14 aprile 2026
+Completato: QR code check-in (token giornaliero, arrivo/uscita automatico, toggle admin, pagina genitore mobile-first)
+Prossimo task: —

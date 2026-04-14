@@ -10,17 +10,21 @@ function getLocale(pathname: string): string {
 }
 
 function isProtectedPath(pathname: string): boolean {
-  return pathname.includes('/dashboard/')
+  return pathname.includes('/dashboard/') || pathname.match(/\/(it|en)\/checkin/) !== null
 }
 
 export default function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl
+  const { pathname, search } = request.nextUrl
 
   if (isProtectedPath(pathname)) {
     const accessToken = request.cookies.get('access_token')?.value
     if (!accessToken) {
       const locale = getLocale(pathname)
-      const loginUrl = new URL(`/${locale}/login`, request.url)
+      const callbackUrl = pathname + search
+      const loginUrl = new URL(
+        `/${locale}/login?callbackUrl=${encodeURIComponent(callbackUrl)}`,
+        request.url,
+      )
       return NextResponse.redirect(loginUrl)
     }
   }

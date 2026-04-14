@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useTranslations, useLocale } from 'next-intl'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { clearUserCache } from '@/components/UserChip'
 
 function getRolePath(role: string): string {
@@ -27,6 +27,8 @@ export default function LoginPage() {
   const t = useTranslations('LoginPage')
   const router = useRouter()
   const locale = useLocale()
+  const searchParams = useSearchParams()
+  const callbackUrl = searchParams.get('callbackUrl') ?? ''
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -66,7 +68,11 @@ export default function LoginPage() {
       }
 
       clearUserCache()
-      router.push(`/${locale}${getRolePath(data.role)}`)
+      if (callbackUrl) {
+        router.push(callbackUrl)
+      } else {
+        router.push(`/${locale}${getRolePath(data.role)}`)
+      }
     } catch {
       setError(t('errorGeneric'))
     } finally {

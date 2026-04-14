@@ -1,5 +1,17 @@
 from rest_framework import serializers
-from .models import Presenza
+from .models import Presenza, DailyQRCodeToken, ConfigurazioneCheckin
+
+
+class ConfigurazioneCheckinSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ConfigurazioneCheckin
+        fields = ('qr_abilitato',)
+
+
+class DailyQRCodeTokenSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DailyQRCodeToken
+        fields = ('token', 'data', 'creato_at')
 
 
 class PresenzaSerializer(serializers.ModelSerializer):
