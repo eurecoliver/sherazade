@@ -9,7 +9,7 @@ import UserChip from '@/components/UserChip'
 
 interface Famiglia {
   id: number
-  genitore1: number        // User ID
+  genitore1: number
   genitore1_nome: string
   genitore1_email: string
   genitore2: number | null
@@ -40,11 +40,9 @@ interface Fattura {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const MESI = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic']
-
-function labelColonna(anno: number, mese: number): string {
-  return `${MESI[mese - 1]} ${anno}`
-}
+const MESI_LABEL = ['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno',
+                    'Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre']
+const MESI_SHORT = ['Gen','Feb','Mar','Apr','Mag','Giu','Lug','Ago','Set','Ott','Nov','Dic']
 
 function ultimi12Mesi(): { anno: number; mese: number }[] {
   const oggi = new Date()
@@ -56,7 +54,7 @@ function ultimi12Mesi(): { anno: number; mese: number }[] {
   return result
 }
 
-// ─── Upload modal ─────────────────────────────────────────────────────────────
+// ─── UploadModal ──────────────────────────────────────────────────────────────
 
 interface UploadModalProps {
   genitoreId: number
@@ -88,7 +86,6 @@ function UploadModal({ genitoreId, genitoreName, anno, mese, existing, onClose, 
       if (importo) fd.append('importo', String(importo))
       if (note) fd.append('note', note)
       if (file) fd.append('file', file)
-
       const res = await fetch('/api/fatture', { method: 'POST', body: fd })
       if (!res.ok) {
         const d = await res.json()
@@ -104,14 +101,11 @@ function UploadModal({ genitoreId, genitoreName, anno, mese, existing, onClose, 
   }
 
   const handleDelete = async () => {
-    if (!existing) return
-    if (!confirm('Eliminare questa fattura?')) return
+    if (!existing || !confirm('Eliminare questa fattura?')) return
     setLoading(true)
     try {
       await fetch(`/api/fatture/${existing.id}`, { method: 'DELETE' })
       onSaved()
-    } catch {
-      setError('Errore durante l\'eliminazione.')
     } finally {
       setLoading(false)
     }
@@ -125,16 +119,16 @@ function UploadModal({ genitoreId, genitoreName, anno, mese, existing, onClose, 
   }
 
   return (
-    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
-      <div onClick={e => e.stopPropagation()} style={{ background: 'white', borderRadius: '20px', padding: '1.5rem', width: '100%', maxWidth: '480px', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: 'white', borderRadius: '20px', padding: '1.5rem', width: '100%', maxWidth: '440px', boxShadow: '0 20px 60px rgba(0,0,0,0.25)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
           <div>
-            <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#6C63FF' }}>
-              🧾 Fattura {labelColonna(anno, mese)}
-            </h2>
-            <p style={{ margin: '0.2rem 0 0', fontSize: '0.82rem', color: '#888' }}>{genitoreName}</p>
+            <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: '#6C63FF' }}>
+              🧾 {MESI_LABEL[mese - 1]} {anno}
+            </h3>
+            <p style={{ margin: '0.15rem 0 0', fontSize: '0.8rem', color: '#888' }}>{genitoreName}</p>
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#aaa' }}>×</button>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: '1.4rem', cursor: 'pointer', color: '#aaa' }}>×</button>
         </div>
 
         <form onSubmit={handleSubmit}>
@@ -150,11 +144,10 @@ function UploadModal({ genitoreId, genitoreName, anno, mese, existing, onClose, 
               {!file && existing?.file_url && (
                 <a href={existing.file_url} target="_blank" rel="noopener noreferrer"
                   style={{ fontSize: '0.82rem', color: '#6C63FF', fontWeight: 600, textDecoration: 'none' }}>
-                  📄 Vedi file caricato
+                  📄 Vedi file
                 </a>
               )}
             </div>
-            {!file && !existing?.file_url && <p style={{ margin: '0.25rem 0 0', fontSize: '0.75rem', color: '#aaa' }}>Lascia vuoto per salvare senza allegato</p>}
           </div>
 
           <div style={{ marginBottom: '0.875rem' }}>
@@ -175,7 +168,7 @@ function UploadModal({ genitoreId, genitoreName, anno, mese, existing, onClose, 
             {existing && (
               <button type="button" onClick={handleDelete} disabled={loading}
                 style={{ padding: '0.75rem 1rem', background: '#FFF5F5', color: '#C53030', border: '1.5px solid #FEB2B2', borderRadius: '10px', fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer', fontFamily: 'inherit' }}>
-                🗑 Elimina
+                🗑
               </button>
             )}
             <button type="button" onClick={onClose}
@@ -184,11 +177,153 @@ function UploadModal({ genitoreId, genitoreName, anno, mese, existing, onClose, 
             </button>
             <button type="submit" disabled={loading}
               style={{ flex: 2, padding: '0.75rem', background: loading ? '#A0AEC0' : '#6C63FF', color: 'white', border: 'none', borderRadius: '10px', fontWeight: 700, fontSize: '0.875rem', cursor: loading ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
-              {loading ? 'Salvataggio...' : (existing ? 'Aggiorna' : 'Salva fattura')}
+              {loading ? 'Salvataggio...' : (existing ? 'Aggiorna' : 'Salva')}
             </button>
           </div>
         </form>
       </div>
+    </div>
+  )
+}
+
+// ─── FamilyModal ──────────────────────────────────────────────────────────────
+
+interface FamilyModalProps {
+  genitoreId: number
+  genitoreName: string
+  genitoreEmail: string
+  figli: string[]
+  anno: number
+  fattureMap: Record<string, Fattura>
+  onClose: () => void
+  onRefresh: () => void
+  initialMese?: number | null
+}
+
+function FamilyModal({ genitoreId, genitoreName, genitoreEmail, figli, anno, fattureMap, onClose, onRefresh, initialMese }: FamilyModalProps) {
+  const [editMese, setEditMese] = useState<number | null>(initialMese ?? null)
+
+  const oggi = new Date()
+  const mesiPagati = Array.from({ length: 12 }, (_, i) => i + 1)
+    .filter(m => !!fattureMap[`${genitoreId}-${m}`])
+  const totale = Array.from({ length: 12 }, (_, i) => i + 1)
+    .reduce((acc, m) => {
+      const f = fattureMap[`${genitoreId}-${m}`]
+      return acc + (f?.importo ? parseFloat(f.importo) : 0)
+    }, 0)
+  const tuttoSaldato = mesiPagati.length === 12
+
+  return (
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: 'white', borderRadius: '24px', width: '100%', maxWidth: '560px', boxShadow: '0 24px 64px rgba(0,0,0,0.2)', overflow: 'hidden' }}>
+
+        {/* Header */}
+        <div style={{ background: 'linear-gradient(135deg, #6C63FF 0%, #3F3D99 100%)', padding: '1.25rem 1.5rem', color: 'white' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                <span style={{ fontSize: 20 }}>🧾</span>
+                <span style={{ fontWeight: 800, fontSize: '1.1rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{genitoreName}</span>
+                {tuttoSaldato && <span style={{ background: 'rgba(72,187,120,0.25)', border: '1px solid rgba(72,187,120,0.5)', borderRadius: 20, padding: '2px 10px', fontSize: 11, fontWeight: 700, color: '#c6f6d5' }}>✓ tutto saldato</span>}
+              </div>
+              <div style={{ fontSize: '0.78rem', opacity: 0.8 }}>{genitoreEmail}</div>
+              {figli.length > 0 && (
+                <div style={{ marginTop: 6, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {figli.map(f => (
+                    <span key={f} style={{ background: 'rgba(255,255,255,0.18)', borderRadius: 12, padding: '2px 10px', fontSize: '0.75rem', fontWeight: 600 }}>
+                      👶 {f}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+            <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.3)', borderRadius: '50%', width: 32, height: 32, color: 'white', fontSize: 18, cursor: 'pointer', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>×</button>
+          </div>
+        </div>
+
+        {/* Anno e sommario */}
+        <div style={{ padding: '1rem 1.5rem 0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+          <div style={{ fontSize: '0.95rem', fontWeight: 700, color: '#333' }}>Anno {anno}</div>
+          <div style={{ display: 'flex', gap: 16, fontSize: '0.82rem' }}>
+            <span style={{ color: '#27AE60', fontWeight: 700 }}>✅ {mesiPagati.length} pagati</span>
+            <span style={{ color: 12 - mesiPagati.length > 0 ? '#E53E3E' : '#CBD5E0', fontWeight: 700 }}>
+              {12 - mesiPagati.length > 0 ? `⚠ ${12 - mesiPagati.length} mancanti` : ''}
+            </span>
+            {totale > 0 && <span style={{ color: '#6C63FF', fontWeight: 800 }}>€ {totale.toFixed(2).replace('.', ',')}</span>}
+          </div>
+        </div>
+
+        {/* Griglia mesi 3×4 */}
+        <div style={{ padding: '0.75rem 1.5rem 1.5rem', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
+          {Array.from({ length: 12 }, (_, i) => i + 1).map(mese => {
+            const fattura = fattureMap[`${genitoreId}-${mese}`]
+            const isCurrent = mese === oggi.getMonth() + 1 && anno === oggi.getFullYear()
+            const isPast = new Date(anno, mese - 1) < new Date(oggi.getFullYear(), oggi.getMonth())
+            const hasProblem = !fattura && isPast
+
+            return (
+              <button
+                key={mese}
+                onClick={() => setEditMese(mese)}
+                style={{
+                  padding: '0.875rem 0.625rem',
+                  borderRadius: 14,
+                  border: fattura
+                    ? '2px solid #C6F6D5'
+                    : isCurrent
+                      ? '2px solid #FEB2B2'
+                      : hasProblem
+                        ? '2px dashed #FEB2B2'
+                        : '2px solid #E2E8F0',
+                  background: fattura
+                    ? 'linear-gradient(135deg, #F0FFF4, #E6FFFA)'
+                    : isCurrent
+                      ? '#FFF5F5'
+                      : '#FAFAFA',
+                  cursor: 'pointer',
+                  textAlign: 'center',
+                  transition: 'all 0.15s',
+                  fontFamily: 'inherit',
+                }}
+              >
+                <div style={{ fontSize: '0.75rem', fontWeight: 600, color: '#888', marginBottom: 4 }}>
+                  {MESI_SHORT[mese - 1]}
+                </div>
+                {fattura ? (
+                  <>
+                    <div style={{ fontSize: '1.1rem' }}>✅</div>
+                    {fattura.importo && (
+                      <div style={{ fontSize: '0.72rem', fontWeight: 800, color: '#27AE60', marginTop: 2 }}>
+                        €{parseFloat(fattura.importo).toFixed(0)}
+                      </div>
+                    )}
+                    {fattura.file_url && (
+                      <div style={{ fontSize: '0.62rem', color: '#6C63FF', marginTop: 1 }}>📄 PDF</div>
+                    )}
+                  </>
+                ) : (
+                  <div style={{ fontSize: '0.72rem', fontWeight: 600, color: hasProblem || isCurrent ? '#FC8181' : '#CBD5E0' }}>
+                    {isCurrent ? '⚠ da fare' : hasProblem ? 'mancante' : '—'}
+                  </div>
+                )}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      {/* Sub-modal edit mese */}
+      {editMese !== null && (
+        <UploadModal
+          genitoreId={genitoreId}
+          genitoreName={genitoreName}
+          anno={anno}
+          mese={editMese}
+          existing={fattureMap[`${genitoreId}-${editMese}`] ?? null}
+          onClose={() => setEditMese(null)}
+          onSaved={() => { setEditMese(null); onRefresh() }}
+        />
+      )}
     </div>
   )
 }
@@ -201,14 +336,12 @@ export default function FatturePage() {
 
   const mesi = ultimi12Mesi()
   const [anno, setAnno] = useState(mesi[0].anno)
-
   const [famiglie, setFamiglie] = useState<Famiglia[]>([])
-  const [bambiniMap, setBambiniMap] = useState<Record<number, string[]>>({}) // genitore1_id → [nomi bambini]
+  const [bambiniMap, setBambiniMap] = useState<Record<number, string[]>>({})
   const [fatture, setFatture] = useState<Fattura[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
-
-  const [modal, setModal] = useState<{ genitoreId: number; genitoreName: string; anno: number; mese: number } | null>(null)
+  const [familyModal, setFamilyModal] = useState<{ genitoreId: number; initialMese?: number } | null>(null)
 
   const mesiAnno = mesi.filter(m => m.anno === anno)
 
@@ -229,7 +362,7 @@ export default function FatturePage() {
       const famList: Famiglia[] = fData.results ?? fData
       const bamList: Bambino[] = bData.results ?? bData
 
-      // Mappa: genitore1_id → [nomi bambini]
+      // Mappa genitore1_id → [nomi bambini] (da TUTTE le famiglie del genitore)
       const map: Record<number, string[]> = {}
       for (const b of bamList) {
         const famId = b.famiglia?.id
@@ -239,10 +372,17 @@ export default function FatturePage() {
         const nomeB = b.alias_attivo && b.alias_nome ? b.alias_nome : b.nome
         const key = fam.genitore1
         if (!map[key]) map[key] = []
-        map[key].push(`${nomeB} ${b.cognome}`)
+        if (!map[key].includes(`${nomeB} ${b.cognome}`)) {
+          map[key].push(`${nomeB} ${b.cognome}`)
+        }
       }
 
-      setFamiglie(famList)
+      // Deduplicazione: una sola riga per genitore1 (anche se ha figli in famiglie diverse)
+      const genitoriMap = new Map<number, Famiglia>()
+      for (const fam of famList) {
+        if (!genitoriMap.has(fam.genitore1)) genitoriMap.set(fam.genitore1, fam)
+      }
+      setFamiglie(Array.from(genitoriMap.values()))
       setBambiniMap(map)
       setFatture(fattureData.results ?? fattureData)
     } finally {
@@ -252,19 +392,19 @@ export default function FatturePage() {
 
   useEffect(() => { carica() }, [carica])
 
-  // Indice rapido: genitore1Id-mese → Fattura
+  // Indice rapido fatture: genitoreId-mese → Fattura
   const fattureMap: Record<string, Fattura> = {}
   fatture.forEach(f => { fattureMap[`${f.genitore}-${f.mese}`] = f })
 
   const famiglieFiltrate = famiglie.filter(fam => {
     if (!search) return true
     const q = search.toLowerCase()
-    return fam.genitore1_nome.toLowerCase().includes(q) || fam.genitore1_email.toLowerCase().includes(q)
+    const figli = (bambiniMap[fam.genitore1] ?? []).join(' ').toLowerCase()
+    return fam.genitore1_nome.toLowerCase().includes(q)
+      || fam.genitore1_email.toLowerCase().includes(q)
+      || figli.includes(q)
   })
 
-  const modalFattura = modal ? fattureMap[`${modal.genitoreId}-${modal.mese}`] ?? null : null
-
-  // Totali per riga e complessivo
   function totaleGenitore(genitoreId: number): number {
     return mesiAnno.reduce((acc, { mese }) => {
       const f = fattureMap[`${genitoreId}-${mese}`]
@@ -272,10 +412,17 @@ export default function FatturePage() {
     }, 0)
   }
 
-  const totaleComplessivo = famiglieFiltrate.reduce((acc, fam) => acc + totaleGenitore(fam.genitore1), 0)
   const totaleFatture = famiglieFiltrate.reduce((acc, fam) =>
     acc + mesiAnno.filter(({ mese }) => fattureMap[`${fam.genitore1}-${mese}`]).length, 0)
   const totaleMancanti = famiglieFiltrate.length * mesiAnno.length - totaleFatture
+  const totaleComplessivo = famiglieFiltrate.reduce((acc, fam) => acc + totaleGenitore(fam.genitore1), 0)
+
+  const familyModalData = familyModal ? famiglieFiltrate.find(f => f.genitore1 === familyModal.genitoreId) ?? null : null
+
+  const handleLogout = async () => {
+    await fetch('/api/auth/logout', { method: 'POST' })
+    router.push(`/${locale}/login`)
+  }
 
   if (loading) {
     return (
@@ -283,11 +430,6 @@ export default function FatturePage() {
         <p style={{ color: '#6C63FF', fontWeight: 600 }}>Caricamento...</p>
       </div>
     )
-  }
-
-  const handleLogout = async () => {
-    await fetch('/api/auth/logout', { method: 'POST' })
-    router.push(`/${locale}/login`)
   }
 
   return (
@@ -298,14 +440,14 @@ export default function FatturePage() {
         <div style={{ maxWidth: 'min(1200px, 96vw)', margin: '0 auto' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.875rem' }}>
             <button onClick={() => router.push(`/${locale}/dashboard/admin`)}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem', background: 'rgba(255,255,255,0.15)', color: 'white', border: '1.5px solid rgba(255,255,255,0.3)', borderRadius: '20px', padding: '0.35rem 0.875rem 0.35rem 0.625rem', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 600, fontFamily: 'inherit' }}>
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem', background: 'rgba(255,255,255,0.15)', color: 'white', border: '1.5px solid rgba(255,255,255,0.3)', borderRadius: '20px', padding: '0.35rem 0.875rem', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 600, fontFamily: 'inherit' }}>
               ← Dashboard
             </button>
             <UserChip onLogout={handleLogout} />
           </div>
           <h1 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 800 }}>🧾 Gestione Fatture</h1>
           <p style={{ margin: '0.25rem 0 0', opacity: 0.85, fontSize: '0.85rem' }}>
-            {totaleFatture} fatture caricate · {totaleMancanti > 0 ? `${totaleMancanti} mancanti` : 'tutto in ordine ✓'}
+            {totaleFatture} fatture caricate · {totaleMancanti > 0 ? `${totaleMancanti} mancanti` : '✓ tutto in ordine'}
           </p>
         </div>
       </div>
@@ -314,8 +456,8 @@ export default function FatturePage() {
 
         {/* Toolbar */}
         <div style={{ background: 'white', borderRadius: '14px', padding: '0.875rem 1rem', marginBottom: '1rem', display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
-          <input type="search" placeholder="Cerca genitore o bambino..." value={search} onChange={e => setSearch(e.target.value)}
-            style={{ flex: 1, minWidth: '160px', padding: '0.5rem 0.875rem', border: '1px solid #E2E8F0', borderRadius: '10px', fontSize: '0.875rem', fontFamily: 'inherit' }} />
+          <input type="search" placeholder="Cerca per nome, email o bambino..." value={search} onChange={e => setSearch(e.target.value)}
+            style={{ flex: 1, minWidth: '200px', padding: '0.5rem 0.875rem', border: '1px solid #E2E8F0', borderRadius: '10px', fontSize: '0.875rem', fontFamily: 'inherit' }} />
           <div style={{ display: 'flex', gap: '0.375rem' }}>
             {[...new Set(mesi.map(m => m.anno))].sort((a, b) => b - a).map(a => (
               <button key={a} onClick={() => setAnno(a)}
@@ -326,27 +468,20 @@ export default function FatturePage() {
           </div>
         </div>
 
-        {/* Legenda */}
-        <div style={{ display: 'flex', gap: '1rem', marginBottom: '0.75rem', fontSize: '0.78rem', color: '#666' }}>
-          <span><span style={{ display: 'inline-block', width: 12, height: 12, borderRadius: '50%', background: '#48BB78', marginRight: 4, verticalAlign: 'middle' }} />Caricata</span>
-          <span><span style={{ display: 'inline-block', width: 12, height: 12, borderRadius: '50%', background: '#FC8181', marginRight: 4, verticalAlign: 'middle' }} />Mancante mese corrente</span>
-          <span style={{ color: '#aaa' }}>Clicca su una cella per caricare o modificare</span>
-        </div>
-
         {/* Tabella */}
         <div style={{ background: 'white', borderRadius: '16px', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.825rem' }}>
             <thead>
               <tr style={{ background: '#F7FAFC' }}>
                 <th style={{ padding: '0.75rem 1rem', textAlign: 'left', fontWeight: 700, color: '#555', borderBottom: '2px solid #E2E8F0', whiteSpace: 'nowrap', position: 'sticky', left: 0, background: '#F7FAFC', zIndex: 1 }}>
-                  Genitore / Bambini
+                  Genitore / Figli
                 </th>
                 {mesiAnno.map(({ anno: a, mese: m }) => (
-                  <th key={m} style={{ padding: '0.625rem 0.5rem', textAlign: 'center', fontWeight: 700, color: '#555', borderBottom: '2px solid #E2E8F0', whiteSpace: 'nowrap', minWidth: 70 }}>
-                    {labelColonna(a, m)}
+                  <th key={m} style={{ padding: '0.625rem 0.5rem', textAlign: 'center', fontWeight: 700, color: '#555', borderBottom: '2px solid #E2E8F0', whiteSpace: 'nowrap', minWidth: 60 }}>
+                    {MESI_SHORT[m - 1]}
                   </th>
                 ))}
-                <th style={{ padding: '0.625rem 0.75rem', textAlign: 'right', fontWeight: 700, color: '#555', borderBottom: '2px solid #E2E8F0', whiteSpace: 'nowrap', minWidth: 80 }}>
+                <th style={{ padding: '0.625rem 0.75rem', textAlign: 'right', fontWeight: 700, color: '#555', borderBottom: '2px solid #E2E8F0', whiteSpace: 'nowrap', minWidth: 90 }}>
                   Totale {anno}
                 </th>
               </tr>
@@ -359,52 +494,75 @@ export default function FatturePage() {
                   </td>
                 </tr>
               ) : famiglieFiltrate.map((fam, i) => {
-                const figliBambini = bambiniMap[fam.genitore1] ?? []
+                const figli = bambiniMap[fam.genitore1] ?? []
                 const totaleR = totaleGenitore(fam.genitore1)
+                const mesiPagatiAnno = mesiAnno.filter(({ mese: m }) => fattureMap[`${fam.genitore1}-${m}`]).length
+
                 return (
-                  <tr key={fam.id}
-                    style={{ background: i % 2 === 0 ? 'white' : '#FAFAFA' }}
+                  <tr key={fam.genitore1} style={{ background: i % 2 === 0 ? 'white' : '#FAFAFA' }}
                     onMouseEnter={e => (e.currentTarget.style.background = '#EDE9FE')}
                     onMouseLeave={e => (e.currentTarget.style.background = i % 2 === 0 ? 'white' : '#FAFAFA')}>
-                    {/* Genitore + bambini — colonna fissa */}
-                    <td style={{ padding: '0.625rem 1rem', borderBottom: '1px solid #F0F0F0', position: 'sticky', left: 0, background: 'inherit', zIndex: 1 }}>
-                      <p style={{ margin: 0, fontWeight: 700, color: '#333', whiteSpace: 'nowrap' }}>
-                        {fam.genitore1_nome || fam.genitore1_email}
-                      </p>
-                      {figliBambini.length > 0 && (
-                        <p style={{ margin: '0.1rem 0 0', fontSize: '0.72rem', color: '#6C63FF', fontWeight: 600 }}>
-                          👶 {figliBambini.join(' · ')}
-                        </p>
-                      )}
-                      <p style={{ margin: '0.05rem 0 0', fontSize: '0.7rem', color: '#aaa' }}>{fam.genitore1_email}</p>
+
+                    {/* Colonna nome — clic apre FamilyModal */}
+                    <td
+                      style={{ padding: '0.625rem 1rem', borderBottom: '1px solid #F0F0F0', position: 'sticky', left: 0, background: 'inherit', zIndex: 1, cursor: 'pointer' }}
+                      onClick={() => setFamilyModal({ genitoreId: fam.genitore1 })}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <div>
+                          <p style={{ margin: 0, fontWeight: 700, color: '#333', whiteSpace: 'nowrap' }}>
+                            {fam.genitore1_nome || fam.genitore1_email}
+                          </p>
+                          {figli.length > 0 && (
+                            <p style={{ margin: '0.1rem 0 0', fontSize: '0.72rem', color: '#6C63FF', fontWeight: 600 }}>
+                              👶 {figli.join(' · ')}
+                            </p>
+                          )}
+                          <p style={{ margin: '0.05rem 0 0', fontSize: '0.7rem', color: '#aaa' }}>{fam.genitore1_email}</p>
+                        </div>
+                        {/* Badge stato */}
+                        <span style={{
+                          marginLeft: 'auto',
+                          flexShrink: 0,
+                          fontSize: '0.7rem', fontWeight: 700,
+                          background: mesiPagatiAnno === mesiAnno.length ? '#F0FFF4' : '#FFF5F5',
+                          color: mesiPagatiAnno === mesiAnno.length ? '#27AE60' : '#E53E3E',
+                          border: `1px solid ${mesiPagatiAnno === mesiAnno.length ? '#C6F6D5' : '#FEB2B2'}`,
+                          borderRadius: 12,
+                          padding: '2px 8px',
+                          whiteSpace: 'nowrap',
+                        }}>
+                          {mesiPagatiAnno}/{mesiAnno.length}
+                        </span>
+                      </div>
                     </td>
-                    {/* Celle per ogni mese */}
+
+                    {/* Celle mese */}
                     {mesiAnno.map(({ anno: a, mese: m }) => {
                       const f = fattureMap[`${fam.genitore1}-${m}`]
-                      const meseCorrente = new Date().getMonth() + 1
-                      const annoCorrente = new Date().getFullYear()
-                      const isCurrent = m === meseCorrente && a === annoCorrente
+                      const isCurrent = m === new Date().getMonth() + 1 && a === new Date().getFullYear()
                       return (
                         <td key={m}
-                          onClick={() => setModal({ genitoreId: fam.genitore1, genitoreName: fam.genitore1_nome || fam.genitore1_email, anno: a, mese: m })}
+                          onClick={() => setFamilyModal({ genitoreId: fam.genitore1, initialMese: m })}
                           style={{ padding: '0.5rem', textAlign: 'center', borderBottom: '1px solid #F0F0F0', cursor: 'pointer' }}>
                           {f ? (
-                            <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: '0.15rem' }}>
-                              <span style={{ fontSize: '1rem' }}>✅</span>
-                              {f.importo && <span style={{ fontSize: '0.68rem', fontWeight: 700, color: '#27AE60' }}>€{parseFloat(f.importo).toFixed(0)}</span>}
+                            <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center', gap: '0.1rem' }}>
+                              <span style={{ fontSize: '0.9rem' }}>✅</span>
+                              {f.importo && <span style={{ fontSize: '0.65rem', fontWeight: 700, color: '#27AE60' }}>€{parseFloat(f.importo).toFixed(0)}</span>}
                             </div>
                           ) : (
                             <span style={{
-                              fontSize: '0.72rem', fontWeight: 700, padding: '0.2rem 0.4rem', borderRadius: '6px',
+                              fontSize: '0.68rem', fontWeight: 700, padding: '0.15rem 0.4rem', borderRadius: '6px',
                               background: isCurrent ? '#FFF5F5' : '#F7FAFC',
                               color: isCurrent ? '#FC8181' : '#CBD5E0',
                             }}>
-                              {isCurrent ? '⚠ da fare' : '—'}
+                              {isCurrent ? '⚠' : '—'}
                             </span>
                           )}
                         </td>
                       )
                     })}
+
                     {/* Totale riga */}
                     <td style={{ padding: '0.5rem 0.75rem', textAlign: 'right', borderBottom: '1px solid #F0F0F0', whiteSpace: 'nowrap' }}>
                       {totaleR > 0 ? (
@@ -419,7 +577,7 @@ export default function FatturePage() {
                 )
               })}
             </tbody>
-            {/* Footer: totale complessivo */}
+
             {famiglieFiltrate.length > 0 && (
               <tfoot>
                 <tr style={{ background: '#F7FAFC', borderTop: '2px solid #E2E8F0' }}>
@@ -433,11 +591,9 @@ export default function FatturePage() {
                     }, 0)
                     return (
                       <td key={m} style={{ padding: '0.5rem', textAlign: 'center' }}>
-                        {tot > 0 ? (
-                          <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#4A5568' }}>€{tot.toFixed(0)}</span>
-                        ) : (
-                          <span style={{ fontSize: '0.72rem', color: '#CBD5E0' }}>—</span>
-                        )}
+                        {tot > 0
+                          ? <span style={{ fontSize: '0.75rem', fontWeight: 700, color: '#4A5568' }}>€{tot.toFixed(0)}</span>
+                          : <span style={{ fontSize: '0.72rem', color: '#CBD5E0' }}>—</span>}
                       </td>
                     )
                   })}
@@ -452,21 +608,22 @@ export default function FatturePage() {
           </table>
         </div>
 
-        {/* Riepilogo mese corrente */}
+        {/* Alert mese corrente */}
         {(() => {
           const meseC = new Date().getMonth() + 1
           const annoC = new Date().getFullYear()
+          if (anno !== annoC) return null
           const scoperti = famiglieFiltrate.filter(fam => !fattureMap[`${fam.genitore1}-${meseC}`])
           if (scoperti.length === 0) return null
           return (
             <div style={{ marginTop: '1.25rem', background: '#FFF5F5', borderRadius: '14px', padding: '1rem 1.25rem', border: '1px solid #FEB2B2' }}>
               <p style={{ margin: '0 0 0.625rem', fontWeight: 700, color: '#C53030', fontSize: '0.9rem' }}>
-                ⚠ Fatture mancanti per {labelColonna(annoC, meseC)} ({scoperti.length})
+                ⚠ Fatture mancanti per {MESI_LABEL[meseC - 1]} {annoC} ({scoperti.length})
               </p>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
                 {scoperti.map(fam => (
-                  <button key={fam.id}
-                    onClick={() => setModal({ genitoreId: fam.genitore1, genitoreName: fam.genitore1_nome || fam.genitore1_email, anno: annoC, mese: meseC })}
+                  <button key={fam.genitore1}
+                    onClick={() => setFamilyModal({ genitoreId: fam.genitore1, initialMese: meseC })}
                     style={{ padding: '0.3rem 0.75rem', background: 'white', border: '1px solid #FEB2B2', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 600, color: '#C53030', cursor: 'pointer', fontFamily: 'inherit' }}>
                     {fam.genitore1_nome || fam.genitore1_email}
                   </button>
@@ -475,18 +632,20 @@ export default function FatturePage() {
             </div>
           )
         })()}
-
       </div>
 
-      {modal && (
-        <UploadModal
-          genitoreId={modal.genitoreId}
-          genitoreName={modal.genitoreName}
-          anno={modal.anno}
-          mese={modal.mese}
-          existing={modalFattura}
-          onClose={() => setModal(null)}
-          onSaved={() => { setModal(null); carica() }}
+      {/* FamilyModal */}
+      {familyModal && familyModalData && (
+        <FamilyModal
+          genitoreId={familyModal.genitoreId}
+          genitoreName={familyModalData.genitore1_nome || familyModalData.genitore1_email}
+          genitoreEmail={familyModalData.genitore1_email}
+          figli={bambiniMap[familyModal.genitoreId] ?? []}
+          anno={anno}
+          fattureMap={fattureMap}
+          onClose={() => setFamilyModal(null)}
+          onRefresh={() => { carica() }}
+          initialMese={familyModal.initialMese}
         />
       )}
     </div>

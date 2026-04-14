@@ -13,6 +13,12 @@ interface MeData {
 let _cache: MeData | null = null
 let _promise: Promise<MeData | null> | null = null
 
+/** Da chiamare in ogni handler logout prima del redirect. */
+export function clearUserCache() {
+  _cache = null
+  _promise = null
+}
+
 function getMe(): Promise<MeData | null> {
   if (_cache) return Promise.resolve(_cache)
   if (!_promise) {
@@ -124,7 +130,7 @@ export default function UserChip({ onLogout }: { onLogout: () => void }) {
 
           {/* Logout */}
           <button
-            onClick={() => { setOpen(false); onLogout() }}
+            onClick={() => { _cache = null; _promise = null; setOpen(false); onLogout() }}
             style={{
               width: '100%', padding: '0.6rem 0.75rem',
               background: 'none', border: 'none', borderRadius: '8px',

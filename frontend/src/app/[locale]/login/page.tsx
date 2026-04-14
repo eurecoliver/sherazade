@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useTranslations, useLocale } from 'next-intl'
 import { useRouter } from 'next/navigation'
+import { clearUserCache } from '@/components/UserChip'
 
 function getRolePath(role: string): string {
   switch (role) {
@@ -64,6 +65,7 @@ export default function LoginPage() {
         return
       }
 
+      clearUserCache()
       router.push(`/${locale}${getRolePath(data.role)}`)
     } catch {
       setError(t('errorGeneric'))

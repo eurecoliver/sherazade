@@ -53,12 +53,21 @@ class MediaPortfolioSerializer(serializers.ModelSerializer):
         ]
 
     def _abs_url(self, field_file):
-        request = self.context.get('request')
         if not field_file:
             return None
         try:
+            from django.conf import settings
             url = field_file.url
-            return request.build_absolute_uri(url) if request else url
+            if getattr(settings, 'USE_S3', False):
+                internal = getattr(settings, 'AWS_S3_ENDPOINT_URL', '')
+                external = getattr(settings, 'AWS_S3_ENDPOINT_URL_EXTERNAL', '')
+                if external and internal and url.startswith(internal):
+                    url = url.replace(internal, external, 1)
+                return url
+            else:
+                base = getattr(settings, 'MEDIA_EXTERNAL_BASE_URL', '').rstrip('/')
+                request = self.context.get('request')
+                return f'{base}{url}' if base else (request.build_absolute_uri(url) if request else url)
         except Exception:
             return None
 
