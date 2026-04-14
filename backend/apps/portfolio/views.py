@@ -75,16 +75,19 @@ class MediaPortfolioViewSet(viewsets.ModelViewSet):
         if user.role == 'genitore':
             try:
                 from apps.children.models import Famiglia
+                # Famiglia ha OneToOneField → bambino (singolo, non plurale)
                 famiglie = Famiglia.objects.filter(
                     Q(genitore1=user) | Q(genitore2=user)
+                ).select_related('bambino', 'bambino__gruppo').prefetch_related(
+                    'bambino__iscrizioni__anno', 'bambino__iscrizioni__gruppo'
                 )
                 pairs = set()
                 bambini_list = []
                 for famiglia in famiglie:
-                    for bambino in famiglia.bambini.prefetch_related('iscrizioni__anno', 'iscrizioni__gruppo'):
-                        bambini_list.append(bambino)
-                        for iscr in bambino.iscrizioni.all():
-                            pairs.add((iscr.anno_id, iscr.gruppo_id))
+                    bambino = famiglia.bambino
+                    bambini_list.append(bambino)
+                    for iscr in bambino.iscrizioni.all():
+                        pairs.add((iscr.anno_id, iscr.gruppo_id))
 
                 if not pairs:
                     # Fallback: usa il gruppo corrente del bambino per tutti gli anni
