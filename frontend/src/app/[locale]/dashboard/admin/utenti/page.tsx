@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useLocale } from 'next-intl'
 import { useRouter } from 'next/navigation'
+import UserChip from '@/components/UserChip'
 
 interface Utente {
   id: number
@@ -42,7 +43,6 @@ export default function UtentiPage() {
   const [utenti, setUtenti] = useState<Utente[]>([])
   const [ruoli, setRuoli] = useState<Ruolo[]>([])
   const [currentRole, setCurrentRole] = useState('')
-  const [currentName, setCurrentName] = useState('')
   const [loading, setLoading] = useState(true)
   const [filterRole, setFilterRole] = useState('')
   const [search, setSearch] = useState('')
@@ -76,10 +76,7 @@ export default function UtentiPage() {
   useEffect(() => {
     fetch('/api/auth/me')
       .then(r => r.ok ? r.json() : Promise.reject(r.status))
-      .then(me => {
-        setCurrentRole(me.role ?? '')
-        setCurrentName(me.first_name ?? '')
-      })
+      .then(me => { setCurrentRole(me.role ?? '') })
       .catch(err => console.warn('[utenti] /api/auth/me fallito:', err))
   }, [])
   useEffect(() => { fetchRuoli() }, [fetchRuoli])
@@ -156,6 +153,11 @@ export default function UtentiPage() {
   const ruoliCodici = ruoli.map(r => r.codice)
   const ruoliSconosciuti = Object.keys(grouped).filter(r => !ruoliCodici.includes(r))
 
+  const handleLogout = async () => {
+    await fetch('/api/auth/logout', { method: 'POST' })
+    router.push(`/${locale}/login`)
+  }
+
   return (
     <div style={{ minHeight: '100vh', background: '#F3F0FF' }}>
 
@@ -169,11 +171,7 @@ export default function UtentiPage() {
             >
               ← Dashboard
             </button>
-            {currentRole && (
-              <span style={{ fontSize: '0.82rem', fontWeight: 600, opacity: 0.85 }}>
-                👤 {currentName || nomeRuolo(currentRole)}
-              </span>
-            )}
+            <UserChip onLogout={handleLogout} />
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: '0.75rem' }}>
             <div>

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useLocale } from 'next-intl'
 import { useRouter } from 'next/navigation'
+import UserChip from '@/components/UserChip'
 
 interface Fattura {
   id: number
@@ -40,17 +41,25 @@ export default function GenitoreFatturePage() {
       .finally(() => setLoading(false))
   }, [])
 
+  const handleLogout = async () => {
+    await fetch('/api/auth/logout', { method: 'POST' })
+    router.push(`/${locale}/login`)
+  }
+
   return (
     <div style={{ minHeight: '100vh', background: '#FFF3EE' }}>
       {/* Header gradient */}
       <div style={{ background: 'linear-gradient(135deg, #276749 0%, #1a4731 100%)', padding: '1.5rem 1.5rem 2rem', color: 'white' }}>
         <div style={{ maxWidth: 'min(860px, 96vw)', margin: '0 auto' }}>
-          <button
-            onClick={() => router.push(`/${locale}/dashboard/genitore`)}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem', background: 'rgba(255,255,255,0.15)', color: 'white', border: '1.5px solid rgba(255,255,255,0.3)', borderRadius: '20px', padding: '0.35rem 0.875rem 0.35rem 0.625rem', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 600, fontFamily: 'inherit', marginBottom: '0.875rem' }}
-          >
-            ← Dashboard
-          </button>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.875rem' }}>
+            <button
+              onClick={() => router.push(`/${locale}/dashboard/genitore`)}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem', background: 'rgba(255,255,255,0.15)', color: 'white', border: '1.5px solid rgba(255,255,255,0.3)', borderRadius: '20px', padding: '0.35rem 0.875rem 0.35rem 0.625rem', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 600, fontFamily: 'inherit' }}
+            >
+              ← Dashboard
+            </button>
+            <UserChip onLogout={handleLogout} />
+          </div>
           <h1 style={{ margin: 0, fontSize: 'clamp(1.4rem, 4vw, 1.9rem)', fontWeight: 800 }}>🧾 Le mie fatture</h1>
           <p style={{ margin: '0.25rem 0 0', opacity: 0.85, fontSize: '0.875rem' }}>Documenti di pagamento caricati dalla scuola</p>
         </div>

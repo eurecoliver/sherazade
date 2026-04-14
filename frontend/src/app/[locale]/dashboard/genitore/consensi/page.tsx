@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useLocale } from 'next-intl'
 import { useRouter } from 'next/navigation'
+import UserChip from '@/components/UserChip'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -61,7 +62,6 @@ const BACK_BTN: React.CSSProperties = {
   fontSize: '0.82rem',
   fontWeight: 600,
   fontFamily: 'inherit',
-  marginBottom: '0.875rem',
 }
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -143,15 +143,23 @@ export default function GenitoreConsensiPage() {
     )
   }
 
+  const handleLogout = async () => {
+    await fetch('/api/auth/logout', { method: 'POST' })
+    router.push(`/${locale}/login`)
+  }
+
   return (
     <div style={{ minHeight: '100vh', background: '#FFF3EE' }}>
 
       {/* Header */}
       <div style={{ background: 'linear-gradient(135deg, #E17055 0%, #C0392B 100%)', padding: '1.5rem 1.5rem 2rem', color: 'white' }}>
         <div style={{ maxWidth: 'min(860px, 96vw)', margin: '0 auto' }}>
-          <button onClick={() => router.push(`/${locale}/dashboard/genitore`)} style={BACK_BTN}>
-            ← Dashboard
-          </button>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.875rem' }}>
+            <button onClick={() => router.push(`/${locale}/dashboard/genitore`)} style={BACK_BTN}>
+              ← Dashboard
+            </button>
+            <UserChip onLogout={handleLogout} />
+          </div>
           <h1 style={{ margin: 0, fontSize: 'clamp(1.4rem, 4vw, 1.9rem)', fontWeight: 800 }}>📷 I miei consensi</h1>
           <p style={{ margin: '0.25rem 0 0', opacity: 0.85, fontSize: '0.875rem' }}>
             Gestisci le autorizzazioni fotografiche per i tuoi figli

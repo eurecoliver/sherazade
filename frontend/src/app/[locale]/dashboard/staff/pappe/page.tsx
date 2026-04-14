@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useLocale } from 'next-intl'
 import { useRouter } from 'next/navigation'
+import UserChip from '@/components/UserChip'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -261,14 +262,22 @@ export default function StaffPappePage() {
     return (menu.piatti[tipo]?.length ?? 0) > 0 || ['primo', 'secondo'].includes(tipo)
   })
 
+  const handleLogout = async () => {
+    await fetch('/api/auth/logout', { method: 'POST' })
+    router.push(`/${locale}/login`)
+  }
+
   return (
     <div style={{ minHeight: '100vh', background: '#EAF4FF' }}>
 
       <div style={{ background: 'linear-gradient(135deg, #0984E3 0%, #0652DD 100%)', padding: '1.5rem 1.5rem 2rem', color: 'white' }}>
         <div style={{ maxWidth: 'min(1080px, 96vw)', margin: '0 auto' }}>
-          <button onClick={() => router.push(`/${locale}/dashboard/staff`)} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem', background: 'rgba(255,255,255,0.15)', color: 'white', border: '1.5px solid rgba(255,255,255,0.3)', borderRadius: '20px', padding: '0.35rem 0.875rem 0.35rem 0.625rem', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 600, fontFamily: 'inherit', marginBottom: '0.875rem' }}>
-            ← Dashboard
-          </button>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.875rem' }}>
+            <button onClick={() => router.push(`/${locale}/dashboard/staff`)} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem', background: 'rgba(255,255,255,0.15)', color: 'white', border: '1.5px solid rgba(255,255,255,0.3)', borderRadius: '20px', padding: '0.35rem 0.875rem 0.35rem 0.625rem', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 600, fontFamily: 'inherit' }}>
+              ← Dashboard
+            </button>
+            <UserChip onLogout={handleLogout} />
+          </div>
           <h1 style={{ margin: 0, fontSize: '1.75rem', fontWeight: 800 }}>🥣 Foglio Pappe</h1>
           <p style={{ margin: '0.25rem 0 0', opacity: 0.85, fontSize: '0.875rem' }}>
             {compilati}/{entries.length} bambini compilati

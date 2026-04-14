@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useLocale } from 'next-intl'
 import { useRouter } from 'next/navigation'
+import UserChip from '@/components/UserChip'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -301,18 +302,26 @@ export default function AdminPresenzePage() {
   const totAssenti = righe.filter(r => r.presenza?.presente === false).length
   const totNonReg = righe.filter(r => !r.presenza).length
 
+  const handleLogout = async () => {
+    await fetch('/api/auth/logout', { method: 'POST' })
+    router.push(`/${locale}/login`)
+  }
+
   return (
     <div style={{ minHeight: '100vh', background: '#F8F9FA' }}>
 
       {/* Header */}
       <div style={{ background: 'linear-gradient(135deg, #2D3436 0%, #636E72 100%)', padding: '1.25rem 1.5rem 1.75rem', color: 'white' }}>
         <div style={{ maxWidth: 'min(1080px, 96vw)', margin: '0 auto' }}>
-          <button
-            onClick={() => router.push(`/${locale}/dashboard/admin`)}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem', background: 'rgba(255,255,255,0.15)', color: 'white', border: '1.5px solid rgba(255,255,255,0.3)', borderRadius: '20px', padding: '0.35rem 0.875rem 0.35rem 0.625rem', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 600, fontFamily: 'inherit', marginBottom: '0.875rem' }}
-          >
-            ← Dashboard
-          </button>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.875rem' }}>
+            <button
+              onClick={() => router.push(`/${locale}/dashboard/admin`)}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem', background: 'rgba(255,255,255,0.15)', color: 'white', border: '1.5px solid rgba(255,255,255,0.3)', borderRadius: '20px', padding: '0.35rem 0.875rem 0.35rem 0.625rem', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 600, fontFamily: 'inherit' }}
+            >
+              ← Dashboard
+            </button>
+            <UserChip onLogout={handleLogout} />
+          </div>
           <h1 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 800 }}>📋 Registro Presenze</h1>
         </div>
       </div>

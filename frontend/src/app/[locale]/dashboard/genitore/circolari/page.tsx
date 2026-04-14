@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useLocale } from 'next-intl'
 import { useRouter } from 'next/navigation'
+import UserChip from '@/components/UserChip'
 
 interface Circolare {
   id: number
@@ -61,18 +62,26 @@ export default function CircolariGenitore() {
     return d.toLocaleDateString('it-IT', { day: '2-digit', month: 'long', year: 'numeric' })
   }
 
+  const handleLogout = async () => {
+    await fetch('/api/auth/logout', { method: 'POST' })
+    router.push(`/${locale}/login`)
+  }
+
   return (
     <div style={{ minHeight: '100vh', background: '#FFF3EE' }}>
 
       {/* Header */}
       <div style={{ background: 'linear-gradient(135deg, #E17055 0%, #C0392B 100%)', padding: '2rem 1.5rem 3rem', color: 'white' }}>
         <div style={{ maxWidth: 'min(720px, 96vw)', margin: '0 auto' }}>
-          <button
-            onClick={() => router.push(`/${locale}/dashboard/genitore`)}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem', background: 'rgba(255,255,255,0.15)', color: 'white', border: '1.5px solid rgba(255,255,255,0.3)', borderRadius: '20px', padding: '0.35rem 0.875rem 0.35rem 0.625rem', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 600, fontFamily: 'inherit', marginBottom: '0.875rem' }}
-          >
-            ‹ Dashboard
-          </button>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.875rem' }}>
+            <button
+              onClick={() => router.push(`/${locale}/dashboard/genitore`)}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem', background: 'rgba(255,255,255,0.15)', color: 'white', border: '1.5px solid rgba(255,255,255,0.3)', borderRadius: '20px', padding: '0.35rem 0.875rem 0.35rem 0.625rem', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 600, fontFamily: 'inherit' }}
+            >
+              ‹ Dashboard
+            </button>
+            <UserChip onLogout={handleLogout} />
+          </div>
           <h1 style={{ margin: 0, fontSize: 'clamp(1.4rem, 4vw, 1.8rem)', fontWeight: 800 }}>📢 Circolari</h1>
           <p style={{ margin: '0.25rem 0 0', opacity: 0.85, fontSize: '0.875rem' }}>
             Comunicazioni dal nido

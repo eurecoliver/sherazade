@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useTranslations, useLocale } from 'next-intl'
 import { useRouter } from 'next/navigation'
+import UserChip from '@/components/UserChip'
 
 interface User {
   id: number
@@ -94,23 +95,7 @@ export default function GenitoreDashboard() {
                 {t(`roles.${user.role}` as Parameters<typeof t>[0])}
               </p>
             </div>
-            <button
-              onClick={handleLogout}
-              style={{
-                padding: '0.5rem 1.1rem',
-                background: 'rgba(255,255,255,0.15)',
-                color: 'white',
-                border: '1.5px solid rgba(255,255,255,0.35)',
-                borderRadius: '20px',
-                fontSize: '0.82rem',
-                fontWeight: 600,
-                cursor: 'pointer',
-                fontFamily: 'inherit',
-                flexShrink: 0,
-              }}
-            >
-              Esci
-            </button>
+            <UserChip onLogout={handleLogout} />
           </div>
 
           {/* Figli */}
