@@ -38,10 +38,14 @@ class OrarioUscitaViewSet(viewsets.ModelViewSet):
 
 
 class RuoloViewSet(viewsets.ModelViewSet):
-    """CRUD ruoli. Solo Admin può creare/modificare/eliminare ruoli."""
+    """CRUD ruoli. Lettura: tutti gli autenticati. Scrittura: solo Admin."""
     serializer_class = RuoloSerializer
-    permission_classes = [IsAuthenticated, IsAdminOnly]
     pagination_class = None
+
+    def get_permissions(self):
+        if self.action in ('list', 'retrieve'):
+            return [IsAuthenticated()]
+        return [IsAuthenticated(), IsAdminOnly()]
 
     def get_queryset(self):
         return Ruolo.objects.all()
@@ -58,7 +62,7 @@ class RuoloViewSet(viewsets.ModelViewSet):
 
     def destroy(self, request, *args, **kwargs):
         ruolo = self.get_object()
-        if ruolo.sistema:
+        if ruolo.codice == 'admin' or ruolo.sistema:
             return Response(
                 {'detail': 'Non puoi eliminare un ruolo di sistema.'},
                 status=status.HTTP_400_BAD_REQUEST,

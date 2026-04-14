@@ -176,7 +176,7 @@ export default function ImpostazioniPage() {
   }
 
   const deleteRuolo = async (r: Ruolo) => {
-    if (r.sistema) return
+    if (r.sistema || r.codice === 'admin') return
     setDeletingRuolo(r.id)
     try {
       const res = await fetch(`/api/config/ruoli/${r.id}`, { method: 'DELETE' })
@@ -456,7 +456,7 @@ export default function ImpostazioniPage() {
                             {r.sistema ? 'Accesso completo · non configurabile' : `${r.user_count} utenti · codice: ${r.codice}`}
                           </div>
                         </div>
-                        {!r.sistema && (
+                        {!r.sistema && r.codice !== 'admin' && (
                           <div style={{ display: 'flex', gap: '0.4rem' }} onClick={e => e.stopPropagation()}>
                             <button onClick={() => openEditRuolo(r)}
                               style={{ padding: '0.3rem 0.65rem', background: '#F3F0FF', color: '#6C5CE7', border: '1px solid #D6CCFF', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
