@@ -132,3 +132,17 @@ class UserAdminViewSet(viewsets.ModelViewSet):
         if attivo is not None:
             qs = qs.filter(is_active=attivo.lower() == 'true')
         return qs
+
+    def _check_admin_role(self, role_value):
+        """Blocca assegnazione ruolo admin a chiunque non sia admin."""
+        if role_value == 'admin' and self.request.user.role != 'admin':
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied('Solo un admin può creare o assegnare il ruolo admin.')
+
+    def perform_create(self, serializer):
+        self._check_admin_role(serializer.validated_data.get('role', ''))
+        serializer.save()
+
+    def perform_update(self, serializer):
+        self._check_admin_role(serializer.validated_data.get('role', self.get_object().role))
+        serializer.save()

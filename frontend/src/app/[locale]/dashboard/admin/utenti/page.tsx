@@ -286,7 +286,7 @@ export default function UtentiPage() {
                 <label style={{ fontSize: '0.8rem', fontWeight: 600, color: '#555', display: 'block', marginBottom: '0.25rem' }}>Ruolo</label>
                 <select value={form.role} onChange={e => setForm(f => ({ ...f, role: e.target.value }))}
                   style={{ width: '100%', padding: '0.6rem', borderRadius: '8px', border: '1.5px solid #D6CCFF', fontSize: '0.9rem', fontFamily: 'inherit', background: 'white', boxSizing: 'border-box' }}>
-                  {ruoli.map(r => <option key={r.codice} value={r.codice}>{r.nome}</option>)}
+                  {ruoli.filter(r => currentRole === 'admin' || r.codice !== 'admin').map(r => <option key={r.codice} value={r.codice}>{r.nome}</option>)}
                 </select>
               </div>
 
