@@ -4,9 +4,7 @@ import { useEffect, useState } from 'react'
 import { useTranslations, useLocale } from 'next-intl'
 import { useRouter } from 'next/navigation'
 
-type Role = 'admin' | 'direttrice' | 'coordinatrice' | 'insegnante' | 'cuoca' | 'genitore'
-
-function getRolePath(role: Role): string {
+function getRolePath(role: string): string {
   switch (role) {
     case 'admin':
     case 'direttrice':
@@ -17,8 +15,10 @@ function getRolePath(role: Role): string {
     case 'cuoca':
       return '/dashboard/cuoca'
     case 'genitore':
-    default:
       return '/dashboard/genitore'
+    default:
+      // Ruoli personalizzati: dashboard admin con navigazione filtrata per permessi
+      return '/dashboard/admin'
   }
 }
 
@@ -40,7 +40,7 @@ export default function LoginPage() {
         throw new Error('not authenticated')
       })
       .then(user => {
-        router.replace(`/${locale}${getRolePath(user.role as Role)}`)
+        router.replace(`/${locale}${getRolePath(user.role)}`)
       })
       .catch(() => setCheckingAuth(false))
   }, [locale, router])
@@ -64,7 +64,7 @@ export default function LoginPage() {
         return
       }
 
-      router.push(`/${locale}${getRolePath(data.role as Role)}`)
+      router.push(`/${locale}${getRolePath(data.role)}`)
     } catch {
       setError(t('errorGeneric'))
     } finally {

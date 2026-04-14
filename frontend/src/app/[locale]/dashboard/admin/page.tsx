@@ -68,7 +68,8 @@ export default function AdminDashboard() {
   }
 
   const base = `/${locale}/dashboard/admin`
-  const allItems = user.role === 'admin' ? [...NAV_ITEMS.slice(0, 4), ADMIN_ONLY, ...NAV_ITEMS.slice(4)] : NAV_ITEMS
+  // "Utenti" è filtrato da canSee('utenti') come tutti gli altri item
+  const allItems = [...NAV_ITEMS.slice(0, 4), ADMIN_ONLY, ...NAV_ITEMS.slice(4)]
   const items = allItems.filter(item => canSee(item.risorsa))
 
   return (
