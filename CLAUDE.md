@@ -49,7 +49,7 @@ Nome interno: Sherazade.
 - [x] Agenda giornaliera condivisa — note di turno per staff
 - [x] Ruoli personalizzati con permessi CRUD granulari
 - [ ] QR code check-in
-- [ ] Portfolio digitale del bambino
+- [x] Portfolio digitale del bambino
 - [x] Fatturazione documentale (PDF, no pagamenti online)
 - [ ] Gestione menu settimanale (sostituita da Pappe v2 con ciclo 5 settimane)
 
@@ -528,7 +528,44 @@ Prossimo task: QR code check-in
 ### Fix nome utente in Gestione Utenti (14 aprile 2026)
 - `utenti/page.tsx`: nome loggato mostra `first_name` se presente, altrimenti `nomeRuolo(role)`; visibile appena `currentRole` è disponibile (non dipende da `currentName`)
 
+### Portfolio digitale del bambino (14 aprile 2026)
+- Nuova app Django `apps.portfolio` con 3 modelli:
+  - `AnnoScolastico`: nome, data_inizio/fine, attivo, descrizione (gestione manuale — supporta anche "Campo Solare" o periodi speciali)
+  - `Iscrizione`: bambino FK + anno FK + gruppo FK, `unique_together (bambino, anno)` — storico gruppo per anno
+  - `MediaPortfolio`: anno FK, gruppo FK, file (MinIO), tipo foto/video, thumbnail (generata server-side), data, autore, soft-delete
+- Thumbnail automatica: Pillow per foto (600px), ffmpeg per video (frame a 1s) — background thread
+- `ffmpeg` aggiunto al `backend/Dockerfile`
+- Permessi via `PermessoRuolo` risorsa 'portfolio': direttrice/coordinatrice/insegnante → CRUD; cuoca/genitore → solo leggi; custom → configurabile
+- Migration `config/0008_add_portfolio_risorsa.py`: seed permessi per tutti i ruoli esistenti
+- Visibilità genitori: filtra per coppie (anno, gruppo) dalle Iscrizioni dei propri figli — genitore con più figli vede l'unione
+- Frontend staff/admin: header gradiente blu, selettore anno (pill), selettore gruppo (pill colorati), strip date scrollabile, drag-drop multi-file con barra progresso, gallery masonry CSS columns, lightbox con prev/next + download + info
+- Frontend genitore: selettore figlio (se più figli), solo anni iscritti, strip date calda arancione, gallery masonry, lightbox warm con overlay sfumato
+- Admin/direttrice: pulsante ⚙️ Anni per creare/visualizzare anni scolastici e periodi speciali
+- Accesso admin alla pagina portfolio via `staff/portfolio` (stessa pagina condivisa — pattern Agenda/Calendario)
+
+**File creati:**
+- `backend/apps/portfolio/__init__.py`, `apps.py`, `admin.py`, `models.py`, `permissions.py`, `serializers.py`, `views.py`, `urls.py`
+- `backend/apps/portfolio/migrations/0001_initial.py`, `migrations/__init__.py`
+- `backend/apps/config/migrations/0008_add_portfolio_risorsa.py`
+- `frontend/src/app/api/portfolio/anni/route.ts`
+- `frontend/src/app/api/portfolio/anni/[id]/route.ts`
+- `frontend/src/app/api/portfolio/iscrizioni/route.ts`
+- `frontend/src/app/api/portfolio/media/route.ts`
+- `frontend/src/app/api/portfolio/media/[id]/route.ts`
+- `frontend/src/app/api/portfolio/media/giorni/route.ts`
+- `frontend/src/app/[locale]/dashboard/staff/portfolio/page.tsx`
+- `frontend/src/app/[locale]/dashboard/genitore/portfolio/page.tsx`
+
+**File modificati:**
+- `backend/sherazade/settings/base.py`: aggiunto `apps.portfolio` in LOCAL_APPS
+- `backend/sherazade/urls.py`: aggiunto include apps.portfolio.urls
+- `backend/Dockerfile`: aggiunto `ffmpeg`
+- `backend/apps/config/models.py`: aggiunta risorsa 'portfolio' in RISORSE
+- `frontend/src/app/[locale]/dashboard/staff/page.tsx`: aggiunto Portfolio in NAV_ITEMS
+- `frontend/src/app/[locale]/dashboard/admin/page.tsx`: aggiunto PORTFOLIO_ITEM + bottone
+- `frontend/src/app/[locale]/dashboard/genitore/page.tsx`: aggiunto Portfolio in NAV_ITEMS
+
 ## Ultimo Aggiornamento
 Data: 14 aprile 2026
-Completato: Fix nome utente header Gestione Utenti + fatturazione documentale segnata completata
-Prossimo task: Portfolio digitale del bambino
+Completato: Portfolio digitale del bambino (upload foto/video per gruppo, iscrizioni storiche, thumbnail automatica, gallery masonry, lightbox)
+Prossimo task: QR code check-in

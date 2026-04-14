@@ -19,6 +19,7 @@ const NAV_ITEMS = [
   { icon: '🥣', label: 'Foglio pappe',      sub: 'Pasti e menu del giorno',       path: '/pappe',      bg: '#FFF9E6', color: '#E67E22', border: '#FED7AA', risorsa: 'pappe' },
   { icon: '📝', label: 'Agenda',            sub: 'Note condivise del turno',      path: '/agenda',     bg: '#FDF2F8', color: '#9B59B6', border: '#E8BFFF', risorsa: 'agenda' },
   { icon: '📅', label: 'Calendario',        sub: 'Eventi e chiusure scolastiche', path: '/calendario', bg: '#EBF8FF', color: '#2B6CB0', border: '#90CDF4', risorsa: 'calendario' },
+  { icon: '📸', label: 'Portfolio',         sub: 'Foto e video del gruppo',       path: '/portfolio',  bg: '#FFF0F6', color: '#D63384', border: '#F5BFDF', risorsa: 'portfolio' },
 ]
 
 export default function StaffDashboard() {

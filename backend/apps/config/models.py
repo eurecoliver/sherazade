@@ -33,6 +33,7 @@ class PermessoRuolo(models.Model):
         ('calendario', 'Calendario'),
         ('agenda',     'Agenda note'),
         ('fatture',    'Fatture'),
+        ('portfolio',  'Portfolio digitale'),
         ('utenti',     'Gestione utenti'),
     ]
     AZIONI = [
