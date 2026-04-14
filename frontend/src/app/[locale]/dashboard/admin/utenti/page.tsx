@@ -74,12 +74,13 @@ export default function UtentiPage() {
   }, [filterRole, search])
 
   useEffect(() => {
-    fetch('/api/auth/me').then(r => r.ok ? r.json() : null).then(me => {
-      if (me) {
-        setCurrentRole(me.role)
-        setCurrentName(me.first_name || '')
-      }
-    })
+    fetch('/api/auth/me')
+      .then(r => r.ok ? r.json() : Promise.reject(r.status))
+      .then(me => {
+        setCurrentRole(me.role ?? '')
+        setCurrentName(me.first_name ?? '')
+      })
+      .catch(err => console.warn('[utenti] /api/auth/me fallito:', err))
   }, [])
   useEffect(() => { fetchRuoli() }, [fetchRuoli])
   useEffect(() => { fetchUtenti() }, [fetchUtenti])
