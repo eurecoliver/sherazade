@@ -108,6 +108,11 @@ export default function StaffPortfolioPage() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const stripRef = useRef<HTMLDivElement>(null)
 
+  const handleLogout = async () => {
+    await fetch('/api/auth/logout', { method: 'POST' })
+    router.push(`/${locale}/login`)
+  }
+
   // ── Bootstrap ──────────────────────────────────────────────────────────────
 
   useEffect(() => {
@@ -325,7 +330,7 @@ export default function StaffPortfolioPage() {
                   ⚙️ Anni
                 </button>
               )}
-              <UserChip />
+              <UserChip onLogout={handleLogout} />
             </div>
           </div>
         </div>

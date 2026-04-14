@@ -97,6 +97,11 @@ export default function GenitorePortfolioPage() {
 
   const stripRef = useRef<HTMLDivElement>(null)
 
+  const handleLogout = async () => {
+    await fetch('/api/auth/logout', { method: 'POST' })
+    router.push(`/${locale}/login`)
+  }
+
   // ── Bootstrap ──────────────────────────────────────────────────────────────
 
   useEffect(() => {
@@ -241,7 +246,7 @@ export default function GenitorePortfolioPage() {
                 <div style={{ fontSize: 12, opacity: 0.85 }}>Ricordi del nido</div>
               </div>
             </div>
-            <UserChip />
+            <UserChip onLogout={handleLogout} />
           </div>
         </div>
       </div>
