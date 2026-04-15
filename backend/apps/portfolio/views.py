@@ -7,6 +7,7 @@ from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from apps.audit.mixin import LogAccessoMixin
 from .models import AnnoScolastico, Iscrizione, MediaPortfolio
 from .permissions import PortfolioMediaPermission, AnnoScolasticoPermission
 from .serializers import (
@@ -56,7 +57,8 @@ class IscrizioneViewSet(viewsets.ModelViewSet):
         return qs
 
 
-class MediaPortfolioViewSet(viewsets.ModelViewSet):
+class MediaPortfolioViewSet(LogAccessoMixin, viewsets.ModelViewSet):
+    risorsa_nome = 'media_portfolio'
     permission_classes = [PortfolioMediaPermission]
     parser_classes = [MultiPartParser, FormParser]
 
