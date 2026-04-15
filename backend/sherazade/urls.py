@@ -17,6 +17,7 @@ urlpatterns = [
     path('api/v1/', include('apps.calendario.urls')),
     path('api/v1/', include('apps.messaggi.urls')),
     path('api/v1/', include('apps.portfolio.urls')),
+    path('api/v1/', include('apps.notifications.urls')),
 ]
 
 if settings.DEBUG:

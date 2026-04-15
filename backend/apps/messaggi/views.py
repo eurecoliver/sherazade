@@ -15,12 +15,12 @@ from .serializers import CircolareSerializer
 
 
 def _invia_notifica_circolare(circolare_id: int):
-    """Invia email ai genitori destinatari. Eseguita in thread separato."""
+    """Invia email + push ai genitori destinatari. Eseguita in thread separato."""
     try:
         circolare = Circolare.objects.prefetch_related('gruppi').get(pk=circolare_id)
         gruppi = list(circolare.gruppi.values_list('id', flat=True))
 
-        # Calcola genitori destinatari
+        # Calcola genitori destinatari (IDs)
         if gruppi:
             bambini_qs = Bambino.objects.filter(gruppo_id__in=gruppi, attivo=True)
             famiglia_ids = bambini_qs.values_list('famiglia_id', flat=True).distinct()
@@ -29,28 +29,42 @@ def _invia_notifica_circolare(circolare_id: int):
             genitore2_ids = Famiglia.objects.filter(
                 id__in=famiglia_ids, genitore2__isnull=False
             ).values_list('genitore2_id', flat=True)
-            destinatari_ids = set(list(genitore1_ids) + list(genitore2_ids))
-            genitori = User.objects.filter(id__in=destinatari_ids, is_active=True).exclude(email='')
+            destinatari_ids = list(set(list(genitore1_ids) + list(genitore2_ids)))
         else:
-            genitori = User.objects.filter(role=Role.GENITORE, is_active=True).exclude(email='')
+            destinatari_ids = list(
+                User.objects.filter(role=Role.GENITORE, is_active=True).values_list('id', flat=True)
+            )
 
-        destinatari = list(genitori.values_list('email', flat=True))
-        if not destinatari:
+        if not destinatari_ids:
             return
 
-        soggetto = f'[Sherazade] {circolare.titolo}'
-        corpo = (
-            f'Gentile famiglia,\n\n'
-            f'{circolare.testo}\n\n'
-            f'Cordiali saluti,\nLo staff di Sherazade'
-        )
+        genitori = User.objects.filter(id__in=destinatari_ids, is_active=True)
 
-        send_mail(
-            subject=soggetto,
-            message=corpo,
-            from_email=getattr(django_settings, 'DEFAULT_FROM_EMAIL', 'noreply@sherazade.it'),
-            recipient_list=destinatari,
-            fail_silently=True,
+        # EMAIL
+        destinatari_email = list(genitori.exclude(email='').values_list('email', flat=True))
+        if destinatari_email:
+            soggetto = f'[Sherazade] {circolare.titolo}'
+            corpo = (
+                f'Gentile famiglia,\n\n'
+                f'{circolare.testo}\n\n'
+                f'Cordiali saluti,\nLo staff di Sherazade'
+            )
+            send_mail(
+                subject=soggetto,
+                message=corpo,
+                from_email=getattr(django_settings, 'DEFAULT_FROM_EMAIL', 'noreply@sherazade.it'),
+                recipient_list=destinatari_email,
+                fail_silently=True,
+            )
+
+        # PUSH (sincrono — siamo già in un thread separato)
+        from apps.notifications.push import send_push_to_users
+        anteprima = circolare.testo[:120] + ('…' if len(circolare.testo) > 120 else '')
+        send_push_to_users(
+            user_ids=destinatari_ids,
+            title=f'📢 {circolare.titolo}',
+            body=anteprima,
+            url='/dashboard/genitore/circolari',
         )
 
         Circolare.objects.filter(pk=circolare_id).update(notifica_inviata=True)

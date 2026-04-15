@@ -15,46 +15,63 @@ from .serializers import TipoEventoSerializer, EventoCalendarioSerializer
 
 def _invia_notifica_evento(evento_id: int):
     """
-    Invia email di notifica a tutti i genitori attivi.
+    Invia email + push a tutti i genitori attivi.
     Eseguita in un thread separato per non bloccare la risposta API.
     """
     try:
         evento = EventoCalendario.objects.select_related('tipo').get(pk=evento_id)
-        genitori = User.objects.filter(role=Role.GENITORE, is_active=True).exclude(email='')
-        destinatari = list(genitori.values_list('email', flat=True))
-        if not destinatari:
-            return
 
         tipo_label = str(evento.tipo) if evento.tipo else 'Evento'
         data_str = evento.data_inizio.strftime('%d/%m/%Y')
         if evento.data_fine and evento.data_fine != evento.data_inizio:
             data_str += f' – {evento.data_fine.strftime("%d/%m/%Y")}'
 
-        soggetto = f'[Sherazade] {tipo_label}: {evento.titolo}'
-        corpo = (
-            f'Gentile famiglia,\n\n'
-            f'Vi informiamo di un nuovo evento nel calendario scolastico:\n\n'
-            f'📅 {evento.titolo}\n'
-            f'Data: {data_str}\n'
-        )
-        if not evento.tutto_il_giorno and evento.ora_inizio:
-            orario = evento.ora_inizio.strftime('%H:%M')
-            if evento.ora_fine:
-                orario += f' – {evento.ora_fine.strftime("%H:%M")}'
-            corpo += f'Orario: {orario}\n'
-        if evento.chiusura_scolastica:
-            corpo += '\n⚠️ ATTENZIONE: Il nido sarà chiuso in questa data.\n'
-        if evento.descrizione:
-            corpo += f'\n{evento.descrizione}\n'
-        corpo += '\nCordiali saluti,\nLo staff di Sherazade'
+        # EMAIL
+        genitori_email_qs = User.objects.filter(role=Role.GENITORE, is_active=True).exclude(email='')
+        destinatari_email = list(genitori_email_qs.values_list('email', flat=True))
+        if destinatari_email:
+            soggetto = f'[Sherazade] {tipo_label}: {evento.titolo}'
+            corpo = (
+                f'Gentile famiglia,\n\n'
+                f'Vi informiamo di un nuovo evento nel calendario scolastico:\n\n'
+                f'📅 {evento.titolo}\n'
+                f'Data: {data_str}\n'
+            )
+            if not evento.tutto_il_giorno and evento.ora_inizio:
+                orario = evento.ora_inizio.strftime('%H:%M')
+                if evento.ora_fine:
+                    orario += f' – {evento.ora_fine.strftime("%H:%M")}'
+                corpo += f'Orario: {orario}\n'
+            if evento.chiusura_scolastica:
+                corpo += '\n⚠️ ATTENZIONE: Il nido sarà chiuso in questa data.\n'
+            if evento.descrizione:
+                corpo += f'\n{evento.descrizione}\n'
+            corpo += '\nCordiali saluti,\nLo staff di Sherazade'
 
-        send_mail(
-            subject=soggetto,
-            message=corpo,
-            from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@sherazade.it'),
-            recipient_list=destinatari,
-            fail_silently=True,
+            send_mail(
+                subject=soggetto,
+                message=corpo,
+                from_email=getattr(settings, 'DEFAULT_FROM_EMAIL', 'noreply@sherazade.it'),
+                recipient_list=destinatari_email,
+                fail_silently=True,
+            )
+
+        # PUSH (sincrono — siamo già in un thread separato)
+        from apps.notifications.push import send_push_to_users
+        destinatari_ids = list(
+            User.objects.filter(role=Role.GENITORE, is_active=True).values_list('id', flat=True)
         )
+        if destinatari_ids:
+            chiusura = '⚠️ Nido chiuso — ' if evento.chiusura_scolastica else ''
+            push_body = f'{chiusura}{data_str}'
+            if evento.descrizione:
+                push_body += f': {evento.descrizione[:80]}'
+            send_push_to_users(
+                user_ids=destinatari_ids,
+                title=f'📅 {evento.titolo}',
+                body=push_body,
+                url='/dashboard/genitore/calendario',
+            )
 
         EventoCalendario.objects.filter(pk=evento_id).update(notifica_inviata=True)
     except Exception:

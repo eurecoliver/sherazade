@@ -31,3 +31,6 @@ django-ratelimit>=4.1
 
 # Utilities
 python-dateutil>=2.9
+
+# Push notifications PWA
+pywebpush>=2.0

@@ -37,6 +37,7 @@ LOCAL_APPS = [
     'apps.calendario',
     'apps.messaggi',
     'apps.portfolio',
+    'apps.notifications',
 ]
 
 INSTALLED_APPS = LOCAL_APPS + DJANGO_APPS + THIRD_PARTY_APPS
@@ -179,6 +180,13 @@ EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=True, cast=bool)
 EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
 EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
 DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='Sherazade <noreply@sherazade.it>')
+
+# Push notifications VAPID
+# Genera le chiavi con: python manage.py generate_vapid_keys
+# Se non configurate, le notifiche push vengono silenziosamente disabilitate
+VAPID_PRIVATE_KEY = config('VAPID_PRIVATE_KEY', default='')
+VAPID_PUBLIC_KEY = config('VAPID_PUBLIC_KEY', default='')
+VAPID_ADMIN_EMAIL = config('VAPID_ADMIN_EMAIL', default='noreply@sherazade.it')
 
 # GDPR
 MEDIA_AUTO_DELETE_DAYS = config('MEDIA_AUTO_DELETE_DAYS', default=365, cast=int)
