@@ -8,7 +8,7 @@ import { fetchBackend } from '@/lib/fetchBackend';
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const res = await fetchBackend(request, '/api/v1/notifiche/unsubscribe/', {
+    const { res } = await fetchBackend(request, '/api/v1/notifiche/unsubscribe/', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
