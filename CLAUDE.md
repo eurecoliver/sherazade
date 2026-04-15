@@ -601,7 +601,75 @@ Completato: Portfolio digitale del bambino (upload foto/video per gruppo, iscriz
 - `frontend/src/components/TabQRCheckin.tsx`: componente condiviso estratto dalla pagina staff
 - `frontend/src/app/[locale]/dashboard/admin/presenze/page.tsx`: aggiunto tab "📱 QR Check-in"
 
+### Notifiche Push PWA + Email (15 aprile 2026) — branch feature/notifiche
+- Nuova app `apps.notifications` con modello `PushSubscription` (user, endpoint, p256dh, auth, unique_together)
+- `push.py`: `send_push_to_users()` sincrona (chiamata dall'interno dei thread email) — auto-rimuove sottoscrizioni scadute (HTTP 404/410)
+- VAPID keys via env: `VAPID_PRIVATE_KEY`, `VAPID_PUBLIC_KEY`, `VAPID_ADMIN_EMAIL`
+- Management command `generate_vapid_keys`: genera e stampa chiavi VAPID pronte per .env
+- Integrazione push in `_invia_notifica_circolare` (messaggi) e `_invia_notifica_evento` (calendario) — stesso thread dell'email, sincrono
+- Email refactored in calendario: separazione destinatari email vs destinatari push (per ID)
+- `public/manifest.json`: PWA manifest con nome, tema viola, riferimenti icone
+- `public/sw.js`: service worker push (showNotification + notificationclick con focus/openWindow)
+- `PushNotificationProvider`: client component che registra SW, chiede permesso, sottoscrive con VAPID key da API, synca al server
+- `layout.tsx`: aggiunto manifest meta, theme-color, apple-touch-icon, PushNotificationProvider
+- API routes: `/api/notifiche/vapid-key` (legge VAPID_PUBLIC_KEY server-side), `/api/notifiche/subscribe`, `/api/notifiche/unsubscribe`
+- docker-compose: `VAPID_PUBLIC_KEY=${VAPID_PUBLIC_KEY:-}` passato al frontend
+
+**Attivazione:**
+1. Nel container backend: `python manage.py generate_vapid_keys` → copia le 3 var in .env
+2. Aggiungere `VAPID_PUBLIC_KEY` al docker-compose.yml (o .env server)
+3. Per email Gmail: aggiungere `EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend`, `EMAIL_HOST=smtp.gmail.com`, `EMAIL_HOST_USER`, `EMAIL_HOST_PASSWORD` al .env
+
+**File creati:**
+- `backend/apps/notifications/__init__.py`, `apps.py`, `admin.py`, `models.py`, `push.py`, `views.py`, `urls.py`
+- `backend/apps/notifications/management/commands/generate_vapid_keys.py`
+- `backend/apps/notifications/migrations/0001_initial.py`
+- `frontend/public/manifest.json`, `frontend/public/sw.js`
+- `frontend/src/components/PushNotificationProvider.tsx`
+- `frontend/src/app/api/notifiche/vapid-key/route.ts`
+- `frontend/src/app/api/notifiche/subscribe/route.ts`
+- `frontend/src/app/api/notifiche/unsubscribe/route.ts`
+
+**File modificati:**
+- `backend/requirements.txt`: aggiunto `pywebpush>=2.0`
+- `backend/sherazade/settings/base.py`: aggiunto `apps.notifications`, VAPID settings
+- `backend/sherazade/urls.py`: aggiunto `apps.notifications.urls`
+- `backend/apps/messaggi/views.py`: push integrato in `_invia_notifica_circolare`
+- `backend/apps/calendario/views.py`: push integrato in `_invia_notifica_evento`
+- `docker-compose.yml`: aggiunto `VAPID_PUBLIC_KEY` al frontend
+- `frontend/src/app/[locale]/layout.tsx`: manifest + PWA meta + PushNotificationProvider
+
+### Log Accessi GDPR (15 aprile 2026) — branch feature/log-accessi
+- Nuova app `apps.audit` con modello `LogAccesso`: timestamp, utente FK (SET_NULL), utente_email+ruolo snapshot, azione (leggi/crea/modifica/elimina), risorsa, oggetto_id, dettagli, ip_address
+- `LogAccessoMixin`: mixin DRF che sovrascrive list/retrieve/create/update/destroy → log asincrono in thread separato
+- Mixin aggiunto alle ViewSet sensibili: `BambinoViewSet`, `FamigliaViewSet`, `DelegaRitiroViewSet`, `RegistroDiarioViewSet`, `MediaDiarioViewSet`, `PresenzaViewSet`, `ConsensoFotograficoViewSet`, `AllergiaIntolleranzaViewSet`, `RegistroPastoViewSet`, `MediaPortfolioViewSet`
+- `LogAccessoViewSet`: read-only, solo admin/direttrice, filtri dal/al/risorsa/azione/utente, paginazione DRF
+- `cleanup_log_accessi`: management command con guardia GDPR (minimo 6 mesi), usa `LOG_ACCESSI_RETENTION_MONTHS` da settings (default 12)
+- `LOG_ACCESSI_RETENTION_MONTHS` aggiunto a settings/base.py
+- Risorsa `audit` aggiunta a `PermessoRuolo.RISORSE` (migration `config/0009_add_audit_risorsa.py`): direttrice può leggere, tutti gli altri No
+- Pagina admin `/dashboard/admin/log-accessi`: tabella filtrata, badge colorati per azione/ruolo, paginazione client, nota GDPR con comando cleanup
+- Pulsante "🔍 Log Accessi" nella dashboard admin (visibile solo a `role=admin`)
+- `_get_ip()`: estrae IP reale anche dietro nginx (X-Forwarded-For)
+
+**Pianificazione operativa:**
+- Aggiungere cron mensile: `0 3 1 * * cd /var/www/sherazade && docker compose exec -T backend python manage.py cleanup_log_accessi`
+
+**File creati:**
+- `backend/apps/audit/__init__.py`, `apps.py`, `admin.py`, `models.py`, `mixin.py`, `serializers.py`, `views.py`, `urls.py`
+- `backend/apps/audit/management/commands/cleanup_log_accessi.py`
+- `backend/apps/audit/migrations/0001_initial.py`
+- `backend/apps/config/migrations/0009_add_audit_risorsa.py`
+- `frontend/src/app/[locale]/dashboard/admin/log-accessi/page.tsx`
+- `frontend/src/app/api/audit/route.ts`
+
+**File modificati:**
+- `backend/apps/children/views.py`, `diary/views.py`, `attendance/views.py`, `consents/views.py`, `meals/views.py`, `portfolio/views.py`: aggiunto `LogAccessoMixin`
+- `backend/apps/config/models.py`: aggiunta risorsa `audit`
+- `backend/sherazade/settings/base.py`: aggiunto `apps.audit`, `LOG_ACCESSI_RETENTION_MONTHS`
+- `backend/sherazade/urls.py`: aggiunto `apps.audit.urls`
+- `frontend/src/app/[locale]/dashboard/admin/page.tsx`: aggiunto pulsante Log Accessi
+
 ## Ultimo Aggiornamento
 Data: 15 aprile 2026
-Completato: Fix QR Check-in (403 permessi, tab aggiunto in admin/presenze, componente condiviso TabQRCheckin)
-Prossimo task: —
+Completato: Notifiche Push PWA + Email (feature/notifiche) + Log Accessi GDPR (feature/log-accessi)
+Prossimo task: deploy + test + configurazione VAPID keys + cron cleanup log
