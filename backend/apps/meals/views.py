@@ -9,6 +9,7 @@ from rest_framework.response import Response
 
 from apps.children.models import Bambino
 from apps.users.models import Role
+from apps.audit.mixin import LogAccessoMixin
 from .models import (
     AllergiaIntolleranza, MenuGiornaliero, RegistroPasto,
     ConfigMenuCiclo, Piatto, PiattoAssegnazione, SostituzionePiatto,
@@ -26,7 +27,8 @@ from .serializers import (
 )
 
 
-class AllergiaIntolleranzaViewSet(viewsets.ModelViewSet):
+class AllergiaIntolleranzaViewSet(LogAccessoMixin, viewsets.ModelViewSet):
+    risorsa_nome = 'allergia'
     serializer_class = AllergiaIntolleranzaSerializer
     permission_classes = [IsAuthenticated, AllergiaPermission]
 
@@ -106,7 +108,8 @@ class MenuGiornalieroViewSet(viewsets.ModelViewSet):
         return Response(MenuGiornalieroSerializer(qs, many=True).data)
 
 
-class RegistroPastoViewSet(viewsets.ModelViewSet):
+class RegistroPastoViewSet(LogAccessoMixin, viewsets.ModelViewSet):
+    risorsa_nome = 'registro_pasto'
     permission_classes = [IsAuthenticated, RegistroPastoPermission]
 
     def get_serializer_class(self):

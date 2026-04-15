@@ -8,6 +8,7 @@ from rest_framework.response import Response
 from apps.children.models import Bambino
 from apps.consents.models import ConsensoFotografico
 from apps.users.models import Role
+from apps.audit.mixin import LogAccessoMixin
 from .models import RegistroDiario, MediaDiario, TagCosaPortare
 from .permissions import DiarioPermission
 from .serializers import (
@@ -52,7 +53,8 @@ def _bambino_ha_consenso_media(bambino):
     return True, ''
 
 
-class RegistroDiarioViewSet(viewsets.ModelViewSet):
+class RegistroDiarioViewSet(LogAccessoMixin, viewsets.ModelViewSet):
+    risorsa_nome = 'registro_diario'
     permission_classes = [IsAuthenticated, DiarioPermission]
 
     def get_serializer_class(self):
@@ -185,7 +187,8 @@ class RegistroDiarioViewSet(viewsets.ModelViewSet):
         return Response(data)
 
 
-class MediaDiarioViewSet(viewsets.ModelViewSet):
+class MediaDiarioViewSet(LogAccessoMixin, viewsets.ModelViewSet):
+    risorsa_nome = 'media_diario'
     serializer_class = MediaDiarioSerializer
     permission_classes = [IsAuthenticated, DiarioPermission]
     parser_classes = [MultiPartParser, FormParser, JSONParser]

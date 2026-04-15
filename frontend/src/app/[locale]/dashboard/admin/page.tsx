@@ -170,6 +170,19 @@ export default function AdminDashboard() {
               </div>
             </button>
           )}
+          {/* Log Accessi GDPR — solo admin */}
+          {user.role === 'admin' && (
+            <button
+              onClick={() => router.push(`${base}/log-accessi`)}
+              style={{ padding: '1rem', background: '#F0F4FF', color: '#4834D4', border: '2px solid #C7D2FE', borderRadius: '14px', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '0.75rem' }}
+            >
+              <span style={{ fontSize: '1.4rem', flexShrink: 0 }}>🔍</span>
+              <div>
+                <p style={{ margin: 0, fontWeight: 700, fontSize: '0.9rem' }}>Log Accessi</p>
+                <p style={{ margin: 0, fontSize: '0.72rem', opacity: 0.75 }}>Audit GDPR dati minori</p>
+              </div>
+            </button>
+          )}
         </div>
 
       </div>

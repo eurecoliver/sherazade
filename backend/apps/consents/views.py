@@ -8,6 +8,7 @@ from rest_framework.response import Response
 from apps.children.models import Bambino
 from apps.users.models import Role
 from apps.consents.permissions import ConsensoPermission
+from apps.audit.mixin import LogAccessoMixin
 from .models import ConsensoFotografico
 from .serializers import ConsensoFotograficoSerializer
 
@@ -28,7 +29,8 @@ def _calcola_stato(c, has_g2, non_fotografabile):
     return 'nessuno'
 
 
-class ConsensoFotograficoViewSet(viewsets.ModelViewSet):
+class ConsensoFotograficoViewSet(LogAccessoMixin, viewsets.ModelViewSet):
+    risorsa_nome = 'consenso'
     serializer_class = ConsensoFotograficoSerializer
     permission_classes = [IsAuthenticated, ConsensoPermission]
 

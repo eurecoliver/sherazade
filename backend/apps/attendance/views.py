@@ -9,6 +9,7 @@ from rest_framework.response import Response
 
 from apps.children.models import Bambino
 from apps.users.models import Role
+from apps.audit.mixin import LogAccessoMixin
 from .models import Presenza, DailyQRCodeToken, ConfigurazioneCheckin
 from .permissions import PresenzaPermission
 from .serializers import (
@@ -17,7 +18,8 @@ from .serializers import (
 )
 
 
-class PresenzaViewSet(viewsets.ModelViewSet):
+class PresenzaViewSet(LogAccessoMixin, viewsets.ModelViewSet):
+    risorsa_nome = 'presenza'
     permission_classes = [IsAuthenticated, PresenzaPermission]
 
     def get_serializer_class(self):

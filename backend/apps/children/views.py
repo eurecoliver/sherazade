@@ -4,6 +4,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from apps.users.models import Role, User
+from apps.audit.mixin import LogAccessoMixin
 from .models import Bambino, Famiglia, DelegaRitiro
 from .permissions import BambinoPermission, IsDirigente
 from .serializers import (
@@ -16,7 +17,8 @@ from .serializers import (
 )
 
 
-class BambinoViewSet(viewsets.ModelViewSet):
+class BambinoViewSet(LogAccessoMixin, viewsets.ModelViewSet):
+    risorsa_nome = 'bambino'
     permission_classes = [IsAuthenticated, BambinoPermission]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['nome', 'cognome', 'codice_fiscale']
@@ -65,7 +67,8 @@ class BambinoViewSet(viewsets.ModelViewSet):
         return BambinoSerializer
 
 
-class FamigliaViewSet(viewsets.ModelViewSet):
+class FamigliaViewSet(LogAccessoMixin, viewsets.ModelViewSet):
+    risorsa_nome = 'famiglia'
     def get_permissions(self):
         if self.action in ('list', 'retrieve'):
             return [IsAuthenticated()]
@@ -137,7 +140,8 @@ class FamigliaViewSet(viewsets.ModelViewSet):
         return Response(FamigliaSerializer(instance).data)
 
 
-class DelegaRitiroViewSet(viewsets.ModelViewSet):
+class DelegaRitiroViewSet(LogAccessoMixin, viewsets.ModelViewSet):
+    risorsa_nome = 'delega_ritiro'
     serializer_class = DelegaRitiroSerializer
 
     def get_permissions(self):

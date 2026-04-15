@@ -38,6 +38,7 @@ LOCAL_APPS = [
     'apps.messaggi',
     'apps.portfolio',
     'apps.notifications',
+    'apps.audit',
 ]
 
 INSTALLED_APPS = LOCAL_APPS + DJANGO_APPS + THIRD_PARTY_APPS
@@ -190,3 +191,5 @@ VAPID_ADMIN_EMAIL = config('VAPID_ADMIN_EMAIL', default='noreply@sherazade.it')
 
 # GDPR
 MEDIA_AUTO_DELETE_DAYS = config('MEDIA_AUTO_DELETE_DAYS', default=365, cast=int)
+# Retention log accessi GDPR: minimo 6 mesi, default 12 mesi
+LOG_ACCESSI_RETENTION_MONTHS = config('LOG_ACCESSI_RETENTION_MONTHS', default=12, cast=int)
