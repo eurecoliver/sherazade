@@ -165,8 +165,18 @@ export default function TabQRCheckin({ isAdmin }: { isAdmin: boolean }) {
       {/* CSS print: mostra solo il QR */}
       <style>{`
         @media print {
-          body > * { display: none !important; }
-          #qr-print-area { display: flex !important; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); }
+          body * { visibility: hidden; }
+          #qr-print-area, #qr-print-area * { visibility: visible; }
+          #qr-print-area {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100vw; height: 100vh;
+            display: flex !important;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+          }
         }
       `}</style>
     </div>
