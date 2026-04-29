@@ -28,7 +28,9 @@ export default function LoginPage() {
   const router = useRouter()
   const locale = useLocale()
   const searchParams = useSearchParams()
-  const callbackUrl = searchParams.get('callbackUrl') ?? ''
+  const rawCallback = searchParams.get('callbackUrl') ?? ''
+  // Accept only relative paths to prevent open-redirect and URL-growth loops
+  const callbackUrl = rawCallback.startsWith('/') ? rawCallback : ''
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')

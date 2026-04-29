@@ -21,10 +21,9 @@ export default function middleware(request: NextRequest) {
     if (!accessToken) {
       const locale = getLocale(pathname)
       const callbackUrl = pathname + search
-      const loginUrl = new URL(
-        `/${locale}/login?callbackUrl=${encodeURIComponent(callbackUrl)}`,
-        request.url,
-      )
+      const loginUrl = request.nextUrl.clone()
+      loginUrl.pathname = `/${locale}/login`
+      loginUrl.search = `?callbackUrl=${encodeURIComponent(callbackUrl)}`
       return NextResponse.redirect(loginUrl)
     }
   }
