@@ -21,7 +21,9 @@ export default function middleware(request: NextRequest) {
     if (!accessToken) {
       const locale = getLocale(pathname)
       const callbackUrl = pathname + search
-      const loginUrl = request.nextUrl.clone()
+      // Usa request.url (stringa raw) come base invece di request.nextUrl.clone()
+      // per evitare il redirect loop con IP:porta in Next.js 14 standalone
+      const loginUrl = new URL(request.url)
       loginUrl.pathname = `/${locale}/login`
       loginUrl.search = `?callbackUrl=${encodeURIComponent(callbackUrl)}`
       return NextResponse.redirect(loginUrl)
