@@ -1,5 +1,8 @@
 # Claude Code
 .claude/settings.local.json
+.claude/
+REVIEW.md
+SKILL.md
 
 # Python
 __pycache__/
