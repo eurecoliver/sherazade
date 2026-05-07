@@ -8,6 +8,7 @@ from django.db import models
 class ConfigurazioneCheckin(models.Model):
     """Singleton — un solo record (id=1) per gestire le impostazioni globali del check-in."""
     qr_abilitato = models.BooleanField(default=True, verbose_name='QR Check-in abilitato')
+    qr_insegnanti_abilitato = models.BooleanField(default=True, verbose_name='QR Check-in insegnanti abilitato')
 
     class Meta:
         verbose_name = 'Configurazione Check-in'
@@ -68,6 +69,53 @@ class DailyQRCodeToken(models.Model):
     @classmethod
     def valida(cls, token: str) -> bool:
         """True se il token esiste ed è di oggi."""
+        return cls.objects.filter(token=token, data=date.today()).exists()
+
+
+class DailyQRCodeTokenInsegnanti(models.Model):
+    """Token giornaliero per il QR code check-in insegnanti. Uno per data."""
+    data = models.DateField(unique=True)
+    token = models.CharField(max_length=64, unique=True)
+    creato_at = models.DateTimeField(auto_now_add=True)
+    creato_da = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        related_name='qr_tokens_insegnanti_generati',
+    )
+
+    class Meta:
+        verbose_name = 'Token QR Giornaliero Insegnanti'
+        verbose_name_plural = 'Token QR Giornalieri Insegnanti'
+        ordering = ['-data']
+
+    def __str__(self):
+        return f'Token QR Insegnanti {self.data}'
+
+    @classmethod
+    def get_or_create_today(cls, user=None):
+        today = date.today()
+        obj, created = cls.objects.get_or_create(
+            data=today,
+            defaults={
+                'token': secrets.token_urlsafe(32),
+                'creato_da': user,
+            },
+        )
+        return obj, created
+
+    @classmethod
+    def rinnova_oggi(cls, user=None):
+        today = date.today()
+        cls.objects.filter(data=today).delete()
+        return cls.objects.create(
+            data=today,
+            token=secrets.token_urlsafe(32),
+            creato_da=user,
+        )
+
+    @classmethod
+    def valida(cls, token: str) -> bool:
         return cls.objects.filter(token=token, data=date.today()).exists()
 
 
@@ -171,3 +219,35 @@ class Presenza(models.Model):
             return self.bambino.orario_uscita.orario
         except Exception:
             return None
+
+
+class PresenzaInsegnante(models.Model):
+    insegnante = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='presenze_insegnante',
+    )
+    data = models.DateField()
+    ora_entrata = models.TimeField(null=True, blank=True)
+    ora_uscita = models.TimeField(null=True, blank=True)
+    registrato_da = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='presenze_insegnanti_registrate',
+    )
+    creato_at = models.DateTimeField(auto_now_add=True)
+    aggiornato_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Presenza insegnante'
+        verbose_name_plural = 'Presenze insegnanti'
+        ordering = ['-data', 'insegnante__last_name', 'insegnante__first_name']
+        constraints = [
+            models.UniqueConstraint(fields=['insegnante', 'data'], name='uniq_presenza_insegnante_data'),
+        ]
+
+    def __str__(self):
+        full_name = self.insegnante.get_full_name() or self.insegnante.email
+        return f'{full_name} — {self.data}'

@@ -1,5 +1,5 @@
 import calendar
-from datetime import date
+from datetime import date, datetime as dt
 
 from django.db.models import Q
 from rest_framework import viewsets, status
@@ -8,13 +8,22 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from apps.children.models import Bambino
-from apps.users.models import Role
+from apps.users.models import Role, User
 from apps.audit.mixin import LogAccessoMixin
-from .models import Presenza, DailyQRCodeToken, ConfigurazioneCheckin
+from .models import (
+    Presenza,
+    PresenzaInsegnante,
+    DailyQRCodeToken,
+    DailyQRCodeTokenInsegnanti,
+    ConfigurazioneCheckin,
+)
 from .permissions import PresenzaPermission
 from .serializers import (
     PresenzaSerializer, PresenzaWriteSerializer,
-    DailyQRCodeTokenSerializer, ConfigurazioneCheckinSerializer,
+    PresenzaInsegnanteSerializer,
+    DailyQRCodeTokenSerializer,
+    DailyQRCodeTokenInsegnantiSerializer,
+    ConfigurazioneCheckinSerializer,
 )
 
 
@@ -46,6 +55,8 @@ class PresenzaViewSet(LogAccessoMixin, viewsets.ModelViewSet):
             qs = qs.filter(data=data_param)
         if gruppo := params.get('gruppo'):
             qs = qs.filter(bambino__gruppo_id=gruppo)
+        elif sezione := params.get('sezione'):
+            qs = qs.filter(bambino__gruppo__nome__iexact=sezione)
         return qs
 
     def perform_create(self, serializer):
@@ -64,6 +75,7 @@ class PresenzaViewSet(LogAccessoMixin, viewsets.ModelViewSet):
         """
         data_str = request.query_params.get('data', str(date.today()))
         gruppo = request.query_params.get('gruppo', '')
+        sezione = request.query_params.get('sezione', '')
 
         bambini_qs = (
             Bambino.objects
@@ -73,6 +85,8 @@ class PresenzaViewSet(LogAccessoMixin, viewsets.ModelViewSet):
         )
         if gruppo:
             bambini_qs = bambini_qs.filter(gruppo_id=gruppo)
+        elif sezione:
+            bambini_qs = bambini_qs.filter(gruppo__nome__iexact=sezione)
 
         presenze = {
             p.bambino_id: p
@@ -157,6 +171,7 @@ class PresenzaViewSet(LogAccessoMixin, viewsets.ModelViewSet):
 
         data_str = request.query_params.get('data', str(date.today()))
         gruppo = request.query_params.get('gruppo', '')
+        sezione = request.query_params.get('sezione', '')
 
         bambini_qs = (
             Bambino.objects.filter(attivo=True)
@@ -165,6 +180,8 @@ class PresenzaViewSet(LogAccessoMixin, viewsets.ModelViewSet):
         )
         if gruppo:
             bambini_qs = bambini_qs.filter(gruppo_id=gruppo)
+        elif sezione:
+            bambini_qs = bambini_qs.filter(gruppo__nome__iexact=sezione)
 
         bambini_con_registro = set(
             Presenza.objects.filter(data=data_str).values_list('bambino_id', flat=True)
@@ -197,6 +214,7 @@ class PresenzaViewSet(LogAccessoMixin, viewsets.ModelViewSet):
         anno = int(request.query_params.get('anno', oggi.year))
         mese = int(request.query_params.get('mese', oggi.month))
         gruppo = request.query_params.get('gruppo', '')
+        sezione = request.query_params.get('sezione', '')
 
         bambini_qs = (
             Bambino.objects.filter(attivo=True)
@@ -205,6 +223,8 @@ class PresenzaViewSet(LogAccessoMixin, viewsets.ModelViewSet):
         )
         if gruppo:
             bambini_qs = bambini_qs.filter(gruppo_id=gruppo)
+        elif sezione:
+            bambini_qs = bambini_qs.filter(gruppo__nome__iexact=sezione)
 
         presenze_mese = Presenza.objects.filter(data__year=anno, data__month=mese)
         mappa: dict[int, list] = {}
@@ -235,6 +255,44 @@ class PresenzaViewSet(LogAccessoMixin, viewsets.ModelViewSet):
             'giorni_nel_mese': giorni_nel_mese,
             'bambini': result,
         })
+
+    @action(detail=False, methods=['get'], url_path='insegnanti-giornata')
+    def insegnanti_giornata(self, request):
+        """
+        Registro presenze insegnanti per la giornata corrente.
+        - Admin/Direttrice/Coordinatrice: lista completa insegnanti
+        - Insegnante: solo la propria riga
+        """
+        role = request.user.role
+        if role not in (Role.ADMIN, Role.DIRETTRICE, Role.COORDINATRICE, Role.INSEGNANTE):
+            return Response({'detail': 'Non autorizzato.'}, status=status.HTTP_403_FORBIDDEN)
+
+        data_str = request.query_params.get('data', str(date.today()))
+        insegnanti_qs = User.objects.filter(role=Role.INSEGNANTE, is_active=True).order_by('last_name', 'first_name')
+        if role == Role.INSEGNANTE:
+            insegnanti_qs = insegnanti_qs.filter(pk=request.user.pk)
+
+        presenze = {
+            p.insegnante_id: p
+            for p in PresenzaInsegnante.objects.filter(data=data_str, insegnante__in=insegnanti_qs)
+        }
+
+        result = []
+        for user in insegnanti_qs:
+            presenza = presenze.get(user.pk)
+            stato = 'nessuno'
+            if presenza:
+                stato = 'uscita_registrata' if presenza.ora_uscita else 'entrata_registrata'
+            result.append({
+                'insegnante_id': user.pk,
+                'nome': user.first_name,
+                'cognome': user.last_name,
+                'email': user.email,
+                'stato': stato,
+                'presenza': PresenzaInsegnanteSerializer(presenza).data if presenza else None,
+            })
+
+        return Response({'data': data_str, 'insegnanti': result})
 
     # ─── Cuoca ────────────────────────────────────────────────────────────────
 
@@ -402,6 +460,26 @@ class PresenzaViewSet(LogAccessoMixin, viewsets.ModelViewSet):
 
         return Response(DailyQRCodeTokenSerializer(token_obj).data)
 
+    @action(detail=False, methods=['get', 'post'], url_path='qr-token-insegnanti')
+    def qr_token_insegnanti(self, request):
+        """
+        Staff/Admin: restituisce il token QR insegnanti di oggi.
+        POST forza il rinnovo del token.
+        """
+        if request.user.role not in (Role.ADMIN, Role.DIRETTRICE, Role.COORDINATRICE, Role.INSEGNANTE):
+            return Response({'detail': 'Non autorizzato.'}, status=status.HTTP_403_FORBIDDEN)
+
+        config = ConfigurazioneCheckin.get()
+        if not config.qr_insegnanti_abilitato:
+            return Response({'detail': 'QR check-in insegnanti disabilitato.'}, status=status.HTTP_403_FORBIDDEN)
+
+        if request.method == 'POST':
+            token_obj = DailyQRCodeTokenInsegnanti.rinnova_oggi(user=request.user)
+        else:
+            token_obj, _ = DailyQRCodeTokenInsegnanti.get_or_create_today(user=request.user)
+
+        return Response(DailyQRCodeTokenInsegnantiSerializer(token_obj).data)
+
     @action(detail=False, methods=['get'], url_path='checkin-info')
     def checkin_info(self, request):
         """
@@ -458,6 +536,40 @@ class PresenzaViewSet(LogAccessoMixin, viewsets.ModelViewSet):
 
         return Response({'figli': result, 'data': oggi_str})
 
+    @action(detail=False, methods=['get'], url_path='checkin-info-insegnanti')
+    def checkin_info_insegnanti(self, request):
+        """
+        Insegnante: valida il token e restituisce il proprio stato presenza odierno.
+        """
+        if request.user.role not in (Role.INSEGNANTE, Role.COORDINATRICE, Role.DIRETTRICE, Role.ADMIN):
+            return Response({'detail': 'Riservato allo staff.'}, status=status.HTTP_403_FORBIDDEN)
+
+        config = ConfigurazioneCheckin.get()
+        if not config.qr_insegnanti_abilitato:
+            return Response({'detail': 'QR check-in insegnanti disabilitato.'}, status=status.HTTP_403_FORBIDDEN)
+
+        token = request.query_params.get('token', '')
+        if not token or not DailyQRCodeTokenInsegnanti.valida(token):
+            return Response({'detail': 'Token non valido o scaduto.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        oggi_str = str(date.today())
+        presenza = PresenzaInsegnante.objects.filter(insegnante=request.user, data=oggi_str).first()
+        stato = 'nessuno'
+        if presenza:
+            stato = 'uscita_registrata' if presenza.ora_uscita else 'entrata_registrata'
+
+        return Response({
+            'data': oggi_str,
+            'insegnante': {
+                'id': request.user.pk,
+                'nome': request.user.first_name,
+                'cognome': request.user.last_name,
+                'email': request.user.email,
+            },
+            'stato': stato,
+            'presenza': PresenzaInsegnanteSerializer(presenza).data if presenza else None,
+        })
+
     @action(detail=False, methods=['post'], url_path='perform-checkin')
     def perform_checkin(self, request):
         """
@@ -490,7 +602,6 @@ class PresenzaViewSet(LogAccessoMixin, viewsets.ModelViewSet):
             return Response({'detail': 'Non autorizzato.'}, status=status.HTTP_403_FORBIDDEN)
 
         oggi_str = date.today()
-        from datetime import datetime as dt
         ora_ora = dt.now().time().replace(second=0, microsecond=0)
 
         presenza, created = Presenza.objects.get_or_create(
@@ -533,4 +644,57 @@ class PresenzaViewSet(LogAccessoMixin, viewsets.ModelViewSet):
             'bambino': bambino.nome,
             'ora': ora_ora.strftime('%H:%M'),
             'presenza': PresenzaSerializer(presenza).data,
+        })
+
+    @action(detail=False, methods=['post'], url_path='perform-checkin-insegnanti')
+    def perform_checkin_insegnanti(self, request):
+        """
+        Insegnante: registra entrata o uscita tramite QR.
+        Body: { token }
+        """
+        if request.user.role not in (Role.INSEGNANTE, Role.COORDINATRICE, Role.DIRETTRICE, Role.ADMIN):
+            return Response({'detail': 'Riservato allo staff.'}, status=status.HTTP_403_FORBIDDEN)
+
+        config = ConfigurazioneCheckin.get()
+        if not config.qr_insegnanti_abilitato:
+            return Response({'detail': 'QR check-in insegnanti disabilitato.'}, status=status.HTTP_403_FORBIDDEN)
+
+        token = request.data.get('token', '')
+        if not token or not DailyQRCodeTokenInsegnanti.valida(token):
+            return Response({'detail': 'Token non valido o scaduto.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        oggi = date.today()
+        ora_ora = dt.now().time().replace(second=0, microsecond=0)
+
+        presenza, created = PresenzaInsegnante.objects.get_or_create(
+            insegnante=request.user,
+            data=oggi,
+            defaults={
+                'ora_entrata': ora_ora,
+                'registrato_da': request.user,
+            },
+        )
+
+        if created:
+            azione = 'entrata'
+        elif presenza.ora_entrata is None:
+            presenza.ora_entrata = ora_ora
+            presenza.registrato_da = request.user
+            presenza.save(update_fields=['ora_entrata', 'registrato_da', 'aggiornato_at'])
+            azione = 'entrata'
+        elif presenza.ora_uscita is None:
+            presenza.ora_uscita = ora_ora
+            presenza.registrato_da = request.user
+            presenza.save(update_fields=['ora_uscita', 'registrato_da', 'aggiornato_at'])
+            azione = 'uscita'
+        else:
+            return Response(
+                {'detail': 'Hai gia registrato entrata e uscita per oggi.'},
+                status=status.HTTP_409_CONFLICT,
+            )
+
+        return Response({
+            'azione': azione,
+            'ora': ora_ora.strftime('%H:%M'),
+            'presenza': PresenzaInsegnanteSerializer(presenza).data,
         })

@@ -669,7 +669,45 @@ Completato: Portfolio digitale del bambino (upload foto/video per gruppo, iscriz
 - `backend/sherazade/urls.py`: aggiunto `apps.audit.urls`
 - `frontend/src/app/[locale]/dashboard/admin/page.tsx`: aggiunto pulsante Log Accessi
 
+### Presenze insegnanti con QR dedicato (7 maggio 2026) — branch feature/qr-presenze-insegnanti
+- Nuovo modello `PresenzaInsegnante` in `attendance`: `insegnante`, `data`, `ora_entrata`, `ora_uscita`, `registrato_da`, vincolo univoco (`insegnante`, `data`)
+- Nuovo modello `DailyQRCodeTokenInsegnanti`: token giornaliero separato da quello genitori (`secrets.token_urlsafe(32)`)
+- `ConfigurazioneCheckin`: aggiunto flag `qr_insegnanti_abilitato` per attivare/disattivare indipendentemente il QR staff
+- Nuove action su `PresenzaViewSet`:
+  - `insegnanti_giornata`: registro giornaliero insegnanti (admin/direttrice/coordinatrice = lista completa, insegnante = solo se stesso)
+  - `qr_token_insegnanti`: GET/POST token QR insegnanti
+  - `checkin_info_insegnanti`: stato timbratura odierna del membro staff autenticato
+  - `perform_checkin_insegnanti`: timbratura automatica entrata/uscita (409 se giornata gia completa)
+- UI staff/admin presenze:
+  - nuovo tab `👩‍🏫 Insegnanti` con pannello `RegistroInsegnantiPanel`
+  - tab `📱 QR Check-in` esteso con card separata per QR insegnanti (`TabQRCheckinInsegnanti`)
+- Nuova pagina mobile-first `/[locale]/checkin-insegnanti` per timbratura personale via QR con callback login
+- API routes Next.js aggiunte: `/api/presenze/qrtoken-insegnanti`, `/api/presenze/checkin-insegnanti`, `/api/presenze/insegnanti-giornata`
+- Migration: `attendance/0005_presenze_insegnanti_qr.py`
+
+### Anomalia pregressa risolta (7 maggio 2026)
+- Presenze backend: i filtri ora supportano sia `gruppo` (ID) sia `sezione` (nome gruppo) in `get_queryset`, `giornata`, `non_arrivati`, `report_mensile`
+- Fix di compatibilita con frontend storico che inviava `?sezione=<nome>`
+
+**File creati:**
+- `backend/apps/attendance/migrations/0005_presenze_insegnanti_qr.py`
+- `frontend/src/app/api/presenze/qrtoken-insegnanti/route.ts`
+- `frontend/src/app/api/presenze/checkin-insegnanti/route.ts`
+- `frontend/src/app/api/presenze/insegnanti-giornata/route.ts`
+- `frontend/src/app/[locale]/checkin-insegnanti/page.tsx`
+- `frontend/src/components/TabQRCheckinInsegnanti.tsx`
+- `frontend/src/components/RegistroInsegnantiPanel.tsx`
+
+**File modificati:**
+- `backend/apps/attendance/models.py`
+- `backend/apps/attendance/serializers.py`
+- `backend/apps/attendance/permissions.py`
+- `backend/apps/attendance/views.py`
+- `backend/apps/attendance/admin.py`
+- `frontend/src/app/[locale]/dashboard/staff/presenze/page.tsx`
+- `frontend/src/app/[locale]/dashboard/admin/presenze/page.tsx`
+
 ## Ultimo Aggiornamento
-Data: 15 aprile 2026
-Completato: Notifiche Push PWA + Email (feature/notifiche) + Log Accessi GDPR (feature/log-accessi)
-Prossimo task: deploy + test + configurazione VAPID keys + cron cleanup log
+Data: 7 maggio 2026
+Completato: Presenze insegnanti con QR dedicato (registro giornaliero staff + check-in entrata/uscita via QR) + fix filtro sezione/gruppo in presenze
+Prossimo task: test end-to-end in Docker (migrazione 0005 + flussi QR genitori/insegnanti) e deploy in produzione
