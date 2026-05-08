@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import type { CSSProperties } from 'react'
 import RegistroInsegnantiPanel from '@/components/RegistroInsegnantiPanel'
 
 interface InsegnanteRiga {
@@ -34,6 +35,15 @@ const MOTIVI = [
   { value: 'altro', label: 'Altro' },
 ]
 
+const CONTROL_STYLE: CSSProperties = {
+  padding: '0.4rem 0.7rem',
+  border: '1px solid #CBD5E0',
+  borderRadius: '8px',
+  fontFamily: 'inherit',
+  fontSize: '0.88rem',
+  minHeight: '36px',
+}
+
 function todayIso(): string {
   return new Date().toISOString().split('T')[0]
 }
@@ -46,10 +56,13 @@ export default function AdminInsegnantiPanel() {
   const [stats, setStats] = useState<StoricoStats | null>(null)
   const [loadingStorico, setLoadingStorico] = useState(false)
   const [errorStorico, setErrorStorico] = useState('')
-  const [dataAssenza, setDataAssenza] = useState(todayIso())
-  const [motivoAssenza, setMotivoAssenza] = useState('malattia')
-  const [savingAssenza, setSavingAssenza] = useState(false)
-  const [successAssenza, setSuccessAssenza] = useState('')
+  const [dataManuale, setDataManuale] = useState(todayIso())
+  const [presenteManuale, setPresenteManuale] = useState(true)
+  const [motivoAssenza, setMotivoAssenza] = useState('altro')
+  const [oraEntrata, setOraEntrata] = useState('')
+  const [oraUscita, setOraUscita] = useState('')
+  const [savingManuale, setSavingManuale] = useState(false)
+  const [successManuale, setSuccessManuale] = useState('')
 
   const caricaInsegnanti = async () => {
     try {
@@ -85,32 +98,32 @@ export default function AdminInsegnantiPanel() {
     }
   }
 
-  const salvaAssenza = async () => {
+  const salvaManuale = async () => {
     if (!insegnanteId) return
-    setSavingAssenza(true)
-    setSuccessAssenza('')
+    setSavingManuale(true)
+    setSuccessManuale('')
     setErrorStorico('')
     try {
-      const res = await fetch('/api/presenze/storico-insegnanti', {
+      const res = await fetch('/api/presenze/insegnanti-manuale', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           insegnante: Number(insegnanteId),
-          data: dataAssenza,
-          presente: false,
-          motivo_assenza: motivoAssenza,
-          ora_entrata: null,
-          ora_uscita: null,
+          data: dataManuale,
+          presente: presenteManuale,
+          motivo_assenza: presenteManuale ? '' : motivoAssenza,
+          ora_entrata: presenteManuale && oraEntrata ? oraEntrata : null,
+          ora_uscita: presenteManuale && oraUscita ? oraUscita : null,
         }),
       })
       const json = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(json.detail || 'Impossibile registrare l\'assenza')
-      setSuccessAssenza('Assenza registrata correttamente')
+      if (!res.ok) throw new Error(json.detail || 'Impossibile salvare la presenza manuale')
+      setSuccessManuale('Salvataggio manuale completato')
       await caricaStorico(insegnanteId)
     } catch (err) {
-      setErrorStorico(err instanceof Error ? err.message : 'Errore nel salvataggio assenza')
+      setErrorStorico(err instanceof Error ? err.message : 'Errore nel salvataggio manuale')
     } finally {
-      setSavingAssenza(false)
+      setSavingManuale(false)
     }
   }
 
@@ -124,6 +137,21 @@ export default function AdminInsegnantiPanel() {
     }
   }, [insegnanteId])
 
+  useEffect(() => {
+    const record = storico.find(r => r.data === dataManuale)
+    if (!record) {
+      setPresenteManuale(true)
+      setMotivoAssenza('altro')
+      setOraEntrata('')
+      setOraUscita('')
+      return
+    }
+    setPresenteManuale(record.presente)
+    setMotivoAssenza(record.motivo_assenza || 'altro')
+    setOraEntrata(record.ora_entrata ? record.ora_entrata.slice(0, 5) : '')
+    setOraUscita(record.ora_uscita ? record.ora_uscita.slice(0, 5) : '')
+  }, [storico, dataManuale])
+
   return (
     <div style={{ display: 'grid', gap: '1rem' }}>
       <div style={{ background: 'white', borderRadius: '14px', padding: '0.875rem 1rem', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
@@ -133,7 +161,7 @@ export default function AdminInsegnantiPanel() {
             type="date"
             value={dataRegistro}
             onChange={e => setDataRegistro(e.target.value)}
-            style={{ padding: '0.4rem 0.75rem', border: '1px solid #CBD5E0', borderRadius: '8px', fontSize: '0.875rem', fontFamily: 'inherit' }}
+            style={CONTROL_STYLE}
           />
         </div>
         <RegistroInsegnantiPanel data={dataRegistro} />
@@ -145,7 +173,7 @@ export default function AdminInsegnantiPanel() {
           <select
             value={insegnanteId}
             onChange={e => setInsegnanteId(e.target.value)}
-            style={{ padding: '0.45rem 0.75rem', border: '1px solid #CBD5E0', borderRadius: '8px', minWidth: '260px', fontFamily: 'inherit' }}
+            style={{ ...CONTROL_STYLE, minWidth: '260px' }}
           >
             {insegnanti.length === 0 && <option value="">Nessuna insegnante disponibile</option>}
             {insegnanti.map(ins => (
@@ -219,30 +247,80 @@ export default function AdminInsegnantiPanel() {
         </div>
 
         <div style={{ marginTop: '1rem', paddingTop: '0.9rem', borderTop: '1px dashed #E2E8F0' }}>
-          <h4 style={{ margin: '0 0 0.6rem', fontSize: '0.92rem', color: '#2D3748' }}>Registra assenza manuale</h4>
+          <h4 style={{ margin: '0 0 0.6rem', fontSize: '0.92rem', color: '#2D3748' }}>Inserisci / modifica manualmente</h4>
           <div style={{ display: 'flex', gap: '0.625rem', flexWrap: 'wrap', alignItems: 'center' }}>
             <input
               type="date"
-              value={dataAssenza}
-              onChange={e => setDataAssenza(e.target.value)}
-              style={{ padding: '0.4rem 0.65rem', border: '1px solid #CBD5E0', borderRadius: '8px', fontFamily: 'inherit' }}
+              value={dataManuale}
+              onChange={e => setDataManuale(e.target.value)}
+              style={CONTROL_STYLE}
             />
+
+            <button
+              onClick={() => setPresenteManuale(true)}
+              style={{
+                padding: '0.45rem 0.8rem',
+                border: presenteManuale ? '2px solid #2F855A' : '1px solid #CBD5E0',
+                borderRadius: '8px',
+                background: presenteManuale ? '#F0FFF4' : 'white',
+                color: presenteManuale ? '#2F855A' : '#4A5568',
+                fontWeight: 700,
+                cursor: 'pointer',
+                minHeight: '36px',
+              }}
+            >
+              Presente
+            </button>
+            <button
+              onClick={() => setPresenteManuale(false)}
+              style={{
+                padding: '0.45rem 0.8rem',
+                border: !presenteManuale ? '2px solid #C53030' : '1px solid #CBD5E0',
+                borderRadius: '8px',
+                background: !presenteManuale ? '#FFF5F5' : 'white',
+                color: !presenteManuale ? '#C53030' : '#4A5568',
+                fontWeight: 700,
+                cursor: 'pointer',
+                minHeight: '36px',
+              }}
+            >
+              Assente
+            </button>
+
+            {presenteManuale ? (
+              <>
+                <input
+                  type="time"
+                  value={oraEntrata}
+                  onChange={e => setOraEntrata(e.target.value)}
+                  style={CONTROL_STYLE}
+                />
+                <input
+                  type="time"
+                  value={oraUscita}
+                  onChange={e => setOraUscita(e.target.value)}
+                  style={CONTROL_STYLE}
+                />
+              </>
+            ) : (
             <select
               value={motivoAssenza}
               onChange={e => setMotivoAssenza(e.target.value)}
-              style={{ padding: '0.4rem 0.65rem', border: '1px solid #CBD5E0', borderRadius: '8px', fontFamily: 'inherit' }}
+              style={CONTROL_STYLE}
             >
               {MOTIVI.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
             </select>
+            )}
+
             <button
-              onClick={salvaAssenza}
-              disabled={!insegnanteId || savingAssenza}
+              onClick={salvaManuale}
+              disabled={!insegnanteId || savingManuale}
               style={{ padding: '0.5rem 0.95rem', border: 'none', borderRadius: '8px', background: '#C53030', color: 'white', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}
             >
-              {savingAssenza ? 'Salvataggio...' : 'Segna assente'}
+              {savingManuale ? 'Salvataggio...' : 'Salva manuale'}
             </button>
           </div>
-          {successAssenza && <p style={{ margin: '0.65rem 0 0', color: '#2F855A', fontSize: '0.82rem', fontWeight: 600 }}>{successAssenza}</p>}
+          {successManuale && <p style={{ margin: '0.65rem 0 0', color: '#2F855A', fontSize: '0.82rem', fontWeight: 600 }}>{successManuale}</p>}
           {errorStorico && <p style={{ margin: '0.65rem 0 0', color: '#C53030', fontSize: '0.82rem' }}>{errorStorico}</p>}
         </div>
       </div>

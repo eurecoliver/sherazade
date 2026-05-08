@@ -755,7 +755,28 @@ Completato: Portfolio digitale del bambino (upload foto/video per gruppo, iscriz
 - `frontend/src/app/[locale]/dashboard/admin/presenze/page.tsx`
 - `frontend/src/app/api/presenze/storico-insegnanti/route.ts`
 
+### Presenze insegnanti manuali complete + fix POST (8 maggio 2026)
+- Backend `attendance/views.py`: nuova action `salva_insegnante_manuale` (`POST /api/v1/presenze/salva-insegnante-manuale/`) per creare/aggiornare manualmente record insegnante per una data
+  - Supporta sia `presente=True` (con `ora_entrata`/`ora_uscita`) sia `presente=False` (con `motivo_assenza`)
+  - Upsert su `(insegnante, data)` per correggere facilmente dimenticanze senza duplicati
+  - Se assente, azzera automaticamente gli orari; se presente, pulisce `motivo_assenza`
+- Frontend API: nuova route `/api/presenze/insegnanti-manuale` (`POST`) che proxya al backend con refresh cookie automatico
+- UI admin `AdminInsegnantiPanel` migliorata:
+  - Form unico "Inserisci / modifica manualmente" con data + toggle Presente/Assente
+  - Se Presente: campi ora entrata/uscita
+  - Se Assente: dropdown motivo assenza
+  - Prefill automatico dei campi se esiste già un record per la data selezionata
+- Bugfix: flusso "Segna assente" con motivo `Altro` ora passa da endpoint manuale dedicato e non dipende più dal POST sulla route storico
+- UX fix: uniformate dimensioni controlli (`input`/`select`/`time`) con stile condiviso per coerenza visiva
+
+**File creati:**
+- `frontend/src/app/api/presenze/insegnanti-manuale/route.ts`
+
+**File modificati:**
+- `backend/apps/attendance/views.py`
+- `frontend/src/components/AdminInsegnantiPanel.tsx`
+
 ## Ultimo Aggiornamento
 Data: 8 maggio 2026
-Completato: Storico presenze insegnanti con gestione assenze + pannello admin completo (selettore insegnante, storico dedicato, registrazione assenze manuali da UI)
-Prossimo task: smoke test completo lato admin/staff (QR, storico, assenze) e deploy in produzione
+Completato: Gestione manuale completa presenze/assenze insegnanti (upsert per data, fix POST, UI uniforme e prefill automatico)
+Prossimo task: smoke test completo lato admin/staff (manuale + QR + storico) e deploy in produzione

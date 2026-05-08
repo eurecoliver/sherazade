@@ -9,6 +9,7 @@ from rest_framework.response import Response
 
 from apps.children.models import Bambino
 from apps.users.models import Role, User
+from apps.config.permessi import check_permesso
 from apps.audit.mixin import LogAccessoMixin
 from .models import (
     Presenza,
@@ -701,6 +702,66 @@ class PresenzaViewSet(LogAccessoMixin, viewsets.ModelViewSet):
             obj = serializer.save(registrato_da=request.user, presente=False)
             return Response(PresenzaInsegnanteSerializer(obj).data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=False, methods=['post'], url_path='salva-insegnante-manuale')
+    def salva_insegnante_manuale(self, request):
+        """
+        Admin/Direttrice (o ruoli con permesso scrivi): crea/aggiorna manualmente
+        la presenza insegnante per una data specifica.
+        Body: {
+          insegnante, data, presente, motivo_assenza?, ora_entrata?, ora_uscita?
+        }
+        """
+        if not check_permesso(request.user, 'presenze', 'scrivi'):
+            return Response({'detail': 'Non autorizzato.'}, status=status.HTTP_403_FORBIDDEN)
+
+        serializer = PresenzaInsegnanteWriteSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        validated = serializer.validated_data
+
+        insegnante = validated['insegnante']
+        data_val = validated['data']
+        presente = validated.get('presente', True)
+
+        defaults = {
+            'presente': presente,
+            'motivo_assenza': validated.get('motivo_assenza', ''),
+            'ora_entrata': validated.get('ora_entrata'),
+            'ora_uscita': validated.get('ora_uscita'),
+            'registrato_da': request.user,
+        }
+
+        # Se assente, gli orari non devono essere valorizzati.
+        if not presente:
+            defaults['ora_entrata'] = None
+            defaults['ora_uscita'] = None
+            if not defaults['motivo_assenza']:
+                defaults['motivo_assenza'] = PresenzaInsegnante.MotivoAssenza.ALTRO
+        else:
+            defaults['motivo_assenza'] = ''
+
+        obj, created = PresenzaInsegnante.objects.get_or_create(
+            insegnante=insegnante,
+            data=data_val,
+            defaults=defaults,
+        )
+
+        if not created:
+            for key, value in defaults.items():
+                setattr(obj, key, value)
+            obj.save(update_fields=[
+                'presente',
+                'motivo_assenza',
+                'ora_entrata',
+                'ora_uscita',
+                'registrato_da',
+                'aggiornato_at',
+            ])
+
+        return Response({
+            'created': created,
+            'presenza': PresenzaInsegnanteSerializer(obj).data,
+        })
 
     @action(detail=False, methods=['post'], url_path='perform-checkin-insegnanti')
     def perform_checkin_insegnanti(self, request):
