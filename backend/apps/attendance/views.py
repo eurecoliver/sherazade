@@ -1,6 +1,7 @@
 import calendar
 from datetime import date, datetime as dt
 
+from django.db import IntegrityError
 from django.db.models import Q
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
@@ -658,6 +659,9 @@ class PresenzaViewSet(LogAccessoMixin, viewsets.ModelViewSet):
         # Se admin/direttrice, possono vedere lo storico di un'altra insegnante passando insegnante_id
         insegnante_id = request.query_params.get('insegnante_id')
         if insegnante_id and request.user.role in (Role.ADMIN, Role.DIRETTRICE):
+            # Verifica che l'ID appartenca ad un utente con ruolo insegnante
+            if not User.objects.filter(pk=insegnante_id, role=Role.INSEGNANTE).exists():
+                return Response({'detail': 'Insegnante non trovata.'}, status=status.HTTP_404_NOT_FOUND)
             insegnante_pk = insegnante_id
         else:
             insegnante_pk = request.user.pk
@@ -699,7 +703,13 @@ class PresenzaViewSet(LogAccessoMixin, viewsets.ModelViewSet):
 
         serializer = PresenzaInsegnanteWriteSerializer(data=request.data)
         if serializer.is_valid():
-            obj = serializer.save(registrato_da=request.user, presente=False)
+            try:
+                obj = serializer.save(registrato_da=request.user, presente=False)
+            except IntegrityError:
+                return Response(
+                    {'detail': 'Esiste già un record per questa insegnante in questa data. Usa il salvataggio manuale per aggiornarlo.'},
+                    status=status.HTTP_409_CONFLICT,
+                )
             return Response(PresenzaInsegnanteSerializer(obj).data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 

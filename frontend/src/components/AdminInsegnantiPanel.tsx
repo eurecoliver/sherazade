@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useId, useState } from 'react'
 import type { CSSProperties } from 'react'
 import RegistroInsegnantiPanel from '@/components/RegistroInsegnantiPanel'
 
@@ -46,7 +46,6 @@ const CONTROL_STYLE: CSSProperties = {
 }
 
 const CONTROL_WIDTH = '170px'
-let _dateInputCounter = 0
 
 function extractErrorMessage(payload: unknown, fallback: string): string {
   if (!payload || typeof payload !== 'object') return fallback
@@ -72,9 +71,10 @@ function todayIso(): string {
 }
 
 export default function AdminInsegnantiPanel() {
-  // id unici per collegare <label> agli input (compatibilità Safari)
-  const [idRegistro] = useState(() => `date-registro-${++_dateInputCounter}`)
-  const [idManuale] = useState(() => `date-manuale-${++_dateInputCounter}`)
+  // id unici per collegare <label> agli input (React 18 useId — stable + SSR-safe)
+  const uid = useId()
+  const idRegistro = `${uid}-registro`
+  const idManuale = `${uid}-manuale`
   const [dataRegistro, setDataRegistro] = useState(todayIso())
   const [insegnanti, setInsegnanti] = useState<InsegnanteRiga[]>([])
   const [insegnanteId, setInsegnanteId] = useState('')
