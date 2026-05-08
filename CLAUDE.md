@@ -776,7 +776,16 @@ Completato: Portfolio digitale del bambino (upload foto/video per gruppo, iscriz
 - `backend/apps/attendance/views.py`
 - `frontend/src/components/AdminInsegnantiPanel.tsx`
 
+### Hardening errore "Impossibile salvare la presenza manuale" (8 maggio 2026)
+- `frontend/src/app/api/presenze/insegnanti-manuale/route.ts`:
+  - parsing robusto della risposta backend (anche non-JSON)
+  - fallback compatibilità per assenze su endpoint legacy `/api/v1/presenze/crea-assenza-insegnante/` se il nuovo endpoint manuale non è ancora deployato (404/405)
+  - messaggio esplicito per presenze manuali quando il backend non è allineato: "Backend non aggiornato... ricostruisci anche backend"
+- `frontend/src/components/AdminInsegnantiPanel.tsx`:
+  - visualizzazione dettagli errore backend reale (no più fallback generico)
+  - messaggi HTTP più chiari durante il salvataggio manuale
+
 ## Ultimo Aggiornamento
 Data: 8 maggio 2026
-Completato: Gestione manuale completa presenze/assenze insegnanti (upsert per data, fix POST, UI uniforme e prefill automatico)
+Completato: Gestione manuale completa presenze/assenze insegnanti + hardening error handling per salvataggio manuale (fallback legacy e messaggi espliciti)
 Prossimo task: smoke test completo lato admin/staff (manuale + QR + storico) e deploy in produzione

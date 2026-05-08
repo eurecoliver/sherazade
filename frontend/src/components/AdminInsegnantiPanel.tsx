@@ -117,7 +117,10 @@ export default function AdminInsegnantiPanel() {
         }),
       })
       const json = await res.json().catch(() => ({}))
-      if (!res.ok) throw new Error(json.detail || 'Impossibile salvare la presenza manuale')
+      if (!res.ok) {
+        const detail = json.detail || json.error || `Errore HTTP ${res.status}`
+        throw new Error(detail)
+      }
       setSuccessManuale('Salvataggio manuale completato')
       await caricaStorico(insegnanteId)
     } catch (err) {

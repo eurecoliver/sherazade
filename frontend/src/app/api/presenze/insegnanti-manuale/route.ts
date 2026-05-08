@@ -9,7 +9,37 @@ export async function POST(request: NextRequest) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
     })
-    const nextRes = NextResponse.json(await res.json(), { status: res.status })
+
+    // Compatibility fallback: se il backend non ha ancora l'action nuova,
+    // supportiamo almeno la registrazione assenze usando l'endpoint legacy.
+    if ((res.status === 404 || res.status === 405) && body?.presente === false) {
+      const legacy = await fetchBackend(request, '/api/v1/presenze/crea-assenza-insegnante/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      })
+      const legacyPayload = await legacy.res.json().catch(() => ({ detail: 'Errore legacy assenza' }))
+      const legacyRes = NextResponse.json(legacyPayload, { status: legacy.res.status })
+      if (legacy.newAccessToken) legacyRes.cookies.set('access_token', legacy.newAccessToken, COOKIE_OPTIONS)
+      return legacyRes
+    }
+
+    const payload = await res.json().catch(async () => {
+      const text = await res.text().catch(() => '')
+      return { detail: text || 'Errore non JSON dal backend' }
+    })
+
+    if ((res.status === 404 || res.status === 405) && body?.presente === true) {
+      return NextResponse.json(
+        {
+          detail: 'Backend non aggiornato: endpoint manuale insegnanti non disponibile. Ricostruisci anche il container backend.',
+          backend_status: res.status,
+        },
+        { status: 409 },
+      )
+    }
+
+    const nextRes = NextResponse.json(payload, { status: res.status })
     if (newAccessToken) nextRes.cookies.set('access_token', newAccessToken, COOKIE_OPTIONS)
     return nextRes
   } catch {
