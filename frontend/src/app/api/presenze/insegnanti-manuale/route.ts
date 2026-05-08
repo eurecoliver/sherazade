@@ -24,10 +24,13 @@ export async function POST(request: NextRequest) {
       return legacyRes
     }
 
-    const payload = await res.json().catch(async () => {
+    let payload: unknown
+    try {
+      payload = await res.json()
+    } catch {
       const text = await res.text().catch(() => '')
-      return { detail: text || 'Errore non JSON dal backend' }
-    })
+      payload = { detail: text || 'Errore non JSON dal backend' }
+    }
 
     if ((res.status === 404 || res.status === 405) && body?.presente === true) {
       return NextResponse.json(
@@ -42,7 +45,10 @@ export async function POST(request: NextRequest) {
     const nextRes = NextResponse.json(payload, { status: res.status })
     if (newAccessToken) nextRes.cookies.set('access_token', newAccessToken, COOKIE_OPTIONS)
     return nextRes
-  } catch {
-    return NextResponse.json({ detail: 'Errore nel salvataggio manuale' }, { status: 503 })
+  } catch (error) {
+    return NextResponse.json(
+      { detail: 'Errore nel salvataggio manuale', error: error instanceof Error ? error.message : 'unknown' },
+      { status: 503 },
+    )
   }
 }

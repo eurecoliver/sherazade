@@ -785,7 +785,16 @@ Completato: Portfolio digitale del bambino (upload foto/video per gruppo, iscriz
   - visualizzazione dettagli errore backend reale (no più fallback generico)
   - messaggi HTTP più chiari durante il salvataggio manuale
 
+### UX fix form manuale insegnanti + diagnostica HTTP 400 (8 maggio 2026)
+- `AdminInsegnantiPanel`:
+  - aggiunti pulsanti `📅` accanto ai campi data per aprire esplicitamente il date picker anche su Safari
+  - uniformate larghezze dei controlli (`date`, `time`, `select`) con costante condivisa `CONTROL_WIDTH`
+  - dropdown motivo assenza ora ha la stessa larghezza del campo data/ora
+  - parsing intelligente degli errori DRF (`field: errore`) invece del solo fallback `Errore HTTP 400`
+- `insegnanti-manuale/route.ts`:
+  - risposta 503 include ora anche il messaggio errore catturato lato route Next per debug più rapido
+
 ## Ultimo Aggiornamento
 Data: 8 maggio 2026
-Completato: Gestione manuale completa presenze/assenze insegnanti + hardening error handling per salvataggio manuale (fallback legacy e messaggi espliciti)
+Completato: Gestione manuale completa presenze/assenze insegnanti + hardening error handling e UX del form (date picker esplicito, controlli uniformi, errori 400 leggibili)
 Prossimo task: smoke test completo lato admin/staff (manuale + QR + storico) e deploy in produzione
