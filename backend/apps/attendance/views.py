@@ -659,9 +659,10 @@ class PresenzaViewSet(LogAccessoMixin, viewsets.ModelViewSet):
         # Se admin/direttrice, possono vedere lo storico di un'altra insegnante passando insegnante_id
         insegnante_id = request.query_params.get('insegnante_id')
         if insegnante_id and request.user.role in (Role.ADMIN, Role.DIRETTRICE):
-            # Verifica che l'ID appartenca ad un utente con ruolo insegnante
-            if not User.objects.filter(pk=insegnante_id, role=Role.INSEGNANTE).exists():
-                return Response({'detail': 'Insegnante non trovata.'}, status=status.HTTP_404_NOT_FOUND)
+            # Verifica che l'utente esista e sia attivo (non limitiamo al ruolo 'insegnante'
+            # per supportare ruoli custom con lo stesso scopo)
+            if not User.objects.filter(pk=insegnante_id, is_active=True).exists():
+                return Response({'detail': 'Utente non trovato.'}, status=status.HTTP_404_NOT_FOUND)
             insegnante_pk = insegnante_id
         else:
             insegnante_pk = request.user.pk

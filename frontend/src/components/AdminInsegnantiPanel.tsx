@@ -64,8 +64,6 @@ function extractErrorMessage(payload: unknown, fallback: string): string {
   return parts[0] || fallback
 }
 
-// Safari non supporta showPicker: usiamo <label htmlFor> nei componenti
-
 function todayIso(): string {
   return new Date().toISOString().split('T')[0]
 }
@@ -77,11 +75,13 @@ export default function AdminInsegnantiPanel() {
   const idManuale = `${uid}-manuale`
   const [dataRegistro, setDataRegistro] = useState(todayIso())
   const [insegnanti, setInsegnanti] = useState<InsegnanteRiga[]>([])
+  const [loadingInsegnanti, setLoadingInsegnanti] = useState(true)
+  const [errorInsegnanti, setErrorInsegnanti] = useState('')
   const [insegnanteId, setInsegnanteId] = useState('')
   const [storico, setStorico] = useState<StoricoPresenza[]>([])
   const [stats, setStats] = useState<StoricoStats | null>(null)
   const [loadingStorico, setLoadingStorico] = useState(false)
-  const [errorStorico, setErrorStorico] = useState('')
+  const [errorStorico, setErrorStorico] = useState('')   // errori caricamento storico
   const [dataManuale, setDataManuale] = useState(todayIso())
   const [presenteManuale, setPresenteManuale] = useState(true)
   const [motivoAssenza, setMotivoAssenza] = useState('altro')
@@ -89,19 +89,27 @@ export default function AdminInsegnantiPanel() {
   const [oraUscita, setOraUscita] = useState('')
   const [savingManuale, setSavingManuale] = useState(false)
   const [successManuale, setSuccessManuale] = useState('')
+  const [errorManuale, setErrorManuale] = useState('')    // errori salvataggio manuale
 
   const caricaInsegnanti = async () => {
+    setLoadingInsegnanti(true)
+    setErrorInsegnanti('')
     try {
       const res = await fetch(`/api/presenze/insegnanti-giornata?data=${encodeURIComponent(dataRegistro)}`)
-      if (!res.ok) return
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({}))
+        throw new Error(json.detail || `Errore HTTP ${res.status} nel caricamento insegnanti`)
+      }
       const json = await res.json()
       const list = (json.insegnanti ?? []) as InsegnanteRiga[]
       setInsegnanti(list)
       if (!insegnanteId && list.length > 0) {
         setInsegnanteId(String(list[0].insegnante_id))
       }
-    } catch {
-      // no-op: il pannello giornaliero gestisce gia gli errori di base
+    } catch (err) {
+      setErrorInsegnanti(err instanceof Error ? err.message : 'Impossibile caricare la lista insegnanti')
+    } finally {
+      setLoadingInsegnanti(false)
     }
   }
 
@@ -128,7 +136,7 @@ export default function AdminInsegnantiPanel() {
     if (!insegnanteId) return
     setSavingManuale(true)
     setSuccessManuale('')
-    setErrorStorico('')
+    setErrorManuale('')
     try {
       const res = await fetch('/api/presenze/insegnanti-manuale', {
         method: 'POST',
@@ -147,10 +155,10 @@ export default function AdminInsegnantiPanel() {
         const detail = extractErrorMessage(json, `Errore HTTP ${res.status}`)
         throw new Error(detail)
       }
-      setSuccessManuale('Salvataggio manuale completato')
+      setSuccessManuale('✓ Salvataggio completato')
       await caricaStorico(insegnanteId)
     } catch (err) {
-      setErrorStorico(err instanceof Error ? err.message : 'Errore nel salvataggio manuale')
+      setErrorManuale(err instanceof Error ? err.message : 'Errore nel salvataggio manuale')
     } finally {
       setSavingManuale(false)
     }
@@ -186,32 +194,39 @@ export default function AdminInsegnantiPanel() {
       <div style={{ background: 'white', borderRadius: '14px', padding: '0.875rem 1rem', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
         <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center', marginBottom: '0.75rem' }}>
           <label style={{ fontSize: '0.8rem', color: '#555', fontWeight: 600 }}>Registro giornaliero</label>
+          {/* input PRIMA della label per garantire l'apertura del picker su Safari */}
+          <input
+            id={idRegistro}
+            type="date"
+            value={dataRegistro}
+            onChange={e => setDataRegistro(e.target.value)}
+            style={{ ...CONTROL_STYLE, width: CONTROL_WIDTH }}
+          />
           <label
             htmlFor={idRegistro}
-            style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}
-          >
-            <input
-              id={idRegistro}
-              type="date"
-              value={dataRegistro}
-              onChange={e => setDataRegistro(e.target.value)}
-              style={{ ...CONTROL_STYLE, width: CONTROL_WIDTH }}
-            />
-            <span style={{ ...CONTROL_STYLE, width: '44px', padding: '0', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: '#F7FAFC', cursor: 'pointer' }}>📅</span>
-          </label>
+            style={{ ...CONTROL_STYLE, width: '44px', padding: '0', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: '#F7FAFC', cursor: 'pointer' }}
+            title="Apri calendario"
+          >📅</label>
         </div>
         <RegistroInsegnantiPanel data={dataRegistro} />
       </div>
 
       <div style={{ background: 'white', borderRadius: '14px', padding: '1rem', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
         <h3 style={{ margin: '0 0 0.75rem', color: '#2D3748', fontSize: '1rem' }}>Storico insegnante</h3>
+        {errorInsegnanti && (
+          <div style={{ background: '#FFF5F5', border: '1px solid #FED7D7', borderRadius: '8px', padding: '0.6rem 0.75rem', marginBottom: '0.75rem', color: '#C53030', fontSize: '0.82rem' }}>
+            ⚠️ {errorInsegnanti}
+          </div>
+        )}
         <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center' }}>
           <select
             value={insegnanteId}
             onChange={e => setInsegnanteId(e.target.value)}
-            style={{ ...CONTROL_STYLE, width: '320px', maxWidth: '100%' }}
+            disabled={loadingInsegnanti}
+            style={{ ...CONTROL_STYLE, width: '320px', maxWidth: '100%', appearance: 'none', WebkitAppearance: 'none' }}
           >
-            {insegnanti.length === 0 && <option value="">Nessuna insegnante disponibile</option>}
+            {loadingInsegnanti && <option value="">Caricamento insegnanti...</option>}
+            {!loadingInsegnanti && insegnanti.length === 0 && <option value="">Nessuna insegnante disponibile</option>}
             {insegnanti.map(ins => (
               <option key={ins.insegnante_id} value={ins.insegnante_id}>
                 {ins.cognome} {ins.nome} ({ins.email})
@@ -245,6 +260,15 @@ export default function AdminInsegnantiPanel() {
         )}
 
         <div style={{ marginTop: '0.9rem', maxHeight: '320px', overflow: 'auto', border: '1px solid #E2E8F0', borderRadius: '10px' }}>
+          {errorStorico && (
+            <div style={{ background: '#FFF5F5', color: '#C53030', padding: '0.75rem 1rem', fontSize: '0.82rem', borderBottom: '1px solid #FED7D7' }}>
+              ⚠️ Errore caricamento storico: {errorStorico}
+              <button
+                onClick={() => caricaStorico(insegnanteId)}
+                style={{ marginLeft: '0.75rem', padding: '0.2rem 0.5rem', border: '1px solid #C53030', borderRadius: '6px', background: 'white', color: '#C53030', cursor: 'pointer', fontSize: '0.78rem', fontFamily: 'inherit' }}
+              >Riprova</button>
+            </div>
+          )}
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ background: '#F7FAFC' }}>
@@ -285,19 +309,19 @@ export default function AdminInsegnantiPanel() {
         <div style={{ marginTop: '1rem', paddingTop: '0.9rem', borderTop: '1px dashed #E2E8F0' }}>
           <h4 style={{ margin: '0 0 0.6rem', fontSize: '0.92rem', color: '#2D3748' }}>Inserisci / modifica manualmente</h4>
           <div style={{ display: 'flex', gap: '0.625rem', flexWrap: 'wrap', alignItems: 'center' }}>
+            {/* input PRIMA della label per garantire l'apertura del picker su Safari */}
+            <input
+              id={idManuale}
+              type="date"
+              value={dataManuale}
+              onChange={e => setDataManuale(e.target.value)}
+              style={{ ...CONTROL_STYLE, width: CONTROL_WIDTH }}
+            />
             <label
               htmlFor={idManuale}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}
-            >
-              <input
-                id={idManuale}
-                type="date"
-                value={dataManuale}
-                onChange={e => setDataManuale(e.target.value)}
-                style={{ ...CONTROL_STYLE, width: CONTROL_WIDTH }}
-              />
-              <span style={{ ...CONTROL_STYLE, width: '44px', padding: '0', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: '#F7FAFC', cursor: 'pointer' }}>📅</span>
-            </label>
+              style={{ ...CONTROL_STYLE, width: '44px', padding: '0', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: '#F7FAFC', cursor: 'pointer' }}
+              title="Apri calendario"
+            >📅</label>
 
             <button
               onClick={() => setPresenteManuale(true)}
@@ -364,7 +388,7 @@ export default function AdminInsegnantiPanel() {
             </button>
           </div>
           {successManuale && <p style={{ margin: '0.65rem 0 0', color: '#2F855A', fontSize: '0.82rem', fontWeight: 600 }}>{successManuale}</p>}
-          {errorStorico && <p style={{ margin: '0.65rem 0 0', color: '#C53030', fontSize: '0.82rem' }}>{errorStorico}</p>}
+          {errorManuale && <p style={{ margin: '0.65rem 0 0', color: '#C53030', fontSize: '0.82rem' }}>{errorManuale}</p>}
         </div>
       </div>
     </div>
