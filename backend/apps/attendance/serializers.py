@@ -93,3 +93,4 @@ class PresenzaInsegnanteWriteSerializer(serializers.ModelSerializer):
             'insegnante', 'data', 'presente', 'motivo_assenza',
             'ora_entrata', 'ora_uscita',
         )
+        validators = []  # upsert gestito manualmente in salva_insegnante_manuale

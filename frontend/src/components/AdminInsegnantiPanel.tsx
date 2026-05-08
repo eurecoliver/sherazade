@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { CSSProperties } from 'react'
 import RegistroInsegnantiPanel from '@/components/RegistroInsegnantiPanel'
 
@@ -46,6 +46,7 @@ const CONTROL_STYLE: CSSProperties = {
 }
 
 const CONTROL_WIDTH = '170px'
+let _dateInputCounter = 0
 
 function extractErrorMessage(payload: unknown, fallback: string): string {
   if (!payload || typeof payload !== 'object') return fallback
@@ -64,24 +65,16 @@ function extractErrorMessage(payload: unknown, fallback: string): string {
   return parts[0] || fallback
 }
 
-function openDatePicker(input: HTMLInputElement | null) {
-  if (!input) return
-  const picker = input as HTMLInputElement & { showPicker?: () => void }
-  if (typeof picker.showPicker === 'function') {
-    picker.showPicker()
-    return
-  }
-  input.focus()
-  input.click()
-}
+// Safari non supporta showPicker: usiamo <label htmlFor> nei componenti
 
 function todayIso(): string {
   return new Date().toISOString().split('T')[0]
 }
 
 export default function AdminInsegnantiPanel() {
-  const dataRegistroRef = useRef<HTMLInputElement | null>(null)
-  const dataManualeRef = useRef<HTMLInputElement | null>(null)
+  // id unici per collegare <label> agli input (compatibilità Safari)
+  const [idRegistro] = useState(() => `date-registro-${++_dateInputCounter}`)
+  const [idManuale] = useState(() => `date-manuale-${++_dateInputCounter}`)
   const [dataRegistro, setDataRegistro] = useState(todayIso())
   const [insegnanti, setInsegnanti] = useState<InsegnanteRiga[]>([])
   const [insegnanteId, setInsegnanteId] = useState('')
@@ -193,30 +186,19 @@ export default function AdminInsegnantiPanel() {
       <div style={{ background: 'white', borderRadius: '14px', padding: '0.875rem 1rem', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
         <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center', marginBottom: '0.75rem' }}>
           <label style={{ fontSize: '0.8rem', color: '#555', fontWeight: 600 }}>Registro giornaliero</label>
-          <input
-            ref={dataRegistroRef}
-            type="date"
-            value={dataRegistro}
-            onChange={e => setDataRegistro(e.target.value)}
-            style={{ ...CONTROL_STYLE, width: CONTROL_WIDTH }}
-          />
-          <button
-            type="button"
-            onClick={() => openDatePicker(dataRegistroRef.current)}
-            style={{
-              ...CONTROL_STYLE,
-              width: '44px',
-              padding: '0',
-              display: 'inline-flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              background: '#F7FAFC',
-              cursor: 'pointer',
-            }}
-            aria-label="Apri calendario"
+          <label
+            htmlFor={idRegistro}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}
           >
-            📅
-          </button>
+            <input
+              id={idRegistro}
+              type="date"
+              value={dataRegistro}
+              onChange={e => setDataRegistro(e.target.value)}
+              style={{ ...CONTROL_STYLE, width: CONTROL_WIDTH }}
+            />
+            <span style={{ ...CONTROL_STYLE, width: '44px', padding: '0', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: '#F7FAFC', cursor: 'pointer' }}>📅</span>
+          </label>
         </div>
         <RegistroInsegnantiPanel data={dataRegistro} />
       </div>
@@ -303,30 +285,19 @@ export default function AdminInsegnantiPanel() {
         <div style={{ marginTop: '1rem', paddingTop: '0.9rem', borderTop: '1px dashed #E2E8F0' }}>
           <h4 style={{ margin: '0 0 0.6rem', fontSize: '0.92rem', color: '#2D3748' }}>Inserisci / modifica manualmente</h4>
           <div style={{ display: 'flex', gap: '0.625rem', flexWrap: 'wrap', alignItems: 'center' }}>
-            <input
-              ref={dataManualeRef}
-              type="date"
-              value={dataManuale}
-              onChange={e => setDataManuale(e.target.value)}
-              style={{ ...CONTROL_STYLE, width: CONTROL_WIDTH }}
-            />
-            <button
-              type="button"
-              onClick={() => openDatePicker(dataManualeRef.current)}
-              style={{
-                ...CONTROL_STYLE,
-                width: '44px',
-                padding: '0',
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                background: '#F7FAFC',
-                cursor: 'pointer',
-              }}
-              aria-label="Apri calendario manuale"
+            <label
+              htmlFor={idManuale}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', cursor: 'pointer' }}
             >
-              📅
-            </button>
+              <input
+                id={idManuale}
+                type="date"
+                value={dataManuale}
+                onChange={e => setDataManuale(e.target.value)}
+                style={{ ...CONTROL_STYLE, width: CONTROL_WIDTH }}
+              />
+              <span style={{ ...CONTROL_STYLE, width: '44px', padding: '0', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: '#F7FAFC', cursor: 'pointer' }}>📅</span>
+            </label>
 
             <button
               onClick={() => setPresenteManuale(true)}
@@ -378,7 +349,7 @@ export default function AdminInsegnantiPanel() {
             <select
               value={motivoAssenza}
               onChange={e => setMotivoAssenza(e.target.value)}
-              style={{ ...CONTROL_STYLE, width: CONTROL_WIDTH }}
+              style={{ ...CONTROL_STYLE, width: CONTROL_WIDTH, appearance: 'none', WebkitAppearance: 'none' }}
             >
               {MOTIVI.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
             </select>
