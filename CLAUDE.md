@@ -707,7 +707,36 @@ Completato: Portfolio digitale del bambino (upload foto/video per gruppo, iscriz
 - `frontend/src/app/[locale]/dashboard/staff/presenze/page.tsx`
 - `frontend/src/app/[locale]/dashboard/admin/presenze/page.tsx`
 
+### Storico presenze insegnanti con assenze (8 maggio 2026)
+- Modello `PresenzaInsegnante` esteso con campi `presente` (BooleanField default=True) e `motivo_assenza` (TextChoices: malattia/ferie/permesso/altro)
+- **TextChoices per assenze**: `MotivoAssenza` con 4 opzioni — indipendenti dal `MotivoAssenza` di `Presenza` (bambini)
+- Nuova action `storico_insegnanti`: GET lista storico insegnante (ultimi 60 record) + stats mese (giorni presenti/assenti/totale)
+  - Admin/Direttrice possono visualizzare lo storico di un'altra insegnante passando `?insegnante_id=<id>`
+  - Insegnante vede solo il proprio storico
+- Nuova action `crea_assenza_insegnante`: POST da admin/direttrice per registrare manualmente assenze (non QR)
+- Logica modificata in `perform_checkin_insegnanti`: blocca il QR check-in se `presente=False` (409 Conflict)
+- Serializer `PresenzaInsegnanteSerializer`: aggiunto `motivo_assenza_display` (testo leggibile)
+- Nuovo serializer `PresenzaInsegnanteWriteSerializer`: accetta `insegnante`, `data`, `presente`, `motivo_assenza`, `ora_entrata`, `ora_uscita`
+- Migration `attendance/0006_presenze_insegnanti_assenze.py`: aggiunge i due campi a `PresenzaInsegnante`
+- Frontend API proxy: `/api/presenze/storico-insegnanti?insegnante_id=<id>` (GET)
+- Nuova pagina `/dashboard/staff/presenze/storico`: header gradiente grigio scuro, tabella con colonne data/entrata/uscita/stato, stats mese (totale/presenti/assenti box)
+  - Pulsante "← Indietro" con link a `/dashboard/staff/presenze`
+  - Badge verde "Presente", badge rosso "Assente (motivo)"
+  - Formattazione date italiane (es. "gio, 8 mag 2026")
+- Pulsante "📊 Storico" aggiunto al header della pagina `dashboard/staff/presenze/page.tsx` (pill style, accanto a "← Dashboard")
+
+**File creati:**
+- `backend/apps/attendance/migrations/0006_presenze_insegnanti_assenze.py`
+- `frontend/src/app/api/presenze/storico-insegnanti/route.ts`
+- `frontend/src/app/[locale]/dashboard/staff/presenze/storico/page.tsx`
+
+**File modificati:**
+- `backend/apps/attendance/models.py`: aggiunto `MotivoAssenza` TextChoices e campi `presente`, `motivo_assenza` a `PresenzaInsegnante`; aggiornato `__str__`
+- `backend/apps/attendance/serializers.py`: aggiunto `PresenzaInsegnanteWriteSerializer`, aggiornato `PresenzaInsegnanteSerializer` con `presente`, `motivo_assenza`, `motivo_assenza_display`
+- `backend/apps/attendance/views.py`: aggiunto import `PresenzaInsegnanteWriteSerializer`; nuove action `storico_insegnanti` e `crea_assenza_insegnante`; logica modificata in `perform_checkin_insegnanti` per bloccare checkin se assente
+- `frontend/src/app/[locale]/dashboard/staff/presenze/page.tsx`: aggiunto pulsante "📊 Storico" nel header
+
 ## Ultimo Aggiornamento
-Data: 7 maggio 2026
-Completato: Presenze insegnanti con QR dedicato (registro giornaliero staff + check-in entrata/uscita via QR) + fix filtro sezione/gruppo in presenze
-Prossimo task: test end-to-end in Docker (migrazione 0005 + flussi QR genitori/insegnanti) e deploy in produzione
+Data: 8 maggio 2026
+Completato: Storico presenze insegnanti con gestione assenze (campo presente/motivo_assenza, action storico, pagina frontend con stats)
+Prossimo task: test end-to-end in Docker + deploy in produzione

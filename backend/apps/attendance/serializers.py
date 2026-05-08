@@ -66,14 +66,30 @@ class PresenzaWriteSerializer(serializers.ModelSerializer):
 
 class PresenzaInsegnanteSerializer(serializers.ModelSerializer):
     insegnante_nome = serializers.SerializerMethodField()
+    motivo_assenza_display = serializers.SerializerMethodField()
 
     class Meta:
         model = PresenzaInsegnante
         fields = (
             'id', 'insegnante', 'insegnante_nome', 'data',
+            'presente', 'motivo_assenza', 'motivo_assenza_display',
             'ora_entrata', 'ora_uscita', 'registrato_da',
             'creato_at', 'aggiornato_at',
         )
 
     def get_insegnante_nome(self, obj):
         return obj.insegnante.get_full_name() or obj.insegnante.email
+
+    def get_motivo_assenza_display(self, obj):
+        if obj.motivo_assenza:
+            return dict(PresenzaInsegnante.MotivoAssenza.choices).get(obj.motivo_assenza, '')
+        return ''
+
+
+class PresenzaInsegnanteWriteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PresenzaInsegnante
+        fields = (
+            'insegnante', 'data', 'presente', 'motivo_assenza',
+            'ora_entrata', 'ora_uscita',
+        )

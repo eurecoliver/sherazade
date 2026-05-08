@@ -222,12 +222,29 @@ class Presenza(models.Model):
 
 
 class PresenzaInsegnante(models.Model):
+
+    class MotivoAssenza(models.TextChoices):
+        MALATTIA = 'malattia', 'Malattia'
+        FERIE = 'ferie', 'Ferie'
+        PERMESSO = 'permesso', 'Permesso'
+        ALTRO = 'altro', 'Altro'
+
     insegnante = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name='presenze_insegnante',
     )
     data = models.DateField()
+    presente = models.BooleanField(
+        default=True,
+        verbose_name='Presente',
+    )
+    motivo_assenza = models.CharField(
+        max_length=10,
+        choices=MotivoAssenza.choices,
+        blank=True,
+        verbose_name='Motivo assenza',
+    )
     ora_entrata = models.TimeField(null=True, blank=True)
     ora_uscita = models.TimeField(null=True, blank=True)
     registrato_da = models.ForeignKey(
@@ -250,4 +267,5 @@ class PresenzaInsegnante(models.Model):
 
     def __str__(self):
         full_name = self.insegnante.get_full_name() or self.insegnante.email
-        return f'{full_name} — {self.data}'
+        stato = 'Presente' if self.presente else f'Assente ({self.motivo_assenza or "non specificato"})'
+        return f'{full_name} — {self.data} ({stato})'

@@ -20,7 +20,7 @@ from .models import (
 from .permissions import PresenzaPermission
 from .serializers import (
     PresenzaSerializer, PresenzaWriteSerializer,
-    PresenzaInsegnanteSerializer,
+    PresenzaInsegnanteSerializer, PresenzaInsegnanteWriteSerializer,
     DailyQRCodeTokenSerializer,
     DailyQRCodeTokenInsegnantiSerializer,
     ConfigurazioneCheckinSerializer,
@@ -646,6 +646,62 @@ class PresenzaViewSet(LogAccessoMixin, viewsets.ModelViewSet):
             'presenza': PresenzaSerializer(presenza).data,
         })
 
+    @action(detail=False, methods=['get'])
+    def storico_insegnanti(self, request):
+        """
+        Insegnante: visualizza il proprio storico presenze + statistiche mese corrente.
+        """
+        if request.user.role not in (Role.INSEGNANTE, Role.COORDINATRICE, Role.DIRETTRICE, Role.ADMIN):
+            return Response({'detail': 'Riservato allo staff.'}, status=status.HTTP_403_FORBIDDEN)
+
+        # Se admin/direttrice, possono vedere lo storico di un'altra insegnante passando insegnante_id
+        insegnante_id = request.query_params.get('insegnante_id')
+        if insegnante_id and request.user.role in (Role.ADMIN, Role.DIRETTRICE):
+            insegnante_pk = insegnante_id
+        else:
+            insegnante_pk = request.user.pk
+
+        presenze = (
+            PresenzaInsegnante.objects
+            .filter(insegnante_id=insegnante_pk)
+            .select_related('registrato_da')
+            .order_by('-data')[:60]
+        )
+
+        oggi = date.today()
+        presenze_mese = PresenzaInsegnante.objects.filter(
+            insegnante_id=insegnante_pk,
+            data__year=oggi.year,
+            data__month=oggi.month,
+        )
+        giorni_presenti = presenze_mese.filter(presente=True).count()
+        giorni_assenti = presenze_mese.filter(presente=False).count()
+
+        return Response({
+            'presenze': PresenzaInsegnanteSerializer(presenze, many=True).data,
+            'stats_mese': {
+                'mese': oggi.strftime('%B %Y'),
+                'giorni_presenti': giorni_presenti,
+                'giorni_assenti': giorni_assenti,
+                'totale_giorni': giorni_presenti + giorni_assenti,
+            },
+        })
+
+    @action(detail=False, methods=['post'])
+    def crea_assenza_insegnante(self, request):
+        """
+        Admin/Direttrice: crea manualmente un record di assenza per un'insegnante.
+        Body: { insegnante, data, motivo_assenza }
+        """
+        if request.user.role not in (Role.ADMIN, Role.DIRETTRICE):
+            return Response({'detail': 'Solo admin/direttrice.'}, status=status.HTTP_403_FORBIDDEN)
+
+        serializer = PresenzaInsegnanteWriteSerializer(data=request.data)
+        if serializer.is_valid():
+            obj = serializer.save(registrato_da=request.user, presente=False)
+            return Response(PresenzaInsegnanteSerializer(obj).data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
     @action(detail=False, methods=['post'], url_path='perform-checkin-insegnanti')
     def perform_checkin_insegnanti(self, request):
         """
@@ -670,10 +726,18 @@ class PresenzaViewSet(LogAccessoMixin, viewsets.ModelViewSet):
             insegnante=request.user,
             data=oggi,
             defaults={
+                'presente': True,
                 'ora_entrata': ora_ora,
                 'registrato_da': request.user,
             },
         )
+
+        # Se segnato assente, non permettere il checkin automatico
+        if not created and not presenza.presente:
+            return Response(
+                {'detail': 'Sei già segnato assente oggi. Contatta lo staff per correggere.'},
+                status=status.HTTP_409_CONFLICT,
+            )
 
         if created:
             azione = 'entrata'
