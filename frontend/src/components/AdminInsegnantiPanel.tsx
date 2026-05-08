@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useId, useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { CSSProperties } from 'react'
 import RegistroInsegnantiPanel from '@/components/RegistroInsegnantiPanel'
 
@@ -14,6 +14,7 @@ interface InsegnanteRiga {
 interface StoricoPresenza {
   id: number
   data: string
+  insegnante_nome?: string
   presente: boolean
   motivo_assenza: string
   motivo_assenza_display: string
@@ -69,10 +70,6 @@ function todayIso(): string {
 }
 
 export default function AdminInsegnantiPanel() {
-  // id unici per collegare <label> agli input (React 18 useId — stable + SSR-safe)
-  const uid = useId()
-  const idRegistro = `${uid}-registro`
-  const idManuale = `${uid}-manuale`
   const [dataRegistro, setDataRegistro] = useState(todayIso())
   const [insegnanti, setInsegnanti] = useState<InsegnanteRiga[]>([])
   const [loadingInsegnanti, setLoadingInsegnanti] = useState(true)
@@ -103,9 +100,6 @@ export default function AdminInsegnantiPanel() {
       const json = await res.json()
       const list = (json.insegnanti ?? []) as InsegnanteRiga[]
       setInsegnanti(list)
-      if (!insegnanteId && list.length > 0) {
-        setInsegnanteId(String(list[0].insegnante_id))
-      }
     } catch (err) {
       setErrorInsegnanti(err instanceof Error ? err.message : 'Impossibile caricare la lista insegnanti')
     } finally {
@@ -114,11 +108,13 @@ export default function AdminInsegnantiPanel() {
   }
 
   const caricaStorico = async (id: string) => {
-    if (!id) return
     setLoadingStorico(true)
     setErrorStorico('')
     try {
-      const res = await fetch(`/api/presenze/storico-insegnanti?insegnante_id=${encodeURIComponent(id)}`)
+      const url = id
+        ? `/api/presenze/storico-insegnanti?insegnante_id=${encodeURIComponent(id)}`
+        : '/api/presenze/storico-insegnanti'
+      const res = await fetch(url)
       const json = await res.json()
       if (!res.ok) throw new Error(json.detail || 'Errore nel caricamento storico')
       setStorico(json.presenze ?? [])
@@ -169,9 +165,9 @@ export default function AdminInsegnantiPanel() {
   }, [dataRegistro])
 
   useEffect(() => {
-    if (insegnanteId) {
-      caricaStorico(insegnanteId)
-    }
+    caricaStorico(insegnanteId)
+  // caricaStorico è ricreata a ogni render ma i deps giusti sono solo [insegnanteId]
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [insegnanteId])
 
   useEffect(() => {
@@ -194,19 +190,12 @@ export default function AdminInsegnantiPanel() {
       <div style={{ background: 'white', borderRadius: '14px', padding: '0.875rem 1rem', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
         <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'center', marginBottom: '0.75rem' }}>
           <label style={{ fontSize: '0.8rem', color: '#555', fontWeight: 600 }}>Registro giornaliero</label>
-          {/* input PRIMA della label per garantire l'apertura del picker su Safari */}
-          <input
-            id={idRegistro}
+            <input
             type="date"
             value={dataRegistro}
             onChange={e => setDataRegistro(e.target.value)}
             style={{ ...CONTROL_STYLE, width: CONTROL_WIDTH }}
           />
-          <label
-            htmlFor={idRegistro}
-            style={{ ...CONTROL_STYLE, width: '44px', padding: '0', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: '#F7FAFC', cursor: 'pointer' }}
-            title="Apri calendario"
-          >📅</label>
         </div>
         <RegistroInsegnantiPanel data={dataRegistro} />
       </div>
@@ -225,8 +214,7 @@ export default function AdminInsegnantiPanel() {
             disabled={loadingInsegnanti}
             style={{ ...CONTROL_STYLE, width: '320px', maxWidth: '100%', appearance: 'none', WebkitAppearance: 'none' }}
           >
-            {loadingInsegnanti && <option value="">Caricamento insegnanti...</option>}
-            {!loadingInsegnanti && insegnanti.length === 0 && <option value="">Nessuna insegnante disponibile</option>}
+            <option value="">{loadingInsegnanti ? 'Caricamento...' : '— Tutte —'}</option>
             {insegnanti.map(ins => (
               <option key={ins.insegnante_id} value={ins.insegnante_id}>
                 {ins.cognome} {ins.nome} ({ins.email})
@@ -272,6 +260,7 @@ export default function AdminInsegnantiPanel() {
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ background: '#F7FAFC' }}>
+                {!insegnanteId && <th style={{ textAlign: 'left', padding: '0.55rem 0.75rem', fontSize: '0.75rem', color: '#4A5568' }}>Insegnante</th>}
                 <th style={{ textAlign: 'left', padding: '0.55rem 0.75rem', fontSize: '0.75rem', color: '#4A5568' }}>Data</th>
                 <th style={{ textAlign: 'left', padding: '0.55rem 0.75rem', fontSize: '0.75rem', color: '#4A5568' }}>Entrata</th>
                 <th style={{ textAlign: 'left', padding: '0.55rem 0.75rem', fontSize: '0.75rem', color: '#4A5568' }}>Uscita</th>
@@ -281,6 +270,7 @@ export default function AdminInsegnantiPanel() {
             <tbody>
               {storico.map((r, idx) => (
                 <tr key={r.id} style={{ borderTop: idx === 0 ? 'none' : '1px solid #EDF2F7' }}>
+                  {!insegnanteId && <td style={{ padding: '0.55rem 0.75rem', fontSize: '0.83rem', color: '#2D3748', fontWeight: 600 }}>{r.insegnante_nome ?? '—'}</td>}
                   <td style={{ padding: '0.55rem 0.75rem', fontSize: '0.83rem', color: '#2D3748' }}>{new Date(`${r.data}T00:00:00`).toLocaleDateString('it-IT')}</td>
                   <td style={{ padding: '0.55rem 0.75rem', fontSize: '0.83rem', color: '#2D3748' }}>{r.ora_entrata ? r.ora_entrata.slice(0, 5) : '—'}</td>
                   <td style={{ padding: '0.55rem 0.75rem', fontSize: '0.83rem', color: '#2D3748' }}>{r.ora_uscita ? r.ora_uscita.slice(0, 5) : '—'}</td>
@@ -297,7 +287,7 @@ export default function AdminInsegnantiPanel() {
               ))}
               {!loadingStorico && storico.length === 0 && (
                 <tr>
-                  <td colSpan={4} style={{ padding: '1rem', textAlign: 'center', color: '#718096', fontSize: '0.85rem' }}>
+                  <td colSpan={insegnanteId ? 4 : 5} style={{ padding: '1rem', textAlign: 'center', color: '#718096', fontSize: '0.85rem' }}>
                     Nessun record disponibile.
                   </td>
                 </tr>
@@ -308,20 +298,17 @@ export default function AdminInsegnantiPanel() {
 
         <div style={{ marginTop: '1rem', paddingTop: '0.9rem', borderTop: '1px dashed #E2E8F0' }}>
           <h4 style={{ margin: '0 0 0.6rem', fontSize: '0.92rem', color: '#2D3748' }}>Inserisci / modifica manualmente</h4>
+          {!insegnanteId ? (
+            <p style={{ margin: 0, color: '#718096', fontSize: '0.85rem' }}>Seleziona un&apos;insegnante specifica dal menu sopra per inserire o correggere presenze.</p>
+          ) : (
+          <>
           <div style={{ display: 'flex', gap: '0.625rem', flexWrap: 'wrap', alignItems: 'center' }}>
-            {/* input PRIMA della label per garantire l'apertura del picker su Safari */}
             <input
-              id={idManuale}
               type="date"
               value={dataManuale}
               onChange={e => setDataManuale(e.target.value)}
               style={{ ...CONTROL_STYLE, width: CONTROL_WIDTH }}
             />
-            <label
-              htmlFor={idManuale}
-              style={{ ...CONTROL_STYLE, width: '44px', padding: '0', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: '#F7FAFC', cursor: 'pointer' }}
-              title="Apri calendario"
-            >📅</label>
 
             <button
               onClick={() => setPresenteManuale(true)}
@@ -389,6 +376,8 @@ export default function AdminInsegnantiPanel() {
           </div>
           {successManuale && <p style={{ margin: '0.65rem 0 0', color: '#2F855A', fontSize: '0.82rem', fontWeight: 600 }}>{successManuale}</p>}
           {errorManuale && <p style={{ margin: '0.65rem 0 0', color: '#C53030', fontSize: '0.82rem' }}>{errorManuale}</p>}
+          </>
+          )}
         </div>
       </div>
     </div>

@@ -651,37 +651,35 @@ class PresenzaViewSet(LogAccessoMixin, viewsets.ModelViewSet):
     @action(detail=False, methods=['get'])
     def storico_insegnanti(self, request):
         """
-        Insegnante: visualizza il proprio storico presenze + statistiche mese corrente.
+        Storico presenze insegnanti.
+        - Insegnante/Coordinatrice: solo il proprio storico
+        - Admin/Direttrice con ?insegnante_id=N: storico di quella insegnante
+        - Admin/Direttrice senza insegnante_id: tutti (ultimi 100 record, modalità registro)
         """
         if request.user.role not in (Role.INSEGNANTE, Role.COORDINATRICE, Role.DIRETTRICE, Role.ADMIN):
             return Response({'detail': 'Riservato allo staff.'}, status=status.HTTP_403_FORBIDDEN)
 
-        # Se admin/direttrice, possono vedere lo storico di un'altra insegnante passando insegnante_id
         insegnante_id = request.query_params.get('insegnante_id')
-        if insegnante_id and request.user.role in (Role.ADMIN, Role.DIRETTRICE):
-            # Verifica che l'utente esista e sia attivo (non limitiamo al ruolo 'insegnante'
-            # per supportare ruoli custom con lo stesso scopo)
-            if not User.objects.filter(pk=insegnante_id, is_active=True).exists():
-                return Response({'detail': 'Utente non trovato.'}, status=status.HTTP_404_NOT_FOUND)
-            insegnante_pk = insegnante_id
+
+        if request.user.role in (Role.ADMIN, Role.DIRETTRICE):
+            if insegnante_id:
+                presenze_qs = PresenzaInsegnante.objects.filter(insegnante_id=insegnante_id)
+            else:
+                # Nessun filtro → tutti (modalità registro completo)
+                presenze_qs = PresenzaInsegnante.objects.all()
         else:
-            insegnante_pk = request.user.pk
+            presenze_qs = PresenzaInsegnante.objects.filter(insegnante_id=request.user.pk)
 
         presenze = (
-            PresenzaInsegnante.objects
-            .filter(insegnante_id=insegnante_pk)
-            .select_related('registrato_da')
-            .order_by('-data')[:60]
+            presenze_qs
+            .select_related('insegnante', 'registrato_da')
+            .order_by('-data', 'insegnante__last_name', 'insegnante__first_name')[:100]
         )
 
         oggi = date.today()
-        presenze_mese = PresenzaInsegnante.objects.filter(
-            insegnante_id=insegnante_pk,
-            data__year=oggi.year,
-            data__month=oggi.month,
-        )
-        giorni_presenti = presenze_mese.filter(presente=True).count()
-        giorni_assenti = presenze_mese.filter(presente=False).count()
+        stats_qs = presenze_qs.filter(data__year=oggi.year, data__month=oggi.month)
+        giorni_presenti = stats_qs.filter(presente=True).count()
+        giorni_assenti = stats_qs.filter(presente=False).count()
 
         return Response({
             'presenze': PresenzaInsegnanteSerializer(presenze, many=True).data,
