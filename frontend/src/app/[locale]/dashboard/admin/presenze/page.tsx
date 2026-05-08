@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import UserChip from '@/components/UserChip'
 import TabQRCheckin from '@/components/TabQRCheckin'
 import TabQRCheckinInsegnanti from '@/components/TabQRCheckinInsegnanti'
-import RegistroInsegnantiPanel from '@/components/RegistroInsegnantiPanel'
+import AdminInsegnantiPanel from '@/components/AdminInsegnantiPanel'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -625,7 +625,7 @@ export default function AdminPresenzePage() {
 
         {/* ── TAB INSEGNANTI ── */}
         {tab === 'insegnanti' && (
-          <RegistroInsegnantiPanel data={data} />
+          <AdminInsegnantiPanel />
         )}
       </div>
     </div>

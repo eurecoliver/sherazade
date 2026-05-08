@@ -736,7 +736,26 @@ Completato: Portfolio digitale del bambino (upload foto/video per gruppo, iscriz
 - `backend/apps/attendance/views.py`: aggiunto import `PresenzaInsegnanteWriteSerializer`; nuove action `storico_insegnanti` e `crea_assenza_insegnante`; logica modificata in `perform_checkin_insegnanti` per bloccare checkin se assente
 - `frontend/src/app/[locale]/dashboard/staff/presenze/page.tsx`: aggiunto pulsante "📊 Storico" nel header
 
+### Admin presenze insegnanti — storico completo + assenze da UI (8 maggio 2026)
+- Dashboard admin `/dashboard/admin/presenze` tab `👩‍🏫 Presenze insegnanti` potenziato con pannello unico:
+  - Registro giornaliero insegnanti con selettore data (riusa `RegistroInsegnantiPanel`)
+  - Selettore insegnante (dropdown) con caricamento storico dedicato
+  - Stats mese corrente per insegnante selezionata (presenti/assenti/totale)
+  - Tabella storico con stato e motivazione assenza
+  - Form admin per registrare assenze manuali direttamente da UI (data + motivo)
+- API route Next.js `storico-insegnanti` estesa:
+  - `GET` con query params verso `/api/v1/presenze/storico-insegnanti/`
+  - `POST` verso `/api/v1/presenze/crea-assenza-insegnante/` con refresh cookie automatico
+- Refactor tab admin insegnanti: da solo `RegistroInsegnantiPanel` a nuovo componente `AdminInsegnantiPanel`
+
+**File creati:**
+- `frontend/src/components/AdminInsegnantiPanel.tsx`
+
+**File modificati:**
+- `frontend/src/app/[locale]/dashboard/admin/presenze/page.tsx`
+- `frontend/src/app/api/presenze/storico-insegnanti/route.ts`
+
 ## Ultimo Aggiornamento
 Data: 8 maggio 2026
-Completato: Storico presenze insegnanti con gestione assenze (campo presente/motivo_assenza, action storico, pagina frontend con stats)
-Prossimo task: test end-to-end in Docker + deploy in produzione
+Completato: Storico presenze insegnanti con gestione assenze + pannello admin completo (selettore insegnante, storico dedicato, registrazione assenze manuali da UI)
+Prossimo task: smoke test completo lato admin/staff (QR, storico, assenze) e deploy in produzione

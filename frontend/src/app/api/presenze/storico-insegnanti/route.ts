@@ -1,31 +1,32 @@
-import { fetchBackend } from '@/lib/fetchBackend';
+import { NextRequest, NextResponse } from 'next/server'
+import { fetchBackend, COOKIE_OPTIONS } from '@/lib/fetchBackend'
 
-export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const insegnanteId = searchParams.get('insegnante_id');
-
-  const params = new URLSearchParams();
-  if (insegnanteId) params.append('insegnante_id', insegnanteId);
-
+export async function GET(request: NextRequest) {
+  const params = request.nextUrl.searchParams.toString()
   try {
     const { res } = await fetchBackend(
-      request as any,
-      `/api/v1/presenze/storico-insegnanti/?${params}`,
-      { cache: 'no-store' } as RequestInit
-    );
+      request,
+      `/api/v1/presenze/storico-insegnanti/${params ? `?${params}` : ''}`,
+      { cache: 'no-store' } as RequestInit,
+    )
+    return NextResponse.json(await res.json(), { status: res.status })
+  } catch {
+    return NextResponse.json({ detail: 'Errore nel caricamento dello storico' }, { status: 503 })
+  }
+}
 
-    if (!res.ok) {
-      const error = await res.json().catch(() => ({}));
-      return Response.json(error, { status: res.status });
-    }
-
-    const data = await res.json();
-    return Response.json(data);
-  } catch (error) {
-    console.error('[storico-insegnanti]', error);
-    return Response.json(
-      { detail: 'Errore nel caricamento dello storico' },
-      { status: 500 }
-    );
+export async function POST(request: NextRequest) {
+  const body = await request.json()
+  try {
+    const { res, newAccessToken } = await fetchBackend(request, '/api/v1/presenze/crea-assenza-insegnante/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    })
+    const nextRes = NextResponse.json(await res.json(), { status: res.status })
+    if (newAccessToken) nextRes.cookies.set('access_token', newAccessToken, COOKIE_OPTIONS)
+    return nextRes
+  } catch {
+    return NextResponse.json({ detail: 'Errore nel salvataggio assenza' }, { status: 503 })
   }
 }
