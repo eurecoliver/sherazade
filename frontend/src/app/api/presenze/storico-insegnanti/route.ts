@@ -8,17 +8,18 @@ export async function GET(request: Request) {
   if (insegnanteId) params.append('insegnante_id', insegnanteId);
 
   try {
-    const response = await fetchBackend(
-      `/presenze/storico-insegnanti/?${params}`,
-      { method: 'GET' }
+    const { res } = await fetchBackend(
+      request as any,
+      `/api/v1/presenze/storico-insegnanti/?${params}`,
+      { cache: 'no-store' } as RequestInit
     );
 
-    if (!response.ok) {
-      const error = await response.json().catch(() => ({}));
-      return Response.json(error, { status: response.status });
+    if (!res.ok) {
+      const error = await res.json().catch(() => ({}));
+      return Response.json(error, { status: res.status });
     }
 
-    const data = await response.json();
+    const data = await res.json();
     return Response.json(data);
   } catch (error) {
     console.error('[storico-insegnanti]', error);
