@@ -648,7 +648,7 @@ class PresenzaViewSet(LogAccessoMixin, viewsets.ModelViewSet):
             'presenza': PresenzaSerializer(presenza).data,
         })
 
-    @action(detail=False, methods=['get'])
+    @action(detail=False, methods=['get'], url_path='storico-insegnanti')
     def storico_insegnanti(self, request):
         """
         Storico presenze insegnanti.
@@ -691,7 +691,7 @@ class PresenzaViewSet(LogAccessoMixin, viewsets.ModelViewSet):
             },
         })
 
-    @action(detail=False, methods=['post'])
+    @action(detail=False, methods=['post'], url_path='crea-assenza-insegnante')
     def crea_assenza_insegnante(self, request):
         """
         Admin/Direttrice: crea manualmente un record di assenza per un'insegnante.
