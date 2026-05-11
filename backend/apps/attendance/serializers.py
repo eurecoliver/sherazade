@@ -1,16 +1,28 @@
 from rest_framework import serializers
-from .models import Presenza, DailyQRCodeToken, ConfigurazioneCheckin
+from .models import (
+    Presenza,
+    PresenzaInsegnante,
+    DailyQRCodeToken,
+    DailyQRCodeTokenInsegnanti,
+    ConfigurazioneCheckin,
+)
 
 
 class ConfigurazioneCheckinSerializer(serializers.ModelSerializer):
     class Meta:
         model = ConfigurazioneCheckin
-        fields = ('qr_abilitato',)
+        fields = ('qr_abilitato', 'qr_insegnanti_abilitato')
 
 
 class DailyQRCodeTokenSerializer(serializers.ModelSerializer):
     class Meta:
         model = DailyQRCodeToken
+        fields = ('token', 'data', 'creato_at')
+
+
+class DailyQRCodeTokenInsegnantiSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DailyQRCodeTokenInsegnanti
         fields = ('token', 'data', 'creato_at')
 
 
@@ -50,3 +62,35 @@ class PresenzaWriteSerializer(serializers.ModelSerializer):
             'presente', 'ora_arrivo', 'ora_uscita',
             'assenza_comunicata', 'motivo_assenza', 'note',
         )
+
+
+class PresenzaInsegnanteSerializer(serializers.ModelSerializer):
+    insegnante_nome = serializers.SerializerMethodField()
+    motivo_assenza_display = serializers.SerializerMethodField()
+
+    class Meta:
+        model = PresenzaInsegnante
+        fields = (
+            'id', 'insegnante', 'insegnante_nome', 'data',
+            'presente', 'motivo_assenza', 'motivo_assenza_display',
+            'ora_entrata', 'ora_uscita', 'registrato_da',
+            'creato_at', 'aggiornato_at',
+        )
+
+    def get_insegnante_nome(self, obj):
+        return obj.insegnante.get_full_name() or obj.insegnante.email
+
+    def get_motivo_assenza_display(self, obj):
+        if obj.motivo_assenza:
+            return dict(PresenzaInsegnante.MotivoAssenza.choices).get(obj.motivo_assenza, '')
+        return ''
+
+
+class PresenzaInsegnanteWriteSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = PresenzaInsegnante
+        fields = (
+            'insegnante', 'data', 'presente', 'motivo_assenza',
+            'ora_entrata', 'ora_uscita',
+        )
+        validators = []  # upsert gestito manualmente in salva_insegnante_manuale

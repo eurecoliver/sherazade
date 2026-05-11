@@ -5,6 +5,8 @@ import { useLocale } from 'next-intl'
 import { useRouter } from 'next/navigation'
 import UserChip from '@/components/UserChip'
 import TabQRCheckin from '@/components/TabQRCheckin'
+import TabQRCheckinInsegnanti from '@/components/TabQRCheckinInsegnanti'
+import RegistroInsegnantiPanel from '@/components/RegistroInsegnantiPanel'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -236,9 +238,10 @@ export default function StaffPresenzePage() {
   const router = useRouter()
   const locale = useLocale()
 
-  const [activeTab, setActiveTab] = useState<'presenze' | 'qr'>('presenze')
+  const [activeTab, setActiveTab] = useState<'presenze' | 'insegnanti' | 'qr'>('presenze')
   const [userRole, setUserRole] = useState('')
   const [qrAbilitatoGlobale, setQrAbilitatoGlobale] = useState(true)
+  const [qrInsegnantiAbilitato, setQrInsegnantiAbilitato] = useState(true)
 
   const [righe, setRighe] = useState<RigaGiornata[]>([])
   const [stati, setStati] = useState<Record<number, StatoBambino>>({})
@@ -294,7 +297,13 @@ export default function StaffPresenzePage() {
   // Carica ruolo utente e config QR
   useEffect(() => {
     fetch('/api/auth/me').then(r => r.json()).then(d => setUserRole(d.role ?? '')).catch(() => {})
-    fetch('/api/presenze/qrconfig').then(r => r.json()).then(d => setQrAbilitatoGlobale(d.qr_abilitato ?? false)).catch(() => {})
+    fetch('/api/presenze/qrconfig')
+      .then(r => r.json())
+      .then(d => {
+        setQrAbilitatoGlobale(d.qr_abilitato ?? false)
+        setQrInsegnantiAbilitato(d.qr_insegnanti_abilitato ?? false)
+      })
+      .catch(() => {})
   }, [])
 
   const aggiornaStato = (bambinoId: number, delta: Partial<StatoBambino>) => {
@@ -348,12 +357,20 @@ export default function StaffPresenzePage() {
       <div style={{ background: 'linear-gradient(135deg, #0984E3 0%, #0652DD 100%)', padding: '1.25rem 1.25rem 1.75rem', color: 'white' }}>
         <div style={{ maxWidth: '720px', margin: '0 auto' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.875rem' }}>
-            <button
-              onClick={() => router.push(`/${locale}/dashboard/staff`)}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem', background: 'rgba(255,255,255,0.15)', color: 'white', border: '1.5px solid rgba(255,255,255,0.3)', borderRadius: '20px', padding: '0.35rem 0.875rem 0.35rem 0.625rem', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 600, fontFamily: 'inherit' }}
-            >
-              ← Dashboard
-            </button>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <button
+                onClick={() => router.push(`/${locale}/dashboard/staff`)}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem', background: 'rgba(255,255,255,0.15)', color: 'white', border: '1.5px solid rgba(255,255,255,0.3)', borderRadius: '20px', padding: '0.35rem 0.875rem 0.35rem 0.625rem', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 600, fontFamily: 'inherit' }}
+              >
+                ← Dashboard
+              </button>
+              <button
+                onClick={() => router.push(`/${locale}/dashboard/staff/presenze/storico`)}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem', background: 'rgba(255,255,255,0.15)', color: 'white', border: '1.5px solid rgba(255,255,255,0.3)', borderRadius: '20px', padding: '0.35rem 0.875rem', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 600, fontFamily: 'inherit' }}
+              >
+                📊 Storico
+              </button>
+            </div>
             <UserChip onLogout={handleLogout} />
           </div>
           <h1 style={{ margin: 0, fontSize: '1.5rem', fontWeight: 800 }}>
@@ -362,10 +379,10 @@ export default function StaffPresenzePage() {
           <p style={{ margin: '0.2rem 0 0', opacity: 0.85, fontSize: '0.85rem', textTransform: 'capitalize' }}>
             {fmtDataIt(data)}
           </p>
-          {/* Tab switcher — mostra QR solo se abilitato (o se admin che lo gestisce) */}
-          {(qrAbilitatoGlobale || ['admin', 'direttrice'].includes(userRole)) && (
+          {/* Tab switcher — mostra QR se almeno uno dei due QR è attivo (o se admin che gestisce) */}
+          {(qrAbilitatoGlobale || qrInsegnantiAbilitato || ['admin', 'direttrice'].includes(userRole)) && (
             <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
-              {(['presenze', 'qr'] as const).map(tab => (
+              {(['presenze', 'insegnanti', 'qr'] as const).map(tab => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
@@ -376,7 +393,7 @@ export default function StaffPresenzePage() {
                     color: activeTab === tab ? '#0652DD' : 'white',
                   }}
                 >
-                  {tab === 'presenze' ? '✅ Presenze' : '📱 QR Check-in'}
+                  {tab === 'presenze' ? '✅ Presenze bimbi' : tab === 'insegnanti' ? '👩‍🏫 Insegnanti' : '📱 QR Check-in'}
                 </button>
               ))}
             </div>
@@ -387,7 +404,14 @@ export default function StaffPresenzePage() {
       <div style={{ maxWidth: '720px', margin: '0 auto', padding: '1rem 1rem 4rem' }}>
 
         {activeTab === 'qr' && (
-          <TabQRCheckin isAdmin={['admin', 'direttrice'].includes(userRole)} />
+          <>
+            <TabQRCheckin isAdmin={['admin', 'direttrice'].includes(userRole)} />
+            <TabQRCheckinInsegnanti isAdmin={['admin', 'direttrice'].includes(userRole)} />
+          </>
+        )}
+
+        {activeTab === 'insegnanti' && (
+          <RegistroInsegnantiPanel data={data} />
         )}
 
         {activeTab === 'presenze' && <>

@@ -669,7 +669,132 @@ Completato: Portfolio digitale del bambino (upload foto/video per gruppo, iscriz
 - `backend/sherazade/urls.py`: aggiunto `apps.audit.urls`
 - `frontend/src/app/[locale]/dashboard/admin/page.tsx`: aggiunto pulsante Log Accessi
 
+### Presenze insegnanti con QR dedicato (7 maggio 2026) — branch feature/qr-presenze-insegnanti
+- Nuovo modello `PresenzaInsegnante` in `attendance`: `insegnante`, `data`, `ora_entrata`, `ora_uscita`, `registrato_da`, vincolo univoco (`insegnante`, `data`)
+- Nuovo modello `DailyQRCodeTokenInsegnanti`: token giornaliero separato da quello genitori (`secrets.token_urlsafe(32)`)
+- `ConfigurazioneCheckin`: aggiunto flag `qr_insegnanti_abilitato` per attivare/disattivare indipendentemente il QR staff
+- Nuove action su `PresenzaViewSet`:
+  - `insegnanti_giornata`: registro giornaliero insegnanti (admin/direttrice/coordinatrice = lista completa, insegnante = solo se stesso)
+  - `qr_token_insegnanti`: GET/POST token QR insegnanti
+  - `checkin_info_insegnanti`: stato timbratura odierna del membro staff autenticato
+  - `perform_checkin_insegnanti`: timbratura automatica entrata/uscita (409 se giornata gia completa)
+- UI staff/admin presenze:
+  - nuovo tab `👩‍🏫 Insegnanti` con pannello `RegistroInsegnantiPanel`
+  - tab `📱 QR Check-in` esteso con card separata per QR insegnanti (`TabQRCheckinInsegnanti`)
+- Nuova pagina mobile-first `/[locale]/checkin-insegnanti` per timbratura personale via QR con callback login
+- API routes Next.js aggiunte: `/api/presenze/qrtoken-insegnanti`, `/api/presenze/checkin-insegnanti`, `/api/presenze/insegnanti-giornata`
+- Migration: `attendance/0005_presenze_insegnanti_qr.py`
+
+### Anomalia pregressa risolta (7 maggio 2026)
+- Presenze backend: i filtri ora supportano sia `gruppo` (ID) sia `sezione` (nome gruppo) in `get_queryset`, `giornata`, `non_arrivati`, `report_mensile`
+- Fix di compatibilita con frontend storico che inviava `?sezione=<nome>`
+
+**File creati:**
+- `backend/apps/attendance/migrations/0005_presenze_insegnanti_qr.py`
+- `frontend/src/app/api/presenze/qrtoken-insegnanti/route.ts`
+- `frontend/src/app/api/presenze/checkin-insegnanti/route.ts`
+- `frontend/src/app/api/presenze/insegnanti-giornata/route.ts`
+- `frontend/src/app/[locale]/checkin-insegnanti/page.tsx`
+- `frontend/src/components/TabQRCheckinInsegnanti.tsx`
+- `frontend/src/components/RegistroInsegnantiPanel.tsx`
+
+**File modificati:**
+- `backend/apps/attendance/models.py`
+- `backend/apps/attendance/serializers.py`
+- `backend/apps/attendance/permissions.py`
+- `backend/apps/attendance/views.py`
+- `backend/apps/attendance/admin.py`
+- `frontend/src/app/[locale]/dashboard/staff/presenze/page.tsx`
+- `frontend/src/app/[locale]/dashboard/admin/presenze/page.tsx`
+
+### Storico presenze insegnanti con assenze (8 maggio 2026)
+- Modello `PresenzaInsegnante` esteso con campi `presente` (BooleanField default=True) e `motivo_assenza` (TextChoices: malattia/ferie/permesso/altro)
+- **TextChoices per assenze**: `MotivoAssenza` con 4 opzioni — indipendenti dal `MotivoAssenza` di `Presenza` (bambini)
+- Nuova action `storico_insegnanti`: GET lista storico insegnante (ultimi 60 record) + stats mese (giorni presenti/assenti/totale)
+  - Admin/Direttrice possono visualizzare lo storico di un'altra insegnante passando `?insegnante_id=<id>`
+  - Insegnante vede solo il proprio storico
+- Nuova action `crea_assenza_insegnante`: POST da admin/direttrice per registrare manualmente assenze (non QR)
+- Logica modificata in `perform_checkin_insegnanti`: blocca il QR check-in se `presente=False` (409 Conflict)
+- Serializer `PresenzaInsegnanteSerializer`: aggiunto `motivo_assenza_display` (testo leggibile)
+- Nuovo serializer `PresenzaInsegnanteWriteSerializer`: accetta `insegnante`, `data`, `presente`, `motivo_assenza`, `ora_entrata`, `ora_uscita`
+- Migration `attendance/0006_presenze_insegnanti_assenze.py`: aggiunge i due campi a `PresenzaInsegnante`
+- Frontend API proxy: `/api/presenze/storico-insegnanti?insegnante_id=<id>` (GET)
+- Nuova pagina `/dashboard/staff/presenze/storico`: header gradiente grigio scuro, tabella con colonne data/entrata/uscita/stato, stats mese (totale/presenti/assenti box)
+  - Pulsante "← Indietro" con link a `/dashboard/staff/presenze`
+  - Badge verde "Presente", badge rosso "Assente (motivo)"
+  - Formattazione date italiane (es. "gio, 8 mag 2026")
+- Pulsante "📊 Storico" aggiunto al header della pagina `dashboard/staff/presenze/page.tsx` (pill style, accanto a "← Dashboard")
+
+**File creati:**
+- `backend/apps/attendance/migrations/0006_presenze_insegnanti_assenze.py`
+- `frontend/src/app/api/presenze/storico-insegnanti/route.ts`
+- `frontend/src/app/[locale]/dashboard/staff/presenze/storico/page.tsx`
+
+**File modificati:**
+- `backend/apps/attendance/models.py`: aggiunto `MotivoAssenza` TextChoices e campi `presente`, `motivo_assenza` a `PresenzaInsegnante`; aggiornato `__str__`
+- `backend/apps/attendance/serializers.py`: aggiunto `PresenzaInsegnanteWriteSerializer`, aggiornato `PresenzaInsegnanteSerializer` con `presente`, `motivo_assenza`, `motivo_assenza_display`
+- `backend/apps/attendance/views.py`: aggiunto import `PresenzaInsegnanteWriteSerializer`; nuove action `storico_insegnanti` e `crea_assenza_insegnante`; logica modificata in `perform_checkin_insegnanti` per bloccare checkin se assente
+- `frontend/src/app/[locale]/dashboard/staff/presenze/page.tsx`: aggiunto pulsante "📊 Storico" nel header
+
+### Admin presenze insegnanti — storico completo + assenze da UI (8 maggio 2026)
+- Dashboard admin `/dashboard/admin/presenze` tab `👩‍🏫 Presenze insegnanti` potenziato con pannello unico:
+  - Registro giornaliero insegnanti con selettore data (riusa `RegistroInsegnantiPanel`)
+  - Selettore insegnante (dropdown) con caricamento storico dedicato
+  - Stats mese corrente per insegnante selezionata (presenti/assenti/totale)
+  - Tabella storico con stato e motivazione assenza
+  - Form admin per registrare assenze manuali direttamente da UI (data + motivo)
+- API route Next.js `storico-insegnanti` estesa:
+  - `GET` con query params verso `/api/v1/presenze/storico-insegnanti/`
+  - `POST` verso `/api/v1/presenze/crea-assenza-insegnante/` con refresh cookie automatico
+- Refactor tab admin insegnanti: da solo `RegistroInsegnantiPanel` a nuovo componente `AdminInsegnantiPanel`
+
+**File creati:**
+- `frontend/src/components/AdminInsegnantiPanel.tsx`
+
+**File modificati:**
+- `frontend/src/app/[locale]/dashboard/admin/presenze/page.tsx`
+- `frontend/src/app/api/presenze/storico-insegnanti/route.ts`
+
+### Presenze insegnanti manuali complete + fix POST (8 maggio 2026)
+- Backend `attendance/views.py`: nuova action `salva_insegnante_manuale` (`POST /api/v1/presenze/salva-insegnante-manuale/`) per creare/aggiornare manualmente record insegnante per una data
+  - Supporta sia `presente=True` (con `ora_entrata`/`ora_uscita`) sia `presente=False` (con `motivo_assenza`)
+  - Upsert su `(insegnante, data)` per correggere facilmente dimenticanze senza duplicati
+  - Se assente, azzera automaticamente gli orari; se presente, pulisce `motivo_assenza`
+- Frontend API: nuova route `/api/presenze/insegnanti-manuale` (`POST`) che proxya al backend con refresh cookie automatico
+- UI admin `AdminInsegnantiPanel` migliorata:
+  - Form unico "Inserisci / modifica manualmente" con data + toggle Presente/Assente
+  - Se Presente: campi ora entrata/uscita
+  - Se Assente: dropdown motivo assenza
+  - Prefill automatico dei campi se esiste già un record per la data selezionata
+- Bugfix: flusso "Segna assente" con motivo `Altro` ora passa da endpoint manuale dedicato e non dipende più dal POST sulla route storico
+- UX fix: uniformate dimensioni controlli (`input`/`select`/`time`) con stile condiviso per coerenza visiva
+
+**File creati:**
+- `frontend/src/app/api/presenze/insegnanti-manuale/route.ts`
+
+**File modificati:**
+- `backend/apps/attendance/views.py`
+- `frontend/src/components/AdminInsegnantiPanel.tsx`
+
+### Hardening errore "Impossibile salvare la presenza manuale" (8 maggio 2026)
+- `frontend/src/app/api/presenze/insegnanti-manuale/route.ts`:
+  - parsing robusto della risposta backend (anche non-JSON)
+  - fallback compatibilità per assenze su endpoint legacy `/api/v1/presenze/crea-assenza-insegnante/` se il nuovo endpoint manuale non è ancora deployato (404/405)
+  - messaggio esplicito per presenze manuali quando il backend non è allineato: "Backend non aggiornato... ricostruisci anche backend"
+- `frontend/src/components/AdminInsegnantiPanel.tsx`:
+  - visualizzazione dettagli errore backend reale (no più fallback generico)
+  - messaggi HTTP più chiari durante il salvataggio manuale
+
+### UX fix form manuale insegnanti + diagnostica HTTP 400 (8 maggio 2026)
+- `AdminInsegnantiPanel`:
+  - aggiunti pulsanti `📅` accanto ai campi data per aprire esplicitamente il date picker anche su Safari
+  - uniformate larghezze dei controlli (`date`, `time`, `select`) con costante condivisa `CONTROL_WIDTH`
+  - dropdown motivo assenza ora ha la stessa larghezza del campo data/ora
+  - parsing intelligente degli errori DRF (`field: errore`) invece del solo fallback `Errore HTTP 400`
+- `insegnanti-manuale/route.ts`:
+  - risposta 503 include ora anche il messaggio errore catturato lato route Next per debug più rapido
+
 ## Ultimo Aggiornamento
-Data: 15 aprile 2026
-Completato: Notifiche Push PWA + Email (feature/notifiche) + Log Accessi GDPR (feature/log-accessi)
-Prossimo task: deploy + test + configurazione VAPID keys + cron cleanup log
+Data: 8 maggio 2026
+Completato: Gestione manuale completa presenze/assenze insegnanti + hardening error handling e UX del form (date picker esplicito, controlli uniformi, errori 400 leggibili)
+Prossimo task: smoke test completo lato admin/staff (manuale + QR + storico) e deploy in produzione

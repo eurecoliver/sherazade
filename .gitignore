@@ -33,6 +33,8 @@ node_modules/
 out/
 .npm
 .eslintcache
+tsconfig.tsbuildinfo
+**/*.tsbuildinfo
 
 # Docker
 .docker/

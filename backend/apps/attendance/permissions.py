@@ -20,11 +20,17 @@ class PresenzaPermission(BasePermission):
             return check_permesso(request.user, 'presenze', 'scrivi')
         if action in ('presenti_oggi', 'giornata', 'non_arrivati', 'report_mensile'):
             return check_permesso(request.user, 'presenze', 'leggi')
+        if action == 'insegnanti_giornata':
+            return check_permesso(request.user, 'presenze', 'leggi')
         # QR check-in: token visibile a chi può leggere le presenze; checkin aperto a tutti i loggati
         if action in ('qr_token', 'qr_config'):
             return check_permesso(request.user, 'presenze', 'leggi')
+        if action == 'qr_token_insegnanti':
+            return check_permesso(request.user, 'presenze', 'leggi')
         if action in ('checkin_info', 'perform_checkin'):
             return True  # logica parentela gestita nell'action
+        if action in ('checkin_info_insegnanti', 'perform_checkin_insegnanti'):
+            return True  # logica ruolo gestita nell'action
         if request.method == 'DELETE':
             return check_permesso(request.user, 'presenze', 'elimina')
         if request.method in SAFE_METHODS:
