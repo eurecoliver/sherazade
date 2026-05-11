@@ -265,10 +265,10 @@ class PresenzaViewSet(LogAccessoMixin, viewsets.ModelViewSet):
         - Admin/Direttrice/Coordinatrice: lista completa insegnanti
         - Insegnante: solo la propria riga
         """
-        role = request.user.role
-        if role not in (Role.ADMIN, Role.DIRETTRICE, Role.COORDINATRICE, Role.INSEGNANTE):
+        if not check_permesso(request.user, 'presenze', 'leggi'):
             return Response({'detail': 'Non autorizzato.'}, status=status.HTTP_403_FORBIDDEN)
 
+        role = request.user.role
         data_str = request.query_params.get('data', str(date.today()))
         insegnanti_qs = User.objects.filter(role=Role.INSEGNANTE, is_active=True).order_by('last_name', 'first_name')
         if role == Role.INSEGNANTE:
@@ -656,7 +656,7 @@ class PresenzaViewSet(LogAccessoMixin, viewsets.ModelViewSet):
         - Admin/Direttrice con ?insegnante_id=N: storico di quella insegnante
         - Admin/Direttrice senza insegnante_id: tutti (ultimi 100 record, modalità registro)
         """
-        if request.user.role not in (Role.INSEGNANTE, Role.COORDINATRICE, Role.DIRETTRICE, Role.ADMIN):
+        if not check_permesso(request.user, 'presenze', 'leggi'):
             return Response({'detail': 'Riservato allo staff.'}, status=status.HTTP_403_FORBIDDEN)
 
         insegnante_id = request.query_params.get('insegnante_id')
@@ -697,8 +697,8 @@ class PresenzaViewSet(LogAccessoMixin, viewsets.ModelViewSet):
         Admin/Direttrice: crea manualmente un record di assenza per un'insegnante.
         Body: { insegnante, data, motivo_assenza }
         """
-        if request.user.role not in (Role.ADMIN, Role.DIRETTRICE):
-            return Response({'detail': 'Solo admin/direttrice.'}, status=status.HTTP_403_FORBIDDEN)
+        if not check_permesso(request.user, 'presenze', 'scrivi'):
+            return Response({'detail': 'Non autorizzato.'}, status=status.HTTP_403_FORBIDDEN)
 
         serializer = PresenzaInsegnanteWriteSerializer(data=request.data)
         if serializer.is_valid():

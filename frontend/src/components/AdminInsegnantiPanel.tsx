@@ -88,6 +88,7 @@ export default function AdminInsegnantiPanel() {
   const [successManuale, setSuccessManuale] = useState('')
   const [errorManuale, setErrorManuale] = useState('')    // errori salvataggio manuale
   const [deletingId, setDeletingId] = useState<number | null>(null)
+  const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null)
   const [errorDelete, setErrorDelete] = useState('')
   const formRef = useRef<HTMLDivElement>(null)
 
@@ -164,8 +165,8 @@ export default function AdminInsegnantiPanel() {
   }
 
   const eliminaPresenza = async (id: number) => {
-    if (!window.confirm('Eliminare questo record di presenza?')) return
     setDeletingId(id)
+    setConfirmDeleteId(null)
     setErrorDelete('')
     try {
       const res = await fetch(`/api/presenze/insegnanti-manuale/${id}`, { method: 'DELETE' })
@@ -318,17 +319,32 @@ export default function AdminInsegnantiPanel() {
                   </td>
                   {insegnanteId && (
                     <td style={{ padding: '0.4rem 0.75rem', textAlign: 'right', whiteSpace: 'nowrap' }}>
-                      <button
-                        onClick={() => modificaPresenza(r)}
-                        title="Modifica"
-                        style={{ background: '#EBF8FF', color: '#2B6CB0', border: '1px solid #BEE3F8', borderRadius: '6px', padding: '0.2rem 0.5rem', cursor: 'pointer', fontSize: '0.8rem', fontFamily: 'inherit', marginRight: '0.3rem' }}
-                      >✏️</button>
-                      <button
-                        onClick={() => eliminaPresenza(r.id)}
-                        disabled={deletingId === r.id}
-                        title="Elimina"
-                        style={{ background: '#FFF5F5', color: '#C53030', border: '1px solid #FED7D7', borderRadius: '6px', padding: '0.2rem 0.5rem', cursor: 'pointer', fontSize: '0.8rem', fontFamily: 'inherit' }}
-                      >{deletingId === r.id ? '…' : '🗑️'}</button>
+                      {confirmDeleteId === r.id ? (
+                        <span style={{ display: 'inline-flex', gap: '0.3rem', alignItems: 'center' }}>
+                          <span style={{ fontSize: '0.75rem', color: '#C53030', fontWeight: 600 }}>Sicuro?</span>
+                          <button
+                            onClick={() => eliminaPresenza(r.id)}
+                            style={{ background: '#C53030', color: 'white', border: 'none', borderRadius: '6px', padding: '0.2rem 0.5rem', cursor: 'pointer', fontSize: '0.78rem', fontFamily: 'inherit' }}
+                          >{deletingId === r.id ? '…' : 'Sì'}</button>
+                          <button
+                            onClick={() => setConfirmDeleteId(null)}
+                            style={{ background: '#E2E8F0', color: '#4A5568', border: 'none', borderRadius: '6px', padding: '0.2rem 0.5rem', cursor: 'pointer', fontSize: '0.78rem', fontFamily: 'inherit' }}
+                          >No</button>
+                        </span>
+                      ) : (
+                        <>
+                          <button
+                            onClick={() => modificaPresenza(r)}
+                            title="Modifica"
+                            style={{ background: '#EBF8FF', color: '#2B6CB0', border: '1px solid #BEE3F8', borderRadius: '6px', padding: '0.2rem 0.5rem', cursor: 'pointer', fontSize: '0.8rem', fontFamily: 'inherit', marginRight: '0.3rem' }}
+                          >✏️</button>
+                          <button
+                            onClick={() => setConfirmDeleteId(r.id)}
+                            title="Elimina"
+                            style={{ background: '#FFF5F5', color: '#C53030', border: '1px solid #FED7D7', borderRadius: '6px', padding: '0.2rem 0.5rem', cursor: 'pointer', fontSize: '0.8rem', fontFamily: 'inherit' }}
+                          >🗑️</button>
+                        </>
+                      )}
                     </td>
                   )}
                 </tr>

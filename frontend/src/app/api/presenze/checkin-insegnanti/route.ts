@@ -4,12 +4,14 @@ import { fetchBackend, COOKIE_OPTIONS } from '@/lib/fetchBackend'
 export async function GET(request: NextRequest) {
   const params = request.nextUrl.searchParams.toString()
   try {
-    const { res } = await fetchBackend(
+    const { res, newAccessToken } = await fetchBackend(
       request,
       `/api/v1/presenze/checkin-info-insegnanti/${params ? `?${params}` : ''}`,
       { cache: 'no-store' } as RequestInit,
     )
-    return NextResponse.json(await res.json(), { status: res.status })
+    const nextRes = NextResponse.json(await res.json(), { status: res.status })
+    if (newAccessToken) nextRes.cookies.set('access_token', newAccessToken, COOKIE_OPTIONS)
+    return nextRes
   } catch {
     return NextResponse.json({ detail: 'Errore server.' }, { status: 503 })
   }
