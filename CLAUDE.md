@@ -32,7 +32,7 @@ Nome interno: Sherazade.
 6. Genitore
 
 ## Funzionalità MVP (ordine di sviluppo)
-1. [x] Autenticazione multi-ruolo (Auth + JWT + 2FA)
+1. [x] Autenticazione multi-ruolo (Auth + JWT) — 2FA non implementato, vedi Post-MVP
 2. [x] Anagrafica bambini e famiglie
 3. [x] Consensi fotografici digitali (GDPR compliant)
 4. [x] Diario del bambino (foto/video giornalieri)
@@ -52,6 +52,7 @@ Nome interno: Sherazade.
 - [x] Portfolio digitale del bambino
 - [x] Fatturazione documentale (PDF, no pagamenti online)
 - [x] Gestione menu settimanale (sostituita da Pappe v2 con ciclo 5 settimane)
+- [ ] 2FA TOTP — campi `two_factor_enabled`/`two_factor_secret` già nel modello User, `pyotp` in requirements; mancano: endpoint setup/verify, step nel login frontend
 
 ## Design
 - Interfaccia genitori: calda, colorata, mobile-first
