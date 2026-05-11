@@ -795,6 +795,26 @@ Completato: Portfolio digitale del bambino (upload foto/video per gruppo, iscriz
   - risposta 503 include ora anche il messaggio errore catturato lato route Next per debug più rapido
 
 ## Ultimo Aggiornamento
-Data: 8 maggio 2026
-Completato: Gestione manuale completa presenze/assenze insegnanti + hardening error handling e UX del form (date picker esplicito, controlli uniformi, errori 400 leggibili)
-Prossimo task: smoke test completo lato admin/staff (manuale + QR + storico) e deploy in produzione
+Data: 11 maggio 2026
+Completato: Auto-eliminazione media GDPR — management commands `cleanup_media_diario` e `cleanup_media_portfolio`, tab 🔐 GDPR in impostazioni admin con istruzioni crontab
+
+**File creati:**
+- `backend/apps/diary/management/__init__.py`
+- `backend/apps/diary/management/commands/__init__.py`
+- `backend/apps/diary/management/commands/cleanup_media_diario.py`
+- `backend/apps/portfolio/management/__init__.py`
+- `backend/apps/portfolio/management/commands/__init__.py`
+- `backend/apps/portfolio/management/commands/cleanup_media_portfolio.py`
+
+**File modificati:**
+- `backend/sherazade/settings/base.py`: aggiunto `MEDIA_PORTFOLIO_DELETE_DAYS` (default 1825 giorni / 5 anni)
+- `frontend/src/app/[locale]/dashboard/admin/impostazioni/page.tsx`: aggiunto tab `🔐 GDPR` con sezioni per ogni variabile retention e crontab suggerito
+
+**Cron da configurare sul server:**
+```
+0 2 * * * cd /var/www/sherazade && docker compose exec -T backend python manage.py cleanup_media_diario
+0 3 1 * * cd /var/www/sherazade && docker compose exec -T backend python manage.py cleanup_media_portfolio
+30 3 1 * * cd /var/www/sherazade && docker compose exec -T backend python manage.py cleanup_log_accessi
+```
+
+Prossimo task: HTTPS + Nginx (in attesa dominio) oppure 2FA
