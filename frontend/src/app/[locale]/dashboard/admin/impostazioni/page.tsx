@@ -62,11 +62,113 @@ interface OrarioUscita {
 const EMPTY_GRUPPO = { nome: '', colore: '#6C5CE7', ordine: 0, attivo: true }
 const EMPTY_ORARIO = { etichetta: '', orario: '16:00', ordine: 0, attivo: true }
 
+// ─── GDPR Tab ─────────────────────────────────────────────────────────────────
+
+function GdprTab() {
+  const SEZIONI = [
+    {
+      titolo: '📷 Media diario (foto/video giornalieri)',
+      variabile: 'MEDIA_AUTO_DELETE_DAYS',
+      default: 365,
+      minimo: 30,
+      desc: 'Foto e video del diario quotidiano dei bambini.',
+      note: 'Dopo N giorni dal caricamento il file viene eliminato dal server.',
+      comando: 'python manage.py cleanup_media_diario',
+      coloreBordo: '#FED7D7',
+      coloreHeader: '#FFF5F5',
+    },
+    {
+      titolo: '📸 Media portfolio (ricordi annuali)',
+      variabile: 'MEDIA_PORTFOLIO_DELETE_DAYS',
+      default: 1825,
+      minimo: 365,
+      desc: 'Foto e video del portfolio digitale per anno scolastico.',
+      note: 'Default 5 anni — solitamente conservati per tutta la durata della frequenza.',
+      comando: 'python manage.py cleanup_media_portfolio',
+      coloreBordo: '#BEE3F8',
+      coloreHeader: '#EBF8FF',
+    },
+    {
+      titolo: '🔍 Log accessi dati minori',
+      variabile: 'LOG_ACCESSI_RETENTION_MONTHS',
+      default: 12,
+      minimo: 6,
+      desc: 'Log di tutti gli accessi ai dati personali dei bambini.',
+      note: 'Minimo GDPR 6 mesi — obbligatorio per legge.',
+      comando: 'python manage.py cleanup_log_accessi',
+      unita: 'mesi',
+      coloreBordo: '#C6F6D5',
+      coloreHeader: '#F0FFF4',
+    },
+  ]
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+      {/* Banner informativo */}
+      <div style={{ background: '#FFFAF0', border: '2px solid #F6AD55', borderRadius: '14px', padding: '1rem 1.25rem' }}>
+        <p style={{ margin: 0, fontSize: '0.88rem', color: '#744210', lineHeight: 1.6 }}>
+          <strong>⚠️ Configurazione retention media GDPR</strong><br />
+          Le variabili sottostanti si configurano nel file <code style={{ background: '#FEF3C7', padding: '0.1rem 0.3rem', borderRadius: '4px' }}>.env</code> sul server,
+          non tramite interfaccia grafica (richiedono riavvio del backend).<br />
+          L&apos;eliminazione automatica avviene tramite cron job notturno — vedi comandi sotto.
+        </p>
+      </div>
+
+      {SEZIONI.map(s => (
+        <div key={s.variabile} style={{
+          background: 'white',
+          border: `2px solid ${s.coloreBordo}`,
+          borderRadius: '14px',
+          overflow: 'hidden',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+        }}>
+          <div style={{ background: s.coloreHeader, padding: '0.75rem 1.25rem', borderBottom: `1px solid ${s.coloreBordo}` }}>
+            <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 700, color: '#333' }}>{s.titolo}</h3>
+            <p style={{ margin: '0.2rem 0 0', fontSize: '0.8rem', color: '#666' }}>{s.desc}</p>
+          </div>
+          <div style={{ padding: '1rem 1.25rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '0.4rem 1rem', alignItems: 'start', marginBottom: '0.75rem' }}>
+              <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#555' }}>Variabile .env:</span>
+              <code style={{ background: '#F7FAFC', padding: '0.15rem 0.5rem', borderRadius: '6px', fontSize: '0.82rem', color: '#2D3748' }}>{s.variabile}=<em style={{ color: '#718096' }}>{s.default}</em></code>
+              <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#555' }}>Default:</span>
+              <span style={{ fontSize: '0.83rem', color: '#4A5568' }}>{s.default} {s.unita ?? 'giorni'} {s.unita ? `(${Math.round(s.default / 30.5)} mesi)` : `(${Math.round(s.default / 365 * 10) / 10} anni)`}</span>
+              <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#555' }}>Minimo:</span>
+              <span style={{ fontSize: '0.83rem', color: '#C53030', fontWeight: 600 }}>{s.minimo} {s.unita ?? 'giorni'}</span>
+            </div>
+            <p style={{ margin: '0 0 0.75rem', fontSize: '0.8rem', color: '#718096', fontStyle: 'italic' }}>ℹ️ {s.note}</p>
+            <div style={{ background: '#1A202C', borderRadius: '8px', padding: '0.6rem 0.875rem' }}>
+              <p style={{ margin: '0 0 0.2rem', fontSize: '0.7rem', color: '#A0AEC0', fontWeight: 600 }}>CRON / esecuzione manuale:</p>
+              <code style={{ fontSize: '0.78rem', color: '#68D391', whiteSpace: 'pre-wrap', wordBreak: 'break-all' }}>
+                docker compose exec backend {s.comando} --dry-run
+              </code>
+            </div>
+          </div>
+        </div>
+      ))}
+
+      {/* Cron setup */}
+      <div style={{ background: '#1A202C', borderRadius: '14px', padding: '1.25rem' }}>
+        <p style={{ margin: '0 0 0.75rem', fontSize: '0.8rem', color: '#A0AEC0', fontWeight: 600 }}>CRONTAB sul server (suggerito):</p>
+        <code style={{ fontSize: '0.75rem', color: '#F6AD55', whiteSpace: 'pre', display: 'block', lineHeight: 1.8 }}>
+{`# Pulizia media diario — ogni notte alle 02:00
+0 2 * * * cd /var/www/sherazade && docker compose exec -T backend python manage.py cleanup_media_diario
+
+# Pulizia media portfolio — primo del mese alle 03:00
+0 3 1 * * cd /var/www/sherazade && docker compose exec -T backend python manage.py cleanup_media_portfolio
+
+# Pulizia log accessi — primo del mese alle 03:30
+30 3 1 * * cd /var/www/sherazade && docker compose exec -T backend python manage.py cleanup_log_accessi`}
+        </code>
+      </div>
+    </div>
+  )
+}
+
 export default function ImpostazioniPage() {
   const router = useRouter()
   const locale = useLocale()
 
-  const [activeTab, setActiveTab] = useState<'gruppi' | 'orari' | 'permessi'>('gruppi')
+  const [activeTab, setActiveTab] = useState<'gruppi' | 'orari' | 'permessi' | 'gdpr'>('gruppi')
 
   // Ruoli state
   const [ruoli, setRuoli] = useState<Ruolo[]>([])
@@ -344,7 +446,7 @@ export default function ImpostazioniPage() {
 
         {/* Tabs */}
         <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
-          {([['gruppi', '🎨 Gruppi'], ['orari', '🕐 Orari uscita'], ['permessi', '🔒 Permessi ruoli']] as const).map(([tab, label]) => (
+          {([['gruppi', '🎨 Gruppi'], ['orari', '🕐 Orari uscita'], ['permessi', '🔒 Permessi ruoli'], ['gdpr', '🔐 GDPR']] as const).map(([tab, label]) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -602,7 +704,13 @@ export default function ImpostazioniPage() {
               </div>
             )}
           </div>
-        )}
+      </div>
+
+      {/* ── GDPR TAB ── */}
+      {activeTab === 'gdpr' && (
+        <GdprTab />
+      )}
+
       </div>
 
       {/* Ruolo Modal */}

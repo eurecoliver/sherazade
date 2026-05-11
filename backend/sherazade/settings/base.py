@@ -189,7 +189,10 @@ VAPID_PRIVATE_KEY = config('VAPID_PRIVATE_KEY', default='')
 VAPID_PUBLIC_KEY = config('VAPID_PUBLIC_KEY', default='')
 VAPID_ADMIN_EMAIL = config('VAPID_ADMIN_EMAIL', default='noreply@sherazade.it')
 
-# GDPR
+# GDPR — Data retention
+# Diario: foto/video del diario giornaliero (default 1 anno)
 MEDIA_AUTO_DELETE_DAYS = config('MEDIA_AUTO_DELETE_DAYS', default=365, cast=int)
+# Portfolio: foto/video del portfolio (default 5 anni)
+MEDIA_PORTFOLIO_DELETE_DAYS = config('MEDIA_PORTFOLIO_DELETE_DAYS', default=1825, cast=int)
 # Retention log accessi GDPR: minimo 6 mesi, default 12 mesi
 LOG_ACCESSI_RETENTION_MONTHS = config('LOG_ACCESSI_RETENTION_MONTHS', default=12, cast=int)
