@@ -704,13 +704,12 @@ export default function ImpostazioniPage() {
               </div>
             )}
           </div>
-      </div>
+        )}
 
-      {/* ── GDPR TAB ── */}
-      {activeTab === 'gdpr' && (
-        <GdprTab />
-      )}
-
+        {/* ── GDPR TAB ── */}
+        {activeTab === 'gdpr' && (
+          <GdprTab />
+        )}
       </div>
 
       {/* Ruolo Modal */}
