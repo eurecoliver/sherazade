@@ -33,6 +33,18 @@ class User(AbstractUser):
     def __str__(self):
         return f'{self.get_full_name()} ({self.role})'
 
+class PasswordResetToken(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='reset_tokens')
+    token = models.CharField(max_length=64, unique=True)
+    creato_at = models.DateTimeField(auto_now_add=True)
+    usato = models.BooleanField(default=False)
+
+    class Meta:
+        verbose_name = 'Token reset password'
+        verbose_name_plural = 'Token reset password'
+
+    def __str__(self):
+        return f'Reset token per {self.user.email} — {"usato" if self.usato else "attivo"}'
     @property
     def is_staff_member(self):
         return self.role in STAFF_ROLES

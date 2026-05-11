@@ -1,6 +1,8 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import Link from 'next/link'
+import { useLocale } from 'next-intl'
 
 interface MeData {
   first_name: string
@@ -48,6 +50,7 @@ function getInitials(me: MeData): string {
 }
 
 export default function UserChip({ onLogout }: { onLogout: () => void }) {
+  const locale = useLocale()
   const [me, setMe] = useState<MeData | null>(null)
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
@@ -127,6 +130,23 @@ export default function UserChip({ onLogout }: { onLogout: () => void }) {
               {me.email}
             </div>
           </div>
+
+          {/* Cambia password */}
+          <Link
+            href={`/${locale}/dashboard/change-password`}
+            onClick={() => setOpen(false)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '0.5rem',
+              width: '100%', padding: '0.6rem 0.75rem',
+              color: '#4A5568', fontWeight: 600, fontSize: '0.875rem',
+              textDecoration: 'none', borderRadius: '8px',
+              marginTop: '0.25rem',
+            }}
+            onMouseOver={e => (e.currentTarget.style.background = '#F7FAFC')}
+            onMouseOut={e => (e.currentTarget.style.background = 'transparent')}
+          >
+            🔑 Cambia password
+          </Link>
 
           {/* Logout */}
           <button

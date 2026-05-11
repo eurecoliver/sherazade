@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useTranslations, useLocale } from 'next-intl'
 import { useRouter, useSearchParams } from 'next/navigation'
+import Link from 'next/link'
 import { clearUserCache } from '@/components/UserChip'
 
 function getRolePath(role: string): string {
@@ -223,6 +224,15 @@ export default function LoginPage() {
           >
             {loading ? t('loading') : t('submitButton')}
           </button>
+
+          <div style={{ textAlign: 'center', marginTop: '1.25rem' }}>
+            <Link
+              href={`/${locale}/reset-password`}
+              style={{ color: '#E8562A', fontSize: '0.875rem', textDecoration: 'none', fontWeight: 500 }}
+            >
+              Password dimenticata?
+            </Link>
+          </div>
         </form>
       </div>
     </div>

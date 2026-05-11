@@ -796,8 +796,37 @@ Completato: Portfolio digitale del bambino (upload foto/video per gruppo, iscriz
   - risposta 503 include ora anche il messaggio errore catturato lato route Next per debug più rapido
 
 ## Ultimo Aggiornamento
-Data: 11 maggio 2026
-Completato: Auto-eliminazione media GDPR — management commands `cleanup_media_diario` e `cleanup_media_portfolio`, tab 🔐 GDPR in impostazioni admin con istruzioni crontab
+Data: 11 maggio 2026 (aggiornato)
+Completato: Reset password via email + Cambio password utente
+
+### Reset password via email + Cambio password (11 maggio 2026) — branch feature/reset-password
+- `PasswordResetToken` model: user FK, token CharField(64) unique, creato_at, usato BooleanField
+- `PasswordResetRequestView`: rate-limited (5/10min), risponde sempre 200 (no user enumeration), crea token con `secrets.token_urlsafe(32)`, invia email in background thread
+- `PasswordResetConfirmView`: valida token (non usato, ≤1h), chiama `set_password()`, marca usato
+- `ChangePasswordView`: richiede autenticazione, verifica password attuale con `authenticate()`, poi `set_password()`
+- Token scade dopo 1 ora; vecchi token dello stesso utente vengono invalidati prima di crearne uno nuovo
+- Frontend pagina pubblica `/reset-password`: form email → stato "link inviato"
+- Frontend pagina pubblica `/reset-password/confirm?token=XXX`: form nuova/conferma password → redirect login
+- Frontend pagina protetta `/dashboard/change-password`: form password attuale + nuova + conferma
+- `UserChip` dropdown: aggiunto link "🔑 Cambia password" sopra il pulsante Esci
+- Login page: aggiunto link "Password dimenticata?" → `/reset-password`
+- Migration `users/0005_password_reset_token.py`
+
+**File creati:**
+- `backend/apps/users/migrations/0005_password_reset_token.py`
+- `frontend/src/app/api/auth/password-reset/route.ts`
+- `frontend/src/app/api/auth/password-reset/confirm/route.ts`
+- `frontend/src/app/api/auth/change-password/route.ts`
+- `frontend/src/app/[locale]/reset-password/page.tsx`
+- `frontend/src/app/[locale]/reset-password/confirm/page.tsx`
+- `frontend/src/app/[locale]/dashboard/change-password/page.tsx`
+
+**File modificati:**
+- `backend/apps/users/models.py`: aggiunto `PasswordResetToken`
+- `backend/apps/users/views.py`: aggiunte 3 view + helper email
+- `backend/apps/users/urls.py`: aggiunti 3 path
+- `frontend/src/app/[locale]/login/page.tsx`: link "Password dimenticata?"
+- `frontend/src/components/UserChip.tsx`: link "Cambia password" nel dropdown
 
 **File creati:**
 - `backend/apps/diary/management/__init__.py`
