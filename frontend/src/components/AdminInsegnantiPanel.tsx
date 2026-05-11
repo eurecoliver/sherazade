@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { CSSProperties } from 'react'
 import RegistroInsegnantiPanel from '@/components/RegistroInsegnantiPanel'
 
@@ -87,6 +87,9 @@ export default function AdminInsegnantiPanel() {
   const [savingManuale, setSavingManuale] = useState(false)
   const [successManuale, setSuccessManuale] = useState('')
   const [errorManuale, setErrorManuale] = useState('')    // errori salvataggio manuale
+  const [deletingId, setDeletingId] = useState<number | null>(null)
+  const [errorDelete, setErrorDelete] = useState('')
+  const formRef = useRef<HTMLDivElement>(null)
 
   const caricaInsegnanti = async () => {
     setLoadingInsegnanti(true)
@@ -158,6 +161,30 @@ export default function AdminInsegnantiPanel() {
     } finally {
       setSavingManuale(false)
     }
+  }
+
+  const eliminaPresenza = async (id: number) => {
+    if (!window.confirm('Eliminare questo record di presenza?')) return
+    setDeletingId(id)
+    setErrorDelete('')
+    try {
+      const res = await fetch(`/api/presenze/insegnanti-manuale/${id}`, { method: 'DELETE' })
+      if (res.status !== 204 && !res.ok) {
+        const json = await res.json().catch(() => ({}))
+        throw new Error(extractErrorMessage(json, `Errore HTTP ${res.status}`))
+      }
+      await caricaStorico(insegnanteId)
+    } catch (err) {
+      setErrorDelete(err instanceof Error ? err.message : 'Errore nell\'eliminazione')
+    } finally {
+      setDeletingId(null)
+    }
+  }
+
+  const modificaPresenza = (r: StoricoPresenza) => {
+    setDataManuale(r.data)
+    // L'useEffect su [storico, dataManuale] si occuperà del prefill
+    formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
   useEffect(() => {
@@ -257,6 +284,11 @@ export default function AdminInsegnantiPanel() {
               >Riprova</button>
             </div>
           )}
+          {errorDelete && (
+            <div style={{ background: '#FFF5F5', color: '#C53030', padding: '0.6rem 1rem', fontSize: '0.82rem', borderBottom: '1px solid #FED7D7' }}>
+              ⚠️ {errorDelete}
+            </div>
+          )}
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr style={{ background: '#F7FAFC' }}>
@@ -265,6 +297,7 @@ export default function AdminInsegnantiPanel() {
                 <th style={{ textAlign: 'left', padding: '0.55rem 0.75rem', fontSize: '0.75rem', color: '#4A5568' }}>Entrata</th>
                 <th style={{ textAlign: 'left', padding: '0.55rem 0.75rem', fontSize: '0.75rem', color: '#4A5568' }}>Uscita</th>
                 <th style={{ textAlign: 'left', padding: '0.55rem 0.75rem', fontSize: '0.75rem', color: '#4A5568' }}>Stato</th>
+                {insegnanteId && <th style={{ textAlign: 'right', padding: '0.55rem 0.75rem', fontSize: '0.75rem', color: '#4A5568' }}>Azioni</th>}
               </tr>
             </thead>
             <tbody>
@@ -283,11 +316,26 @@ export default function AdminInsegnantiPanel() {
                       </span>
                     )}
                   </td>
+                  {insegnanteId && (
+                    <td style={{ padding: '0.4rem 0.75rem', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                      <button
+                        onClick={() => modificaPresenza(r)}
+                        title="Modifica"
+                        style={{ background: '#EBF8FF', color: '#2B6CB0', border: '1px solid #BEE3F8', borderRadius: '6px', padding: '0.2rem 0.5rem', cursor: 'pointer', fontSize: '0.8rem', fontFamily: 'inherit', marginRight: '0.3rem' }}
+                      >✏️</button>
+                      <button
+                        onClick={() => eliminaPresenza(r.id)}
+                        disabled={deletingId === r.id}
+                        title="Elimina"
+                        style={{ background: '#FFF5F5', color: '#C53030', border: '1px solid #FED7D7', borderRadius: '6px', padding: '0.2rem 0.5rem', cursor: 'pointer', fontSize: '0.8rem', fontFamily: 'inherit' }}
+                      >{deletingId === r.id ? '…' : '🗑️'}</button>
+                    </td>
+                  )}
                 </tr>
               ))}
               {!loadingStorico && storico.length === 0 && (
                 <tr>
-                  <td colSpan={insegnanteId ? 4 : 5} style={{ padding: '1rem', textAlign: 'center', color: '#718096', fontSize: '0.85rem' }}>
+                  <td colSpan={insegnanteId ? 5 : 5} style={{ padding: '1rem', textAlign: 'center', color: '#718096', fontSize: '0.85rem' }}>
                     Nessun record disponibile.
                   </td>
                 </tr>
@@ -296,8 +344,24 @@ export default function AdminInsegnantiPanel() {
           </table>
         </div>
 
-        <div style={{ marginTop: '1rem', paddingTop: '0.9rem', borderTop: '1px dashed #E2E8F0' }}>
-          <h4 style={{ margin: '0 0 0.6rem', fontSize: '0.92rem', color: '#2D3748' }}>Inserisci / modifica manualmente</h4>
+        <div ref={formRef} style={{ marginTop: '1rem', paddingTop: '0.9rem', borderTop: '1px dashed #E2E8F0' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.6rem' }}>
+            <h4 style={{ margin: 0, fontSize: '0.92rem', color: '#2D3748' }}>Inserisci / modifica manualmente</h4>
+            {insegnanteId && (
+              <button
+                onClick={() => {
+                  setDataManuale(todayIso())
+                  setPresenteManuale(true)
+                  setOraEntrata('')
+                  setOraUscita('')
+                  setMotivoAssenza('altro')
+                  setSuccessManuale('')
+                  setErrorManuale('')
+                }}
+                style={{ padding: '0.25rem 0.625rem', border: '1px solid #CBD5E0', borderRadius: '8px', background: 'white', color: '#4A5568', fontSize: '0.78rem', cursor: 'pointer', fontFamily: 'inherit' }}
+              >+ Nuova</button>
+            )}
+          </div>
           {!insegnanteId ? (
             <p style={{ margin: 0, color: '#718096', fontSize: '0.85rem' }}>Seleziona un&apos;insegnante specifica dal menu sopra per inserire o correggere presenze.</p>
           ) : (

@@ -712,6 +712,21 @@ class PresenzaViewSet(LogAccessoMixin, viewsets.ModelViewSet):
             return Response(PresenzaInsegnanteSerializer(obj).data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+    @action(detail=False, methods=['delete'], url_path='elimina-presenza-insegnante/(?P<pid>[0-9]+)')
+    def elimina_presenza_insegnante(self, request, pid=None):
+        """
+        Admin/Direttrice (o ruoli con permesso scrivi): elimina un record
+        PresenzaInsegnante per ID.
+        """
+        if not check_permesso(request.user, 'presenze', 'scrivi'):
+            return Response({'detail': 'Non autorizzato.'}, status=status.HTTP_403_FORBIDDEN)
+        try:
+            presenza = PresenzaInsegnante.objects.get(pk=pid)
+        except PresenzaInsegnante.DoesNotExist:
+            return Response({'detail': 'Record non trovato.'}, status=status.HTTP_404_NOT_FOUND)
+        presenza.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
     @action(detail=False, methods=['post'], url_path='salva-insegnante-manuale')
     def salva_insegnante_manuale(self, request):
         """
