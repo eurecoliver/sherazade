@@ -868,6 +868,8 @@ Prossimo task: HTTPS + Nginx (in attesa dominio) oppure 2FA
 - `UserChip` dropdown: aggiunto link "🔐 Sicurezza" sopra "🔑 Cambia password"
 - API routes Next.js: `GET/POST /api/auth/2fa/setup`, `POST /api/auth/2fa/verify`, `POST /api/auth/2fa/disable`
 - Fix TypeScript: route 2FA usano pattern `{ res, newAccessToken } = await fetchBackend(...)` con `NextResponse.json(data, { status })` per compatibilità con il tipo di ritorno di Next.js
+- Fix login route: `totp_required` non veniva passato al frontend (route costruiva risposta con solo `role`+`user`)
+- Fix cookie 2FA verify: `secure: process.env.NODE_ENV === 'production'` → `secure: false` tramite `COOKIE_OPTIONS` condiviso — cookie `secure` su HTTP venivano scartati dal browser in silenzio
 
 **File creati:**
 - `backend/apps/users/views.py`: aggiunte `TwoFactorSetupView`, `TwoFactorDisableView`, `TwoFactorVerifyLoginView`
@@ -884,6 +886,6 @@ Prossimo task: HTTPS + Nginx (in attesa dominio) oppure 2FA
 
 ## Ultimo Aggiornamento
 Data: 13 maggio 2026
-Completato: 2FA TOTP — attivazione con QR, step TOTP nel login, pagina sicurezza — deployato in produzione
+Completato: 2FA TOTP — attivazione con QR, step TOTP nel login, pagina sicurezza — testato e deployato in produzione
 
 Prossimo task: HTTPS + Nginx (in attesa dominio)
