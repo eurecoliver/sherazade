@@ -131,6 +131,23 @@ export default function UserChip({ onLogout }: { onLogout: () => void }) {
             </div>
           </div>
 
+          {/* Sicurezza (2FA + password) */}
+          <Link
+            href={`/${locale}/dashboard/sicurezza`}
+            onClick={() => setOpen(false)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: '0.5rem',
+              width: '100%', padding: '0.6rem 0.75rem',
+              color: '#4A5568', fontWeight: 600, fontSize: '0.875rem',
+              textDecoration: 'none', borderRadius: '8px',
+              marginTop: '0.25rem',
+            }}
+            onMouseOver={e => (e.currentTarget.style.background = '#F7FAFC')}
+            onMouseOut={e => (e.currentTarget.style.background = 'transparent')}
+          >
+            🔐 Sicurezza
+          </Link>
+
           {/* Cambia password */}
           <Link
             href={`/${locale}/dashboard/change-password`}
@@ -140,7 +157,6 @@ export default function UserChip({ onLogout }: { onLogout: () => void }) {
               width: '100%', padding: '0.6rem 0.75rem',
               color: '#4A5568', fontWeight: 600, fontSize: '0.875rem',
               textDecoration: 'none', borderRadius: '8px',
-              marginTop: '0.25rem',
             }}
             onMouseOver={e => (e.currentTarget.style.background = '#F7FAFC')}
             onMouseOut={e => (e.currentTarget.style.background = 'transparent')}

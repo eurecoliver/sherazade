@@ -73,6 +73,12 @@ class LoginView(APIView):
                 status=status.HTTP_401_UNAUTHORIZED,
             )
 
+        # Se 2FA attivo → restituisce totp_session invece dei JWT
+        if user.two_factor_enabled:
+            from django.core import signing
+            totp_session = signing.dumps({'uid': user.id}, salt='2fa-login')
+            return Response({'totp_required': True, 'totp_session': totp_session})
+
         refresh = RefreshToken.for_user(user)
         refresh['role'] = user.role
 
@@ -296,3 +302,153 @@ class ChangePasswordView(APIView):
         user.save(update_fields=['password'])
 
         return Response({'detail': 'Password aggiornata con successo.'})
+
+
+# ─── 2FA TOTP ──────────────────────────────────────────────────────────────────
+
+class TwoFactorSetupView(APIView):
+    """
+    GET  → genera secret + URI provisioning per il QR code (non attiva ancora il 2FA)
+    POST → verifica il codice TOTP e attiva il 2FA
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        import pyotp
+        from django.core import signing
+
+        secret = pyotp.random_base32()
+        totp = pyotp.TOTP(secret)
+        provisioning_uri = totp.provisioning_uri(
+            name=request.user.email,
+            issuer_name='Sherazade',
+        )
+        # Firma il secret con scadenza 10 minuti — non serve salvarlo nel DB
+        setup_token = signing.dumps(
+            {'uid': request.user.id, 'secret': secret},
+            salt='2fa-setup',
+        )
+        return Response({
+            'secret': secret,
+            'qr_uri': provisioning_uri,
+            'setup_token': setup_token,
+        })
+
+    def post(self, request):
+        import pyotp
+        from django.core import signing
+
+        setup_token = request.data.get('setup_token', '')
+        code = request.data.get('code', '').strip()
+
+        if not setup_token or not code:
+            return Response(
+                {'detail': 'setup_token e code sono obbligatori.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        try:
+            data = signing.loads(setup_token, salt='2fa-setup', max_age=600)
+        except signing.BadSignature:
+            return Response(
+                {'detail': 'Token non valido o scaduto. Ricarica la pagina.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if data['uid'] != request.user.id:
+            return Response({'detail': 'Token non valido.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        totp = pyotp.TOTP(data['secret'])
+        if not totp.verify(code, valid_window=1):
+            return Response(
+                {'detail': 'Codice non valido. Controlla l\'ora del tuo dispositivo.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        request.user.two_factor_secret = data['secret']
+        request.user.two_factor_enabled = True
+        request.user.save(update_fields=['two_factor_secret', 'two_factor_enabled'])
+
+        return Response({'detail': '2FA attivato con successo.'})
+
+
+class TwoFactorDisableView(APIView):
+    """POST → disabilita il 2FA richiedendo la password attuale."""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        password = request.data.get('password', '')
+        if not password:
+            return Response(
+                {'detail': 'Password obbligatoria.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        user = authenticate(request, username=request.user.username, password=password)
+        if user is None:
+            return Response(
+                {'detail': 'Password non corretta.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        user.two_factor_enabled = False
+        user.two_factor_secret = ''
+        user.save(update_fields=['two_factor_enabled', 'two_factor_secret'])
+
+        return Response({'detail': '2FA disabilitato.'})
+
+
+class TwoFactorVerifyLoginView(APIView):
+    """
+    POST → step 2 del login: verifica il codice TOTP e restituisce i JWT.
+    Riceve { totp_session: "<signed>", code: "XXXXXX" }.
+    """
+    permission_classes = [permissions.AllowAny]
+
+    @method_decorator(ratelimit(key='ip', rate='10/5m', method='POST', block=False))
+    def post(self, request):
+        if getattr(request, 'limited', False):
+            return Response(
+                {'detail': 'Troppi tentativi. Riprova tra 5 minuti.'},
+                status=status.HTTP_429_TOO_MANY_REQUESTS,
+            )
+        import pyotp
+        from django.core import signing
+
+        totp_session = request.data.get('totp_session', '')
+        code = request.data.get('code', '').strip()
+
+        if not totp_session or not code:
+            return Response(
+                {'detail': 'totp_session e code sono obbligatori.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        try:
+            data = signing.loads(totp_session, salt='2fa-login', max_age=300)
+        except signing.BadSignature:
+            return Response(
+                {'detail': 'Sessione scaduta. Esegui di nuovo il login.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        try:
+            user = User.objects.get(pk=data['uid'])
+        except User.DoesNotExist:
+            return Response({'detail': 'Utente non trovato.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        if not user.is_active:
+            return Response({'detail': 'Account disabilitato.'}, status=status.HTTP_401_UNAUTHORIZED)
+
+        totp = pyotp.TOTP(user.two_factor_secret)
+        if not totp.verify(code, valid_window=1):
+            return Response(
+                {'detail': 'Codice non valido. Controlla l\'ora del tuo dispositivo.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        refresh = RefreshToken.for_user(user)
+        refresh['role'] = user.role
+
+        return Response({
+            'access': str(refresh.access_token),
+            'refresh': str(refresh),
+            'role': user.role,
+            'user': UserSerializer(user).data,
+        })

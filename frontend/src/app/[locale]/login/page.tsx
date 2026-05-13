@@ -39,6 +39,11 @@ export default function LoginPage() {
   const [error, setError] = useState('')
   const [checkingAuth, setCheckingAuth] = useState(true)
 
+  // 2FA step
+  const [totpStep, setTotpStep] = useState(false)
+  const [totpSession, setTotpSession] = useState('')
+  const [totpCode, setTotpCode] = useState('')
+
   useEffect(() => {
     fetch('/api/auth/me')
       .then(res => {
@@ -70,6 +75,14 @@ export default function LoginPage() {
         return
       }
 
+      // 2FA richiesto → step TOTP
+      if (data.totp_required) {
+        setTotpSession(data.totp_session)
+        setTotpStep(true)
+        setError('')
+        return
+      }
+
       clearUserCache()
       if (callbackUrl) {
         router.push(callbackUrl)
@@ -83,8 +96,35 @@ export default function LoginPage() {
     }
   }
 
-  if (checkingAuth) {
-    return (
+  const handleTotpSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setLoading(true)
+    setError('')
+    try {
+      const res = await fetch('/api/auth/2fa/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ totp_session: totpSession, code: totpCode }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setError(data.detail || 'Codice non valido.')
+        return
+      }
+      clearUserCache()
+      if (callbackUrl) {
+        router.push(callbackUrl)
+      } else {
+        router.push(`/${locale}${getRolePath(data.role)}`)
+      }
+    } catch {
+      setError('Errore di rete.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (checkingAuth) {    return (
       <div style={{
         display: 'flex',
         justifyContent: 'center',
@@ -128,6 +168,113 @@ export default function LoginPage() {
           </p>
         </div>
 
+        {totpStep ? (
+          <form onSubmit={handleTotpSubmit}>
+            <div style={{
+              textAlign: 'center',
+              marginBottom: '1.5rem',
+              padding: '1rem',
+              background: '#FFF3E0',
+              borderRadius: '12px',
+            }}>
+              <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>🔐</div>
+              <p style={{ margin: 0, fontWeight: 600, color: '#444', fontSize: '0.95rem' }}>
+                Verifica a due fattori
+              </p>
+              <p style={{ margin: '0.25rem 0 0', color: '#888', fontSize: '0.8rem' }}>
+                Inserisci il codice a 6 cifre dalla tua app autenticatore
+              </p>
+            </div>
+
+            <div style={{ marginBottom: '1.5rem' }}>
+              <label style={{
+                display: 'block',
+                marginBottom: '0.375rem',
+                fontWeight: 600,
+                color: '#444',
+                fontSize: '0.875rem',
+              }}>
+                Codice di verifica
+              </label>
+              <input
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                maxLength={6}
+                value={totpCode}
+                onChange={e => setTotpCode(e.target.value.replace(/\D/g, ''))}
+                placeholder="000000"
+                required
+                autoFocus
+                disabled={loading}
+                style={{
+                  width: '100%',
+                  padding: '0.875rem 1rem',
+                  border: '2px solid #FFD4B3',
+                  borderRadius: '12px',
+                  fontSize: '1.5rem',
+                  letterSpacing: '0.5em',
+                  textAlign: 'center',
+                  outline: 'none',
+                  boxSizing: 'border-box',
+                  fontFamily: 'monospace',
+                  opacity: loading ? 0.7 : 1,
+                }}
+              />
+            </div>
+
+            {error && (
+              <div style={{
+                background: '#FADBD8',
+                color: '#C0392B',
+                padding: '0.75rem 1rem',
+                borderRadius: '10px',
+                marginBottom: '1.25rem',
+                fontSize: '0.875rem',
+                fontWeight: 500,
+              }}>
+                {error}
+              </div>
+            )}
+
+            <button
+              type="submit"
+              disabled={loading || totpCode.length !== 6}
+              style={{
+                width: '100%',
+                padding: '1rem',
+                background: (loading || totpCode.length !== 6) ? '#FFB8A0' : '#E8562A',
+                color: 'white',
+                border: 'none',
+                borderRadius: '12px',
+                fontSize: '1rem',
+                fontWeight: 700,
+                cursor: (loading || totpCode.length !== 6) ? 'not-allowed' : 'pointer',
+                letterSpacing: '0.025em',
+                fontFamily: 'inherit',
+              }}
+            >
+              {loading ? 'Verifica...' : 'Verifica'}
+            </button>
+
+            <div style={{ textAlign: 'center', marginTop: '1.25rem' }}>
+              <button
+                type="button"
+                onClick={() => { setTotpStep(false); setTotpCode(''); setError('') }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#888',
+                  fontSize: '0.875rem',
+                  cursor: 'pointer',
+                  textDecoration: 'underline',
+                }}
+              >
+                ← Torna al login
+              </button>
+            </div>
+          </form>
+        ) : (
         <form onSubmit={handleSubmit}>
           <div style={{ marginBottom: '1.25rem' }}>
             <label style={{
@@ -234,6 +381,7 @@ export default function LoginPage() {
             </Link>
           </div>
         </form>
+        )}
       </div>
     </div>
   )
