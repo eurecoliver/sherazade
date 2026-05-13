@@ -14,6 +14,8 @@ interface Fattura {
   file_url: string | null
   caricato_at: string
   caricato_da_nome: string
+  bambino: number | null
+  bambino_nome: string | null
 }
 
 const MESI = ['', 'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
@@ -110,6 +112,11 @@ export default function GenitoreFatturePage() {
                   <p style={{ margin: 0, fontWeight: 700, color: '#333', fontSize: '1rem' }}>
                     {MESI[f.mese]} {f.anno}
                   </p>
+                  {f.bambino_nome && (
+                    <p style={{ margin: '0.1rem 0 0', fontSize: '0.8rem', color: '#6C63FF', fontWeight: 600 }}>
+                      👶 {f.bambino_nome}
+                    </p>
+                  )}
                   {f.importo && (
                     <p style={{ margin: '0.15rem 0 0', color: '#E17055', fontWeight: 700, fontSize: '1.05rem' }}>
                       € {parseFloat(f.importo).toFixed(2).replace('.', ',')}

@@ -7,16 +7,25 @@ class FatturaSerializer(serializers.ModelSerializer):
     genitore_email = serializers.SerializerMethodField()
     caricato_da_nome = serializers.SerializerMethodField()
     file_url = serializers.SerializerMethodField()
+    bambino_nome = serializers.SerializerMethodField()
 
     class Meta:
         model = Fattura
         fields = (
             'id', 'genitore', 'genitore_nome', 'genitore_email',
+            'bambino', 'bambino_nome',
             'anno', 'mese', 'importo', 'file', 'file_url',
             'note', 'caricato_da', 'caricato_da_nome',
             'caricato_at', 'aggiornato_at',
         )
         read_only_fields = ('caricato_da', 'caricato_at', 'aggiornato_at')
+
+    def get_bambino_nome(self, obj):
+        if not obj.bambino:
+            return None
+        bam = obj.bambino
+        nome = bam.alias_nome if (bam.alias_attivo and bam.alias_nome) else bam.nome
+        return f'{nome} {bam.cognome}'
 
     def get_genitore_nome(self, obj):
         return obj.genitore.get_full_name() or obj.genitore.email

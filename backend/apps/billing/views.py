@@ -53,14 +53,17 @@ class FatturaViewSet(viewsets.ModelViewSet):
         serializer.save(caricato_da=self.request.user)
 
     def create(self, request, *args, **kwargs):
-        # Upsert: se esiste già (stesso genitore/anno/mese), aggiorna
+        # Upsert: se esiste già (stesso genitore/anno/mese/bambino), aggiorna
         genitore_id = request.data.get('genitore')
         anno = request.data.get('anno')
         mese = request.data.get('mese')
+        bambino_id = request.data.get('bambino') or None  # null per famiglie monobambino
 
         if genitore_id and anno and mese:
             try:
-                fattura = Fattura.objects.get(genitore_id=genitore_id, anno=anno, mese=mese)
+                fattura = Fattura.objects.get(
+                    genitore_id=genitore_id, anno=anno, mese=mese, bambino_id=bambino_id
+                )
                 serializer = self.get_serializer(fattura, data=request.data, partial=True)
                 serializer.is_valid(raise_exception=True)
                 serializer.save(caricato_da=request.user)

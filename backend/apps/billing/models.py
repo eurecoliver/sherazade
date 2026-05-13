@@ -7,6 +7,10 @@ class Fattura(models.Model):
         User, on_delete=models.CASCADE, related_name='fatture',
         limit_choices_to={'role': 'genitore'},
     )
+    bambino = models.ForeignKey(
+        'children.Bambino', on_delete=models.SET_NULL, null=True, blank=True,
+        related_name='fatture',
+    )
     anno = models.IntegerField()
     mese = models.IntegerField()  # 1-12
     importo = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
@@ -20,8 +24,22 @@ class Fattura(models.Model):
     aggiornato_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        unique_together = [('genitore', 'anno', 'mese')]
+        constraints = [
+            # Famiglie con un solo bambino: al max una fattura per mese (bambino=null)
+            models.UniqueConstraint(
+                condition=models.Q(bambino__isnull=True),
+                fields=['genitore', 'anno', 'mese'],
+                name='unique_fattura_senza_bambino',
+            ),
+            # Famiglie multi-bambino: una fattura per mese per bambino
+            models.UniqueConstraint(
+                condition=models.Q(bambino__isnull=False),
+                fields=['genitore', 'anno', 'mese', 'bambino'],
+                name='unique_fattura_per_bambino',
+            ),
+        ]
         ordering = ['-anno', '-mese']
 
     def __str__(self):
-        return f'Fattura {self.mese}/{self.anno} — {self.genitore}'
+        bambino_str = f' ({self.bambino})' if self.bambino else ''
+        return f'Fattura {self.mese}/{self.anno} — {self.genitore}{bambino_str}'
