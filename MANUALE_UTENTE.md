@@ -1,7 +1,7 @@
 # Manuale Utente — Portale Sherazade
 
 > Guida operativa per l'utilizzo del portale dell'asilo nido/scuola primaria.
-> Aggiornato al: 15 aprile 2026
+> Aggiornato al: 13 maggio 2026
 
 ---
 
@@ -27,6 +27,8 @@
    - [Fatture](#311-fatture)
    - [Gestione utenti](#312-gestione-utenti)
    - [Impostazioni (Gruppi, Orari, Ruoli)](#313-impostazioni)
+   - [Sicurezza account (2FA, password)](#314-sicurezza-account)
+4. [Presenze insegnanti e staff](#4-presenze-insegnanti-e-staff)
 
 ---
 
@@ -367,15 +369,54 @@ Il sistema permette ai genitori di registrare autonomamente l'entrata e l'uscita
 
 **Percorso:** `Staff → Pappe`
 
+**Menu del giorno automatico:**
+- In cima alla pagina compare il banner **"📋 Menu del giorno"** con i piatti del ciclo per il gruppo selezionato
+- Se il ciclo non è configurato compare un avviso — contattare l'admin
+- I piatti sostituiti mostrano 🔄 accanto al nome
+
 **Tabella foglio pappe:**
-- Colonne: bambino | allergie | colazione | primo | secondo | contorno | frutta | merenda
+- Colonne: bambino | allergie | colazione | primo | secondo | contorno | frutta | merenda | note
 - Allergie mostrate come badge colorati per gravità (rosso = grave, arancione = moderata, giallo = lieve)
 - Dropdown quantità per ogni portata con colori: 🟢 tutto / 🟡 metà / 🟠 poco / 🔴 nulla
-- Pulsante **Salva sezione** — salva tutti in un unico invio
+- Pulsante **Salva pappe** in fondo — salva tutti in un unico invio
+
+#### Admin — Gestione menu ciclico
+
+**Percorso:** `Admin → Pappe`
+
+Il menu si ripete ogni **5 settimane** in modo automatico. Una volta configurato, non serve più inserirlo ogni giorno.
+
+**Tab Piatti:**
+Catalogo di tutti i piatti disponibili.
+1. Pulsante **+ Nuovo piatto** → selezionare tipo (colazione/primo/secondo/monopiatto/contorno/pane/frutta/merenda), inserire descrizione e note
+2. Modifica (✏️) o disattiva (🗑) un piatto esistente — i piatti disattivati non appaiono nel ciclo ma lo storico è conservato
+
+**Tab Calendario:**
+Assegna i piatti a specifiche settimane e giorni del ciclo.
+1. Selezionare il gruppo di visualizzazione (pill colorati)
+2. Pulsante **+ Assegna piatto** → scegliere piatto, gruppi, e uno dei due modi:
+   - **Ogni giorno** — per pane, acqua, frutta fissa
+   - **Settimana × giorno** — griglia 5 settimane × 5 giorni cliccabile
+3. Salva assegnazione
+
+**Tab Sostituzioni:**
+Override temporanei per una data specifica (es. menù di Natale, variante giornaliera).
+1. Pulsante **+ Nuova sostituzione**
+2. Compilare: data, tipo portata da sostituire, piatto alternativo, gruppi coinvolti
+3. La sostituzione sovrascrive il ciclo base solo per quella data
+
+**Tab Ciclo:**
+Configura la data di partenza del ciclo.
+1. Selezionare il **lunedì della settimana 1** del ciclo
+2. Salva — il sistema calcola automaticamente le settimane 1–5 per qualsiasi data futura
+3. Il preview mostra le date corrispondenti ad ogni settimana del ciclo
+
+> **Esempio:** se il ciclo inizia lunedì 1 settembre, il 29 settembre sarà settimana 5, il 6 ottobre ricomincia dalla settimana 1.
 
 #### Genitore
 
-- Card pasto del figlio con icone quantità e menu del giorno abbinato
+- Card pasto del figlio con icone quantità (🍽️ tutto / ½ metà / 🥄 poco / ❌ nulla)
+- Menu del giorno abbinato al pasto
 - Storico pasti scorribile
 
 ---
@@ -600,6 +641,120 @@ Tre tab: **Gruppi** | **Orari uscita** | **Ruoli**
 - Solo se nessun utente è assegnato a quel ruolo
 - I ruoli di sistema (admin, direttrice, coordinatrice, insegnante, cuoca, genitore) non possono essere eliminati
 - Il ruolo `admin` non può mai essere eliminato
+
+---
+
+### 3.14 Sicurezza account
+
+**Percorso:** menu utente (pill in alto a destra) → **🔐 Sicurezza**
+
+#### Cambio password
+
+1. Menu utente → **🔑 Cambia password**
+2. Inserire la password attuale
+3. Inserire e confermare la nuova password (min. 8 caratteri)
+4. Salva
+
+#### Reset password (accesso perso)
+
+1. Nella pagina di login: link **"Password dimenticata?"**
+2. Inserire l'email dell'account
+3. Ricevere il link via email (valido 1 ora)
+4. Cliccare il link → inserire la nuova password
+5. Effettuare il login con la nuova password
+
+> **Nota:** se il server non ha l'SMTP configurato, il link di reset appare nei log del backend. Contattare l'amministratore.
+
+#### Autenticazione a due fattori (2FA TOTP)
+
+La 2FA aggiunge un secondo livello di sicurezza: dopo email e password, viene richiesto un codice a 6 cifre generato dall'app di autenticazione sul telefono.
+
+**Attivare la 2FA:**
+1. Menu utente → **🔐 Sicurezza**
+2. Pulsante **"Attiva autenticazione a due fattori"**
+3. Scansionare il QR code con un'app di autenticazione (es. Google Authenticator, Aegis, Authy)
+4. Inserire il codice a 6 cifre mostrato dall'app per confermare
+5. Da quel momento, ogni login richiederà il codice TOTP
+
+**App consigliate:**
+
+| App | Piattaforma |
+|-----|-------------|
+| Google Authenticator | iOS / Android |
+| Aegis | Android (open source) |
+| Authy | iOS / Android / Desktop |
+
+**Login con 2FA attiva:**
+1. Inserire email e password → Accedi
+2. Comparirà la schermata **"Codice di autenticazione"**
+3. Aprire l'app, digitare il codice a 6 cifre corrente
+4. Il codice cambia ogni 30 secondi — inserirlo prima che scada
+5. Link **"Torna al login"** per annullare e riprovare con credenziali diverse
+
+**Disattivare la 2FA:**
+1. Menu utente → **🔐 Sicurezza**
+2. Pulsante **"Disattiva 2FA"**
+3. Inserire la password attuale per confermare
+
+> ⚠️ Se si perde l'accesso all'app di autenticazione, contattare l'amministratore per la disattivazione manuale dal pannello admin Django.
+
+---
+
+## 4. Presenze insegnanti e staff
+
+**Percorso:** `Staff → Presenze` → tab **"👩‍🏫 Insegnanti"**
+
+Il sistema tiene traccia anche delle presenze del personale, separatamente dal registro bambini.
+
+### 4.1 Timbratura con QR (self check-in staff)
+
+Analogamente al QR dei genitori, esiste un QR dedicato per il personale.
+
+**Abilitare (Admin/Direttrice):**
+1. `Presenze` → tab **"📱 QR Check-in"**
+2. Sezione **"QR Insegnanti"** → Toggle **Abilita**
+
+**Per lo staff:**
+1. `Presenze` → tab **"📱 QR Check-in"** → sezione QR Insegnanti
+2. Mostra il QR o stampalo per affiggerlo in sala professori
+3. Pulsante **Rinnova** per generare un nuovo token giornaliero
+
+**Timbratura (insegnante):**
+1. Scansionare il QR con il telefono → pagina `/checkin-insegnanti`
+2. Sistema riconosce automaticamente entrata o uscita:
+   - Nessun record oggi → registra **entrata** con orario attuale
+   - Entrata già registrata → registra **uscita**
+   - Entrambi → messaggio "Già completato per oggi"
+
+### 4.2 Registro giornaliero insegnanti (admin)
+
+**Percorso:** `Admin → Presenze` → tab **"👩‍🏫 Presenze insegnanti"**
+
+- Lista del personale con orari di entrata/uscita per la data selezionata
+- Inserimento manuale: form con data, toggle Presente/Assente, orari, motivo assenza
+- Prefill automatico se esiste già un record per la data scelta
+
+**Motivi assenza:**
+- Malattia
+- Ferie
+- Permesso
+- Altro
+
+### 4.3 Storico presenze personale
+
+**Percorso:** `Staff → Presenze` → pulsante **"📊 Storico"** in alto a destra
+
+- Tabella con data / ora entrata / ora uscita / stato (presente / assente)
+- Stats del mese corrente: giorni totali, presenti, assenti
+- Admin/Direttrice possono vedere lo storico di qualsiasi membro del personale (selettore dropdown)
+
+### 4.4 Registrare assenze manuali (admin)
+
+Dall'admin (`Presenze` → tab Insegnanti → form manuale):
+1. Selezionare la data
+2. Selezionare l'insegnante
+3. Toggle **Assente** → selezionare il motivo
+4. Salva
 
 ---
 

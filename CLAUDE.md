@@ -886,6 +886,6 @@ Prossimo task: HTTPS + Nginx (in attesa dominio) oppure 2FA
 
 ## Ultimo Aggiornamento
 Data: 13 maggio 2026
-Completato: Monitoring — health endpoint `/api/v1/health/` (testa DB), monitor.sh (disco/RAM/container Docker) con cron ogni 10 min; code review fixes deployati (MIME validation, CORS, middleware regex, fetchBackend, NEXTAUTH_SECRET)
+Completato: Manuale utente — aggiornato con sezioni 2FA/sicurezza, presenze insegnanti (QR + storico + admin), pappe v2 (menu ciclico con configurazione ciclo, tab calendario/sostituzioni), sezione 3.14 sicurezza account
 
-Prossimo task: Pappe v2 (ciclo 5 settimane)
+Prossimo task: Manutenzione (documentare cron jobs) + Backup offsite
