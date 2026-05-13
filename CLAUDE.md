@@ -52,7 +52,7 @@ Nome interno: Sherazade.
 - [x] Portfolio digitale del bambino
 - [x] Fatturazione documentale (PDF, no pagamenti online)
 - [x] Gestione menu settimanale (sostituita da Pappe v2 con ciclo 5 settimane)
-- [ ] 2FA TOTP — campi `two_factor_enabled`/`two_factor_secret` già nel modello User, `pyotp` in requirements; mancano: endpoint setup/verify, step nel login frontend
+- [ ] 2FA TOTP — ✅ COMPLETATO (13 maggio 2026): endpoint setup/verify/disable, step TOTP nel login, pagina `/dashboard/sicurezza`
 
 ## Design
 - Interfaccia genitori: calda, colorata, mobile-first
@@ -857,3 +857,33 @@ Data: 13 maggio 2026
 Completato: Reset password via email + Cambio password — testato e deployato in produzione
 
 Prossimo task: HTTPS + Nginx (in attesa dominio) oppure 2FA
+
+### 2FA TOTP (13 maggio 2026)
+- `TwoFactorSetupView` (GET + POST): genera secret + QR provisioning URI firmato con `django.core.signing` (salt `2fa-setup`, 10 min) — stateless, nessun salvataggio nel DB fino alla conferma
+- `TwoFactorDisableView` (POST): verifica password attuale → imposta `two_factor_enabled=False` e `two_factor_secret=''`
+- `TwoFactorVerifyLoginView` (POST): step 2 del login — verifica TOTP dal `totp_session` firmato (salt `2fa-login`, 5 min), restituisce JWT; rate-limited 10/5min
+- `LoginView` modificata: se `user.two_factor_enabled` restituisce `{totp_required: true, totp_session: signed}` invece dei JWT
+- Frontend login: se risposta ha `totp_required=True` → switcha a form TOTP con input numerico monospace; link "Torna al login" per annullare
+- Frontend pagina `/dashboard/sicurezza`: stato 2FA, attivazione con QR code (`QRCodeSVG` da `qrcode.react`) + input codice, disattivazione con password; sezione link "Cambia password"
+- `UserChip` dropdown: aggiunto link "🔐 Sicurezza" sopra "🔑 Cambia password"
+- API routes Next.js: `GET/POST /api/auth/2fa/setup`, `POST /api/auth/2fa/verify`, `POST /api/auth/2fa/disable`
+- Fix TypeScript: route 2FA usano pattern `{ res, newAccessToken } = await fetchBackend(...)` con `NextResponse.json(data, { status })` per compatibilità con il tipo di ritorno di Next.js
+
+**File creati:**
+- `backend/apps/users/views.py`: aggiunte `TwoFactorSetupView`, `TwoFactorDisableView`, `TwoFactorVerifyLoginView`
+- `frontend/src/app/api/auth/2fa/setup/route.ts`
+- `frontend/src/app/api/auth/2fa/verify/route.ts`
+- `frontend/src/app/api/auth/2fa/disable/route.ts`
+- `frontend/src/app/[locale]/dashboard/sicurezza/page.tsx`
+
+**File modificati:**
+- `backend/apps/users/views.py`: `LoginView.post()` con step 2FA
+- `backend/apps/users/urls.py`: aggiunti 3 path `2fa/setup/`, `2fa/verify/`, `2fa/disable/`
+- `frontend/src/app/[locale]/login/page.tsx`: step TOTP condizionale
+- `frontend/src/components/UserChip.tsx`: link "🔐 Sicurezza"
+
+## Ultimo Aggiornamento
+Data: 13 maggio 2026
+Completato: 2FA TOTP — attivazione con QR, step TOTP nel login, pagina sicurezza — deployato in produzione
+
+Prossimo task: HTTPS + Nginx (in attesa dominio)
