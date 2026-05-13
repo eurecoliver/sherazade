@@ -102,6 +102,11 @@ export default function BachecaPresenzePage() {
   const [data, setData] = useState<LiveData | null>(null)
   const [loading, setLoading] = useState(true)
   const [countdown, setCountdown] = useState(REFRESH_INTERVAL / 1000)
+  const [userRole, setUserRole] = useState('')
+
+  useEffect(() => {
+    fetch('/api/auth/me').then(r => r.json()).then(d => { if (d?.role) setUserRole(d.role) }).catch(() => {})
+  }, [])
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const countRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
@@ -139,7 +144,7 @@ export default function BachecaPresenzePage() {
   }
 
   // Determina il ruolo per il back button
-  const getRoleDashboard = () => `/${locale}/dashboard/staff`
+  const getRoleDashboard = () => ['admin', 'direttrice'].includes(userRole) ? `/${locale}/dashboard/admin` : `/${locale}/dashboard/staff`
 
   return (
     <div style={{ minHeight: '100vh', background: '#F0F4F8' }}>

@@ -730,7 +730,7 @@ export default function StaffDiarioPage() {
         <div style={{ maxWidth: 'min(1080px, 96vw)', margin: '0 auto' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.875rem' }}>
             <button
-              onClick={() => router.push(`/${locale}/dashboard/staff`)}
+              onClick={() => router.push(['admin', 'direttrice'].includes(userRole) ? `/${locale}/dashboard/admin` : `/${locale}/dashboard/staff`)}
               style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem', background: 'rgba(255,255,255,0.15)', color: 'white', border: '1.5px solid rgba(255,255,255,0.3)', borderRadius: '20px', padding: '0.35rem 0.875rem 0.35rem 0.625rem', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 600, fontFamily: 'inherit' }}
             >
               ← Dashboard
