@@ -886,13 +886,33 @@ Prossimo task: HTTPS + Nginx (in attesa dominio) oppure 2FA
 
 ## Ultimo Aggiornamento
 Data: 13 maggio 2026
-Completato: Manutenzione — cron jobs verificati e funzionanti, logrotate configurato per log sherazade (settimanale, 8 settimane), warning `version` rimosso da docker-compose.yml
+Completato: Migliorie QR check-in (feature/migliorie-qr) — bacheca presenze live, storico QR, campo via_qr, push notifications check-in bambino
 
-**Stato cron jobs sul server:**
-- `0 2 * * *` → `cleanup_media_diario` → `/var/log/sherazade-cleanup.log`
-- `0 3 1 * *` → `cleanup_media_portfolio` → `/var/log/sherazade-cleanup.log`
-- `30 3 1 * *` → `cleanup_log_accessi` → `/var/log/sherazade-cleanup.log`
-- `*/10 * * * *` → `monitor.sh` (disco/RAM/container) → `/var/log/sherazade_monitor.log`
-- logrotate weekly: `/etc/logrotate.d/sherazade` (8 rotazioni, compresso)
+### Migliorie QR check-in (13 maggio 2026) — branch feature/migliorie-qr
+- `via_qr` BooleanField aggiunto a `Presenza` e `PresenzaInsegnante` (migration `0008_via_qr.py`)
+- `perform_checkin`: imposta `via_qr=True` + notifica push a tutti gli utenti staff (ADMIN/DIRETTRICE/COORDINATRICE/INSEGNANTE) con messaggio "QR Check-in — {nome} è arrivato/a" o "è uscito/a"
+- `perform_checkin_insegnanti`: imposta `via_qr=True` (no push, evita spam)
+- Nuova action `live_oggi` (`GET /api/v1/presenze/live-oggi/`): snapshot giornaliero bambini per gruppo (stato: presente/uscito/assente/non_registrato) + lista insegnanti + totali + `aggiornato_at`
+- Nuova action `storico_qr` (`GET /api/v1/presenze/storico-qr/`): log eventi QR della giornata filtrabili per `?data=` e `?gruppo=`
+- Pagina `/bacheca-presenze`: live board auto-refresh 30s con countdown visibile, card per gruppo con colori, badge 📱 per check-in QR, sezione staff, legenda
+- Tab "📋 Storico QR" aggiunto a `staff/presenze` e `admin/presenze` con timeline eventi, filtro data
+- Bottone "📺 Bacheca Live" in: dashboard staff (nav item), dashboard admin, pagina staff/presenze, pagina admin/presenze
+- Middleware aggiornato: `/bacheca-presenze` rotta protetta
+- API routes Next.js: `/api/presenze/live-oggi` e `/api/presenze/storico-qr`
 
-Prossimo task: Backup offsite
+**File creati:**
+- `backend/apps/attendance/migrations/0008_via_qr.py`
+- `frontend/src/app/[locale]/bacheca-presenze/page.tsx`
+- `frontend/src/app/api/presenze/live-oggi/route.ts`
+- `frontend/src/app/api/presenze/storico-qr/route.ts`
+
+**File modificati:**
+- `backend/apps/attendance/models.py`: campo `via_qr` su entrambi i modelli
+- `backend/apps/attendance/views.py`: `perform_checkin` (push+via_qr), `perform_checkin_insegnanti` (via_qr), nuove action `live_oggi` e `storico_qr`
+- `frontend/src/app/[locale]/dashboard/staff/page.tsx`: aggiunto "📺 Bacheca Live" in NAV_ITEMS
+- `frontend/src/app/[locale]/dashboard/admin/page.tsx`: aggiunto `BACHECA_ITEM` + bottone
+- `frontend/src/app/[locale]/dashboard/staff/presenze/page.tsx`: tab storico_qr + bottone bacheca
+- `frontend/src/app/[locale]/dashboard/admin/presenze/page.tsx`: tab storico_qr + bottone bacheca
+- `frontend/src/middleware.ts`: protezione rotta `/bacheca-presenze`
+
+Prossimo task: feature/statistiche — dashboard statistiche presenze (trend mensili, medie, grafici)

@@ -402,6 +402,12 @@ export default function AdminPresenzePage() {
               >
                 📺 Bacheca Live
               </button>
+              <button
+                onClick={() => router.push(`/${locale}/dashboard/admin/statistiche`)}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem', background: 'rgba(255,255,255,0.15)', color: 'white', border: '1.5px solid rgba(255,255,255,0.3)', borderRadius: '20px', padding: '0.35rem 0.875rem', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 600, fontFamily: 'inherit' }}
+              >
+                📊 Statistiche
+              </button>
             </div>
             <UserChip onLogout={handleLogout} />
           </div>

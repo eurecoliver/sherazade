@@ -1,8 +1,7 @@
 import calendar
 from datetime import date, datetime as dt
-
 from django.db import IntegrityError
-from django.db.models import Q
+from django.db.models import Avg, Count, Q, Sum
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
@@ -879,6 +878,108 @@ class PresenzaViewSet(LogAccessoMixin, viewsets.ModelViewSet):
         })
 
     # ── Bacheca live ─────────────────────────────────────────────────────────
+
+    @action(detail=False, methods=['get'], url_path='statistiche')
+    def statistiche(self, request):
+        """
+        Dashboard statistiche presenze — admin/direttrice/coordinatrice.
+        Parametri:
+          anno=YYYY (default anno corrente)
+          gruppo=<id> (opzionale, filtra per gruppo)
+        Ritorna:
+          - trend mensile (presenti/assenti/perc_presenza per mese)
+          - media ritardo arrivo/uscita mensile (minuti)
+          - riepilogo per gruppo (presenti, assenti, perc_presenza — anno)
+          - top 10 bambini per giorni assenti nell'anno
+        """
+        role = request.user.role
+        from apps.config.permessi import check_permesso
+        if not check_permesso(request.user, 'presenze', 'leggi'):
+            return Response({'detail': 'Non autorizzato.'}, status=status.HTTP_403_FORBIDDEN)
+
+        oggi = date.today()
+        anno = int(request.query_params.get('anno', oggi.year))
+        gruppo_id = request.query_params.get('gruppo', '')
+
+        # ── 1. Trend mensile ─────────────────────────────────────────────────
+        trend = []
+        for mese in range(1, 13):
+            _, giorni = calendar.monthrange(anno, mese)
+            qs = Presenza.objects.filter(data__year=anno, data__month=mese)
+            if gruppo_id:
+                qs = qs.filter(bambino__gruppo_id=gruppo_id)
+            totale = qs.count()
+            presenti = qs.filter(presente=True).count()
+            assenti = qs.filter(presente=False).count()
+            # Media ritardo (solo record con ritardo > 0)
+            avg_ritardo_arr = qs.filter(
+                presente=True, minuti_ritardo_arrivo__gt=0
+            ).aggregate(avg=Avg('minuti_ritardo_arrivo'))['avg'] or 0
+            avg_ritardo_usc = qs.filter(
+                presente=True, minuti_ritardo_uscita__gt=0
+            ).aggregate(avg=Avg('minuti_ritardo_uscita'))['avg'] or 0
+            trend.append({
+                'mese': mese,
+                'giorni_scolastici': giorni,
+                'registrazioni': totale,
+                'presenti': presenti,
+                'assenti': assenti,
+                'perc_presenza': round(presenti / totale * 100) if totale else 0,
+                'avg_ritardo_arrivo': round(avg_ritardo_arr, 1),
+                'avg_ritardo_uscita': round(avg_ritardo_usc, 1),
+            })
+
+        # ── 2. Riepilogo per gruppo (anno intero) ────────────────────────────
+        from apps.config.models import Gruppo
+        gruppi = Gruppo.objects.filter(attivo=True).order_by('ordine')
+        riepilogo_gruppi = []
+        for g in gruppi:
+            qs = Presenza.objects.filter(
+                data__year=anno, bambino__gruppo=g
+            )
+            totale = qs.count()
+            presenti = qs.filter(presente=True).count()
+            assenti = qs.filter(presente=False).count()
+            riepilogo_gruppi.append({
+                'gruppo_id': g.id,
+                'gruppo_nome': g.nome,
+                'gruppo_colore': g.colore,
+                'presenti': presenti,
+                'assenti': assenti,
+                'perc_presenza': round(presenti / totale * 100) if totale else 0,
+            })
+
+        # ── 3. Top 10 bambini per giorni assenti (anno intero) ───────────────
+        from apps.children.models import Bambino
+        bambini_qs = Bambino.objects.filter(attivo=True).select_related('gruppo')
+        if gruppo_id:
+            bambini_qs = bambini_qs.filter(gruppo_id=gruppo_id)
+        presenze_anno = (
+            Presenza.objects.filter(data__year=anno, presente=False)
+            .values('bambino_id')
+            .annotate(giorni_assenti=Count('id'))
+            .order_by('-giorni_assenti')[:10]
+        )
+        bambini_map = {b.id: b for b in bambini_qs}
+        top_assenti = []
+        for item in presenze_anno:
+            b = bambini_map.get(item['bambino_id'])
+            if not b:
+                continue
+            top_assenti.append({
+                'bambino_id': b.id,
+                'nome': b.nome,
+                'cognome': b.cognome,
+                'gruppo': b.sezione,
+                'giorni_assenti': item['giorni_assenti'],
+            })
+
+        return Response({
+            'anno': anno,
+            'trend_mensile': trend,
+            'riepilogo_gruppi': riepilogo_gruppi,
+            'top_assenti': top_assenti,
+        })
 
     @action(detail=False, methods=['get'], url_path='live-oggi')
     def live_oggi(self, request):
