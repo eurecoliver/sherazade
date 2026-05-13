@@ -640,6 +640,10 @@ export default function StaffDiarioPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [userRole, setUserRole] = useState('')
+  const [showPdfModal, setShowPdfModal] = useState(false)
+  const [pdfBambino, setPdfBambino] = useState('')
+  const [pdfAnno, setPdfAnno] = useState(new Date().getFullYear())
+  const [pdfMese, setPdfMese] = useState(new Date().getMonth() + 1)
 
   // Carica ruolo utente per decidere se mostrare soft-delete tag
   useEffect(() => {
@@ -776,7 +780,68 @@ export default function StaffDiarioPage() {
           >
             ↻
           </button>
+          {['admin', 'direttrice', 'coordinatrice'].includes(userRole) && (
+            <button
+              onClick={() => setShowPdfModal(true)}
+              style={{ padding: '0.45rem 1rem', background: '#D5F5E3', color: '#27AE60', border: '2px solid #9AE6B4', borderRadius: '8px', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
+            >
+              📄 Esporta PDF diario
+            </button>
+          )}
         </div>
+
+        {/* Mini modale export PDF */}
+        {showPdfModal && (
+          <div style={{ background: 'white', borderRadius: '14px', padding: '1.25rem', marginBottom: '1rem', boxShadow: '0 4px 16px rgba(0,0,0,0.12)', border: '2px solid #D5F5E3' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.875rem' }}>
+              <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 800 }}>📄 Esporta diario mensile PDF</h3>
+              <button onClick={() => setShowPdfModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.2rem', color: '#aaa' }}>✕</button>
+            </div>
+            <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: '#555', marginBottom: '0.3rem' }}>Bambino (ID)</label>
+                <input
+                  type="number"
+                  placeholder="ID bambino"
+                  value={pdfBambino}
+                  onChange={e => setPdfBambino(e.target.value)}
+                  style={{ padding: '0.4rem 0.625rem', border: '1px solid #CBD5E0', borderRadius: '8px', fontSize: '0.875rem', fontFamily: 'inherit', width: '90px' }}
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: '#555', marginBottom: '0.3rem' }}>Mese</label>
+                <input
+                  type="number"
+                  min={1} max={12}
+                  value={pdfMese}
+                  onChange={e => setPdfMese(Number(e.target.value))}
+                  style={{ padding: '0.4rem 0.625rem', border: '1px solid #CBD5E0', borderRadius: '8px', fontSize: '0.875rem', fontFamily: 'inherit', width: '60px' }}
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 600, color: '#555', marginBottom: '0.3rem' }}>Anno</label>
+                <input
+                  type="number"
+                  value={pdfAnno}
+                  onChange={e => setPdfAnno(Number(e.target.value))}
+                  style={{ padding: '0.4rem 0.625rem', border: '1px solid #CBD5E0', borderRadius: '8px', fontSize: '0.875rem', fontFamily: 'inherit', width: '80px' }}
+                />
+              </div>
+              <button
+                onClick={() => {
+                  if (!pdfBambino) return
+                  const params = new URLSearchParams({ bambino: pdfBambino, anno: String(pdfAnno), mese: String(pdfMese) })
+                  window.open(`/api/diario/export-pdf?${params}`, '_blank')
+                }}
+                disabled={!pdfBambino}
+                style={{ padding: '0.45rem 1.25rem', background: '#27AE60', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 700, fontSize: '0.875rem', cursor: pdfBambino ? 'pointer' : 'not-allowed', fontFamily: 'inherit', opacity: pdfBambino ? 1 : 0.5 }}
+              >
+                📥 Scarica PDF
+              </button>
+            </div>
+            <p style={{ margin: '0.5rem 0 0', fontSize: '0.75rem', color: '#aaa' }}>Trovi l&apos;ID bambino nella lista bambini — colonna ID.</p>
+          </div>
+        )}
 
         {error && (
           <div style={{ background: '#FADBD8', color: '#C0392B', padding: '0.75rem 1rem', borderRadius: '10px', marginBottom: '1rem', fontSize: '0.875rem' }}>

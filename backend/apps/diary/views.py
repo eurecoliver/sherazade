@@ -186,6 +186,121 @@ class RegistroDiarioViewSet(LogAccessoMixin, viewsets.ModelViewSet):
 
         return Response(data)
 
+    @action(detail=False, methods=['get'], url_path='export-pdf-diario')
+    def export_pdf_diario(self, request):
+        """
+        Admin/Direttrice/Coordinatrice/Insegnante: PDF diario mensile di un bambino.
+        Parametri: bambino (id), anno, mese.
+        """
+        from django.http import HttpResponse
+        from weasyprint import HTML
+
+        role = request.user.role
+        if role not in (Role.ADMIN, Role.DIRETTRICE, Role.COORDINATRICE, Role.INSEGNANTE):
+            return Response({'detail': 'Non autorizzato.'}, status=status.HTTP_403_FORBIDDEN)
+
+        bambino_id = request.query_params.get('bambino')
+        if not bambino_id:
+            return Response({'detail': 'Parametro "bambino" obbligatorio.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            bambino = Bambino.objects.select_related('gruppo').get(id=bambino_id, attivo=True)
+        except Bambino.DoesNotExist:
+            return Response({'detail': 'Bambino non trovato.'}, status=status.HTTP_404_NOT_FOUND)
+
+        from datetime import date
+        oggi = date.today()
+        anno = int(request.query_params.get('anno', oggi.year))
+        mese = int(request.query_params.get('mese', oggi.month))
+
+        MESI_IT = ['', 'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
+                   'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre']
+        UMORE_EMOJI = {
+            'felice': '😊', 'sereno': '🙂', 'stanco': '😴', 'agitato': '😤', 'triste': '😢', '': '—',
+        }
+
+        registri = (
+            RegistroDiario.objects
+            .filter(bambino_id=bambino_id, data__year=anno, data__month=mese)
+            .select_related('autore')
+            .prefetch_related('tags_cosa_portare')
+            .order_by('data')
+        )
+
+        if not registri.exists():
+            return Response({'detail': 'Nessuna voce di diario per il periodo selezionato.'}, status=status.HTTP_404_NOT_FOUND)
+
+        righe_html = ''
+        for r in registri:
+            data_fmt = r.data.strftime('%d/%m/%Y')
+            umore = UMORE_EMOJI.get(r.umore or '', '—')
+            sonno = '—'
+            if r.sonno_inizio and r.sonno_fine:
+                sonno = f'{r.sonno_inizio.strftime("%H:%M")} → {r.sonno_fine.strftime("%H:%M")}'
+            popo = '✓' if r.popo else '—'
+            attivita = r.attivita_descrizione or '—'
+            note = r.note_giornata or '—'
+            tags = ', '.join(t.nome for t in r.tags_cosa_portare.all()) or '—'
+            autore = r.autore.get_full_name() or r.autore.email
+
+            righe_html += f'''
+            <div class="card">
+              <div class="card-header">
+                <span class="data">{data_fmt}</span>
+                <span class="umore">{umore}</span>
+                <span class="autore">Scritto da: {autore}</span>
+              </div>
+              <table class="inner">
+                <tr><td class="lbl">Attività</td><td>{attivita}</td></tr>
+                <tr><td class="lbl">Note</td><td>{note}</td></tr>
+                <tr>
+                  <td class="lbl">Sonno</td><td>{sonno}</td>
+                </tr>
+                <tr>
+                  <td class="lbl">Popò</td><td>{popo}</td>
+                  <td class="lbl" style="padding-left:1cm">Portare domani</td><td>{tags}</td>
+                </tr>
+              </table>
+            </div>'''
+
+        from django.utils import timezone as tz
+        data_stampa = tz.now().strftime('%d/%m/%Y %H:%M')
+
+        html = f'''<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<style>
+  @page {{ size: A4; margin: 2cm; }}
+  body {{ font-family: Arial, sans-serif; font-size: 10pt; color: #222; }}
+  h1 {{ font-size: 15pt; color: #0984E3; margin-bottom: 0.1cm; }}
+  .meta {{ font-size: 8.5pt; color: #888; margin-bottom: 0.8cm; }}
+  .card {{ border: 1px solid #BDE0FF; border-radius: 6px; margin-bottom: 0.5cm; overflow: hidden; }}
+  .card-header {{ background: #EAF4FF; padding: 5px 10px; display: flex; align-items: center; gap: 1cm; }}
+  .data {{ font-weight: bold; font-size: 10pt; }}
+  .umore {{ font-size: 14pt; }}
+  .autore {{ font-size: 8pt; color: #888; margin-left: auto; }}
+  .inner {{ width: 100%; border-collapse: collapse; padding: 6px 10px; }}
+  .inner td {{ padding: 3px 8px; vertical-align: top; font-size: 9pt; border-bottom: 1px solid #F0F8FF; }}
+  td.lbl {{ font-weight: bold; color: #0984E3; white-space: nowrap; width: 2.5cm; }}
+  .footer {{ margin-top: 1cm; font-size: 8pt; color: #aaa; border-top: 1px solid #EEE; padding-top: 0.3cm; }}
+</style>
+</head>
+<body>
+<h1>📖 Diario — {bambino.cognome} {bambino.nome}</h1>
+<div class="meta">{MESI_IT[mese]} {anno} &nbsp;|&nbsp; Gruppo: {bambino.sezione} &nbsp;|&nbsp; Stampa: {data_stampa}</div>
+{righe_html}
+<div class="footer">Generato da Sherazade — documento riservato ad uso interno</div>
+</body>
+</html>'''
+
+        pdf_bytes = HTML(string=html).write_pdf()
+        nome = f'{bambino.cognome}_{bambino.nome}'.replace(' ', '_')
+        filename = f'diario_{nome}_{anno}_{mese:02d}.pdf'
+        resp = HttpResponse(pdf_bytes, content_type='application/pdf')
+        resp['Content-Disposition'] = f'attachment; filename="{filename}"'
+        return resp
+
 
 class MediaDiarioViewSet(LogAccessoMixin, viewsets.ModelViewSet):
     risorsa_nome = 'media_diario'

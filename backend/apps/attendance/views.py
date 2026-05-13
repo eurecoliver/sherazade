@@ -1178,3 +1178,146 @@ class PresenzaViewSet(LogAccessoMixin, viewsets.ModelViewSet):
             'eventi': events,
             'totale': len(events),
         })
+
+    # ── Export PDF ───────────────────────────────────────────────────────────
+
+    @action(detail=False, methods=['get'], url_path='export-pdf-presenze')
+    def export_pdf_presenze(self, request):
+        """
+        Admin/Direttrice/Coordinatrice: esporta PDF report presenze mensile.
+        Parametri: anno, mese, gruppo (opzionale).
+        """
+        from django.http import HttpResponse
+        from weasyprint import HTML
+        import calendar as cal_mod
+
+        if not check_permesso(request.user, 'presenze', 'leggi'):
+            return Response({'detail': 'Non autorizzato.'}, status=status.HTTP_403_FORBIDDEN)
+
+        role = request.user.role
+        if role not in (Role.ADMIN, Role.DIRETTRICE, Role.COORDINATRICE):
+            return Response({'detail': 'Non autorizzato.'}, status=status.HTTP_403_FORBIDDEN)
+
+        oggi = date.today()
+        anno = int(request.query_params.get('anno', oggi.year))
+        mese = int(request.query_params.get('mese', oggi.month))
+        gruppo_id = request.query_params.get('gruppo', '')
+
+        MESI_IT = ['', 'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
+                   'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre']
+        GIORNI_IT = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom']
+
+        bambini_qs = (
+            Bambino.objects.filter(attivo=True)
+            .select_related('gruppo')
+            .order_by('gruppo__ordine', 'cognome', 'nome')
+        )
+        if gruppo_id:
+            bambini_qs = bambini_qs.filter(gruppo_id=gruppo_id)
+
+        _, giorni_nel_mese = cal_mod.monthrange(anno, mese)
+        presenze_mese = {
+            (p.bambino_id, p.data.day): p
+            for p in Presenza.objects.filter(data__year=anno, data__month=mese)
+        }
+
+        # Intestazione colonne giorni
+        col_giorni = ''
+        for g in range(1, giorni_nel_mese + 1):
+            dow = date(anno, mese, g).weekday()
+            cls = ' class="weekend"' if dow >= 5 else ''
+            col_giorni += f'<th{cls}>{g}<br><small>{GIORNI_IT[dow]}</small></th>'
+
+        # Righe bambini
+        righe_html = ''
+        for b in bambini_qs:
+            pres_count = 0
+            ass_count = 0
+            celle = ''
+            for g in range(1, giorni_nel_mese + 1):
+                p = presenze_mese.get((b.id, g))
+                if p is None:
+                    celle += '<td class="vuoto">—</td>'
+                elif p.presente:
+                    pres_count += 1
+                    celle += '<td class="presente">P</td>'
+                else:
+                    ass_count += 1
+                    motivo = (p.motivo_assenza or '').upper()[:1] or 'A'
+                    celle += f'<td class="assente" title="{p.motivo_assenza or ""}">{motivo}</td>'
+            perc = round(pres_count / giorni_nel_mese * 100)
+            righe_html += f'''
+            <tr>
+              <td class="nome">{b.cognome} {b.nome}</td>
+              <td class="sezione">{b.sezione}</td>
+              {celle}
+              <td class="totale-p">{pres_count}</td>
+              <td class="totale-a">{ass_count}</td>
+              <td class="perc">{perc}%</td>
+            </tr>'''
+
+        titolo_gruppo = ''
+        if gruppo_id:
+            try:
+                from apps.config.models import Gruppo
+                titolo_gruppo = f' — {Gruppo.objects.get(id=gruppo_id).nome}'
+            except Exception:
+                pass
+
+        from django.utils import timezone as tz
+        data_stampa = tz.now().strftime('%d/%m/%Y %H:%M')
+
+        html = f'''<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<style>
+  @page {{ size: A3 landscape; margin: 1.5cm; }}
+  body {{ font-family: Arial, sans-serif; font-size: 8pt; color: #222; }}
+  h1 {{ font-size: 14pt; color: #27AE60; margin-bottom: 0.2cm; }}
+  .meta {{ font-size: 8pt; color: #888; margin-bottom: 0.5cm; }}
+  table {{ width: 100%; border-collapse: collapse; }}
+  th {{ background: #D5F5E3; padding: 4px 3px; border: 1px solid #9AE6B4; font-size: 7.5pt; text-align: center; white-space: nowrap; }}
+  td {{ padding: 3px 4px; border: 1px solid #DDD; text-align: center; font-size: 7.5pt; }}
+  td.nome {{ text-align: left; font-weight: bold; min-width: 4cm; white-space: nowrap; }}
+  td.sezione {{ font-size: 7pt; color: #888; }}
+  td.presente {{ background: #D5F5E3; color: #1E8449; font-weight: bold; }}
+  td.assente {{ background: #FADBD8; color: #922B21; font-weight: bold; }}
+  td.vuoto {{ color: #CCC; }}
+  th.weekend, td.weekend {{ background: #F7F7F7; color: #AAA; }}
+  td.totale-p {{ background: #EBF9F1; font-weight: bold; color: #27AE60; }}
+  td.totale-a {{ background: #FEF3F2; font-weight: bold; color: #E74C3C; }}
+  td.perc {{ font-weight: bold; }}
+  .footer {{ margin-top: 0.5cm; font-size: 7pt; color: #aaa; border-top: 1px solid #EEE; padding-top: 0.2cm; }}
+</style>
+</head>
+<body>
+<h1>✅ Report Presenze — {MESI_IT[mese]} {anno}{titolo_gruppo}</h1>
+<div class="meta">Stampa: {data_stampa} &nbsp;|&nbsp; P = Presente &nbsp;|&nbsp; A/M/F = Assente/Malattia/Ferie &nbsp;|&nbsp; — = non registrato</div>
+<table>
+  <thead>
+    <tr>
+      <th style="text-align:left">Bambino</th>
+      <th>Sezione</th>
+      {col_giorni}
+      <th style="background:#D5F5E3">P</th>
+      <th style="background:#FADBD8">A</th>
+      <th>%</th>
+    </tr>
+  </thead>
+  <tbody>
+    {righe_html}
+  </tbody>
+</table>
+<div class="footer">Generato da Sherazade — dati riservati, uso interno</div>
+</body>
+</html>'''
+
+        pdf_bytes = HTML(string=html).write_pdf()
+        nome_file = f'presenze_{anno}_{mese:02d}.pdf'
+        if gruppo_id:
+            nome_file = f'presenze_{anno}_{mese:02d}_g{gruppo_id}.pdf'
+        resp = HttpResponse(pdf_bytes, content_type='application/pdf')
+        resp['Content-Disposition'] = f'attachment; filename="{nome_file}"'
+        return resp
+

@@ -916,3 +916,28 @@ Completato: Migliorie QR check-in (feature/migliorie-qr) — bacheca presenze li
 - `frontend/src/middleware.ts`: protezione rotta `/bacheca-presenze`
 
 Prossimo task: feature/statistiche — dashboard statistiche presenze (trend mensili, medie, grafici)
+
+### Statistiche presenze (13 maggio 2026) — branch feature/statistiche
+- Nuova action `statistiche` (`GET /api/v1/presenze/statistiche/`) nel `PresenzaViewSet`
+  - Parametri: `anno` (default corrente), `gruppo` (opzionale)
+  - Trend mensile 12 mesi: presenti, assenti, perc_presenza, avg_ritardo_arrivo/uscita
+  - Riepilogo per gruppo: presenti, assenti, perc_presenza per l'anno
+  - Top 10 bambini per giorni assenti nell'anno
+  - Accessibile tramite `check_permesso('presenze', 'leggi')`
+- Import aggiunto a views.py: `Avg`, `Count`, `Sum` da `django.db.models`
+- Pagina `/dashboard/admin/statistiche`: grafici a barre CSS puri (no librerie),
+  % presenza per mese, confronto gruppi con colori dinamici, top assenti, 4 KPI box
+- Filtri: selettore anno (3 anni) + dropdown gruppo
+- Bottone "📊 Statistiche" nella dashboard admin e nell'header admin/presenze
+- API route Next.js: `/api/presenze/statistiche` con passthrough parametri
+
+**File creati:**
+- `frontend/src/app/[locale]/dashboard/admin/statistiche/page.tsx`
+- `frontend/src/app/api/presenze/statistiche/route.ts`
+
+**File modificati:**
+- `backend/apps/attendance/views.py`: aggiunta action `statistiche`
+- `frontend/src/app/[locale]/dashboard/admin/page.tsx`: aggiunto `STATISTICHE_ITEM`
+- `frontend/src/app/[locale]/dashboard/admin/presenze/page.tsx`: bottone Statistiche
+
+Prossimo task: feature/export-pdf — PDF diario mensile, report presenze, menu settimanale
