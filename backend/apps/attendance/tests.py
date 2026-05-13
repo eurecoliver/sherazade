@@ -161,25 +161,25 @@ class QRTokenTest(TestCase):
         self.staff = make_user('qrstaff@test.it', 'insegnante')
 
     def test_get_or_create_crea_token(self):
-        token = DailyQRCodeToken.get_or_create_today(user=self.staff)
+        token, created = DailyQRCodeToken.get_or_create_today(user=self.staff)
         self.assertIsNotNone(token)
         self.assertTrue(len(token.token) > 10)
 
     def test_get_or_create_idempotente(self):
         """Chiamate multiple per lo stesso giorno restituiscono lo stesso token."""
-        t1 = DailyQRCodeToken.get_or_create_today(user=self.staff)
-        t2 = DailyQRCodeToken.get_or_create_today(user=self.staff)
+        t1, _ = DailyQRCodeToken.get_or_create_today(user=self.staff)
+        t2, _ = DailyQRCodeToken.get_or_create_today(user=self.staff)
         self.assertEqual(t1.token, t2.token)
 
     def test_valida_token_corretto(self):
-        token_obj = DailyQRCodeToken.get_or_create_today(user=self.staff)
+        token_obj, _ = DailyQRCodeToken.get_or_create_today(user=self.staff)
         self.assertTrue(DailyQRCodeToken.valida(token_obj.token))
 
     def test_valida_token_sbagliato(self):
         self.assertFalse(DailyQRCodeToken.valida('token-inventato-xyz'))
 
     def test_rinnova_genera_nuovo_token(self):
-        t1 = DailyQRCodeToken.get_or_create_today(user=self.staff)
+        t1, _ = DailyQRCodeToken.get_or_create_today(user=self.staff)
         staff2 = make_user('qrstaff2@test.it', 'insegnante')
         t2 = DailyQRCodeToken.rinnova_oggi(user=staff2)
         self.assertNotEqual(t1.token, t2.token)

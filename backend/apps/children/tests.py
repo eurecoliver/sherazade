@@ -140,7 +140,7 @@ class BambinoPermessiTest(APITestCase):
             'nome': 'Nuovo', 'cognome': 'Bambino',
             'data_nascita': '2022-03-15',
             'data_iscrizione': '2024-09-01',
-            'codice_fiscale': 'NUOVO00X00X000X000X',
+            'codice_fiscale': 'NUOVOBMB00X000X00X',
             'attivo': True,
         }
         resp = self.client.post('/api/v1/bambini/', payload, **auth_header(self.admin))

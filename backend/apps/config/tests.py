@@ -26,6 +26,16 @@ def auth_header(user):
     return {'HTTP_AUTHORIZATION': f'Bearer {refresh.access_token}'}
 
 
+def grant(role, risorsa, azione, consentito=True):
+    """Crea o aggiorna un permesso, gestendo record già presenti da migration."""
+    from django.db import IntegrityError, transaction
+    try:
+        with transaction.atomic():
+            PermessoRuolo.objects.create(ruolo=role, risorsa=risorsa, azione=azione, consentito=consentito)
+    except IntegrityError:
+        PermessoRuolo.objects.filter(ruolo=role, risorsa=risorsa, azione=azione).update(consentito=consentito)
+
+
 # ─────────────────────────────────────────────────────────────────
 # Test check_permesso()
 # ─────────────────────────────────────────────────────────────────
@@ -53,25 +63,19 @@ class CheckPermessoTest(TestCase):
     def test_ruolo_con_permesso_ha_accesso(self):
         """Se PermessoRuolo.consentito=True → True."""
         user = make_user('coord@test.it', 'coordinatrice')
-        PermessoRuolo.objects.create(
-            ruolo='coordinatrice', risorsa='bambini', azione='leggi', consentito=True,
-        )
+        grant('coordinatrice', 'bambini', 'leggi', consentito=True)
         self.assertTrue(check_permesso(user, 'bambini', 'leggi'))
 
     def test_ruolo_con_permesso_negato(self):
         """Se PermessoRuolo.consentito=False → False."""
         user = make_user('cuoca@test.it', 'cuoca')
-        PermessoRuolo.objects.create(
-            ruolo='cuoca', risorsa='diario', azione='leggi', consentito=False,
-        )
+        grant('cuoca', 'diario', 'leggi', consentito=False)
         self.assertFalse(check_permesso(user, 'diario', 'leggi'))
 
     def test_permesso_su_risorsa_diversa_non_vale(self):
         """Permesso su 'bambini' non si estende a 'diario'."""
         user = make_user('ins2@test.it', 'insegnante')
-        PermessoRuolo.objects.create(
-            ruolo='insegnante', risorsa='bambini', azione='leggi', consentito=True,
-        )
+        grant('insegnante', 'bambini', 'leggi', consentito=True)
         self.assertFalse(check_permesso(user, 'diario', 'leggi'))
 
     def test_ruolo_custom(self):
@@ -152,9 +156,7 @@ class PermessiUtenteAPITest(APITestCase):
     def test_permessi_utente_con_permesso_leggi(self):
         """Ruolo con permesso 'leggi' su 'bambini' → compare nelle risorse."""
         user = make_user('coord2@test.it', 'coordinatrice')
-        PermessoRuolo.objects.create(
-            ruolo='coordinatrice', risorsa='bambini', azione='leggi', consentito=True,
-        )
+        grant('coordinatrice', 'bambini', 'leggi', consentito=True)
         resp = self.client.get('/api/v1/config/permessi-utente/', **auth_header(user))
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         self.assertIn('bambini', resp.data['risorse'])
