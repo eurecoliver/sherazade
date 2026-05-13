@@ -940,4 +940,25 @@ Prossimo task: feature/statistiche — dashboard statistiche presenze (trend men
 - `frontend/src/app/[locale]/dashboard/admin/page.tsx`: aggiunto `STATISTICHE_ITEM`
 - `frontend/src/app/[locale]/dashboard/admin/presenze/page.tsx`: bottone Statistiche
 
-Prossimo task: feature/export-pdf — PDF diario mensile, report presenze, menu settimanale
+---
+
+## feature/export-pdf (13 maggio 2026)
+
+Export PDF tramite WeasyPrint:
+
+**Backend:**
+- `attendance/views.py`: action `export-pdf-presenze` — PDF A3 landscape con griglia giorni/bambini (P/A/M/F), raggruppato per gruppo. Param: `anno`, `mese`, `gruppo` (opzionale). Accesso: ADMIN/DIRETTRICE/COORDINATRICE.
+- `diary/views.py`: action `export-pdf-diario` — PDF A4 diario mensile bambino (umore emoji, attività, note, sonno, popò, tags). Param: `bambino` (ID, obbligatorio), `anno`, `mese`. Accesso: ADMIN/DIRETTRICE/COORDINATRICE/INSEGNANTE.
+- `meals/views.py`: action `export-pdf-menu` — PDF A4 landscape menu settimanale per gruppo (righe=piatti, colonne=giorni lun-ven). Param: `data` (default oggi, snap al lunedì). Accesso: tutti autenticati.
+
+**API routes Next.js (proxy PDF con `arrayBuffer()`):**
+- `/api/presenze/export-pdf/route.ts` → `GET /api/v1/presenze/export-pdf-presenze/`
+- `/api/diario/export-pdf/route.ts` → `GET /api/v1/diario/export-pdf-diario/`
+- `/api/pappe/export-pdf/route.ts` → `GET /api/v1/piatti/export-pdf-menu/`
+
+**Frontend:**
+- `admin/presenze` tab Storico: bottone "📄 Esporta PDF" (sostituisce vecchio Stampa)
+- `admin/pappe` header: bottone "📄 Esporta menu PDF (settimana corrente)"
+- `staff/diario` toolbar: bottone "📄 Esporta PDF diario" + mini-modale (bambino ID + mese + anno), visibile solo a admin/direttrice/coordinatrice
+
+Prossimo task: feature/tests — test automatici Django + Playwright
