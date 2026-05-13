@@ -4,8 +4,8 @@ const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:8000'
 
 export async function POST(request: NextRequest) {
   const body = await request.json()
-  // Passa l'origin per costruire il link di reset nel backend
-  const origin = request.headers.get('origin') || request.nextUrl.origin
+  // Usa NEXTAUTH_URL come URL pubblico (evita porta interna Docker nel link email)
+  const origin = process.env.NEXTAUTH_URL?.replace(/\/$/, '') || request.headers.get('origin') || request.nextUrl.origin
   try {
     const res = await fetch(`${BACKEND_URL}/api/v1/auth/password-reset/`, {
       method: 'POST',
