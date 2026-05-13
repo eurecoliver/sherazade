@@ -25,6 +25,11 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(data, { status: djangoRes.status })
   }
 
+  // 2FA richiesto → passa il totp_session al frontend senza impostare cookie
+  if (data.totp_required) {
+    return NextResponse.json({ totp_required: true, totp_session: data.totp_session })
+  }
+
   const response = NextResponse.json({
     role: data.role,
     user: data.user,
