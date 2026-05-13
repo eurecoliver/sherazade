@@ -886,6 +886,13 @@ Prossimo task: HTTPS + Nginx (in attesa dominio) oppure 2FA
 
 ## Ultimo Aggiornamento
 Data: 13 maggio 2026
-Completato: Manuale utente — aggiornato con sezioni 2FA/sicurezza, presenze insegnanti (QR + storico + admin), pappe v2 (menu ciclico con configurazione ciclo, tab calendario/sostituzioni), sezione 3.14 sicurezza account
+Completato: Manutenzione — cron jobs verificati e funzionanti, logrotate configurato per log sherazade (settimanale, 8 settimane), warning `version` rimosso da docker-compose.yml
 
-Prossimo task: Manutenzione (documentare cron jobs) + Backup offsite
+**Stato cron jobs sul server:**
+- `0 2 * * *` → `cleanup_media_diario` → `/var/log/sherazade-cleanup.log`
+- `0 3 1 * *` → `cleanup_media_portfolio` → `/var/log/sherazade-cleanup.log`
+- `30 3 1 * *` → `cleanup_log_accessi` → `/var/log/sherazade-cleanup.log`
+- `*/10 * * * *` → `monitor.sh` (disco/RAM/container) → `/var/log/sherazade_monitor.log`
+- logrotate weekly: `/etc/logrotate.d/sherazade` (8 rotazioni, compresso)
+
+Prossimo task: Backup offsite
