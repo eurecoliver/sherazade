@@ -144,7 +144,7 @@ class BambinoPermessiTest(APITestCase):
             'attivo': True,
         }
         resp = self.client.post('/api/v1/bambini/', payload, **auth_header(self.admin))
-        self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(resp.status_code, status.HTTP_201_CREATED, msg=resp.data)
         self.assertEqual(resp.data['nome'], 'Nuovo')
 
     def test_genitore_non_puo_creare_bambino(self):

@@ -73,9 +73,10 @@ class CheckPermessoTest(TestCase):
         self.assertFalse(check_permesso(user, 'diario', 'leggi'))
 
     def test_permesso_su_risorsa_diversa_non_vale(self):
-        """Permesso su 'bambini' non si estende a 'diario'."""
-        user = make_user('ins2@test.it', 'insegnante')
-        grant('insegnante', 'bambini', 'leggi', consentito=True)
+        """Un ruolo custom con solo bambini/leggi non ha accesso a diario/leggi."""
+        user = make_user('custom@test.it', 'custom_only_bambini')
+        grant('custom_only_bambini', 'bambini', 'leggi', consentito=True)
+        # custom_only_bambini non ha mai avuto diario/leggi nelle migration
         self.assertFalse(check_permesso(user, 'diario', 'leggi'))
 
     def test_ruolo_custom(self):
