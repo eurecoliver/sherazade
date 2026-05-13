@@ -33,7 +33,7 @@ def make_bambino(nome='Luca', cognome='Rossi', gruppo=None, orario_uscita=None):
     return Bambino.objects.create(
         nome=nome, cognome=cognome, data_nascita='2021-01-01',
         data_iscrizione='2023-09-01', attivo=True,
-        codice_fiscale=f'TSTBMB{_bambino_counter:02d}X00X000X000X',
+        codice_fiscale=f'TSTBMB{_bambino_counter:02d}X00X000X',
         gruppo=gruppo, orario_uscita=orario_uscita,
     )
 

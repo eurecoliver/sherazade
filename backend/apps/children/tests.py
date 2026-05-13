@@ -30,7 +30,7 @@ def make_bambino(nome='Luca', cognome='Rossi', cf_suffix='01', gruppo=None):
         data_nascita='2021-01-01',
         data_iscrizione='2023-09-01',
         attivo=True,
-        codice_fiscale=f'TSTBMB{cf_suffix}X00X000X000X',
+        codice_fiscale=f'TSTBMB{cf_suffix}X00X000X',
         gruppo=gruppo,
     )
 
@@ -85,7 +85,7 @@ class BambinoModelTest(TestCase):
                 data_nascita='2021-01-01',
                 data_iscrizione='2023-09-01',
                 attivo=True,
-                codice_fiscale='TSTBMB07X00X000X000X',
+                codice_fiscale='TSTBMB07X00X000X',
             )
 
 

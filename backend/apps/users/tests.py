@@ -1,7 +1,7 @@
 """
 Test per l'autenticazione: login, JWT, cambio password, 2FA, reset password.
 """
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.urls import reverse
 from rest_framework.test import APITestCase
 from rest_framework import status
@@ -40,7 +40,7 @@ class UserModelTest(TestCase):
 
     def test_str_uses_email(self):
         user = make_user('admin@test.it', 'admin')
-        self.assertIn('admin@test.it', str(user))
+        self.assertEqual(str(user), f'{user.get_full_name()} ({user.role})')
 
     def test_role_default(self):
         user = make_user('test@test.it', 'genitore')
@@ -63,6 +63,7 @@ class UserModelTest(TestCase):
 # ─────────────────────────────────────────────────────────────────
 # Test LoginView
 # ─────────────────────────────────────────────────────────────────
+@override_settings(RATELIMIT_ENABLE=False)
 class LoginViewTest(APITestCase):
 
     def setUp(self):
@@ -123,7 +124,7 @@ class ChangePasswordTest(APITestCase):
     def test_cambio_password_corretto(self):
         resp = self.client.post(
             self.url,
-            {'old_password': 'TestPass123!', 'new_password': 'NuovaPass456!'},
+            {'current_password': 'TestPass123!', 'new_password': 'NuovaPass456!'},
             **auth_header(self.user),
         )
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
@@ -133,13 +134,13 @@ class ChangePasswordTest(APITestCase):
     def test_cambio_password_vecchia_sbagliata(self):
         resp = self.client.post(
             self.url,
-            {'old_password': 'Sbagliata!', 'new_password': 'NuovaPass456!'},
+            {'current_password': 'Sbagliata!', 'new_password': 'NuovaPass456!'},
             **auth_header(self.user),
         )
         self.assertEqual(resp.status_code, status.HTTP_400_BAD_REQUEST)
 
     def test_cambio_password_richiede_autenticazione(self):
-        resp = self.client.post(self.url, {'old_password': 'TestPass123!', 'new_password': 'N!'})
+        resp = self.client.post(self.url, {'current_password': 'TestPass123!', 'new_password': 'N!'})
         self.assertEqual(resp.status_code, status.HTTP_401_UNAUTHORIZED)
 
 

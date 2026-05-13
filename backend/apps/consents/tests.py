@@ -30,7 +30,7 @@ def make_bambino(cf_suffix='01'):
         data_nascita='2021-01-01',
         data_iscrizione='2023-09-01',
         attivo=True,
-        codice_fiscale=f'TSTBMB{cf_suffix}X00X000X000X',
+        codice_fiscale=f'TSTBMB{cf_suffix}X00X000X',
     )
 
 
