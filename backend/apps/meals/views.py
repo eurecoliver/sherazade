@@ -404,6 +404,127 @@ class PiattoViewSet(viewsets.ModelViewSet):
             'sostituzioni_raw': SostituzionePiattoSerializer(sostituzioni, many=True).data,
         })
 
+    @action(detail=False, methods=['get'], url_path='export-pdf-menu')
+    def export_pdf_menu(self, request):
+        """
+        Esporta PDF menu settimanale per tutti i gruppi.
+        Parametri: data (default lunedì corrente).
+        Accessibile a tutti gli utenti autenticati.
+        """
+        from django.http import HttpResponse
+        from weasyprint import HTML
+        from apps.config.models import Gruppo
+        import calendar as cal_mod
+        from datetime import timedelta
+
+        data_str = request.query_params.get('data', str(date.today()))
+        try:
+            data_richiesta = date.fromisoformat(data_str)
+        except ValueError:
+            return Response({'detail': 'Data non valida.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Vai al lunedì della settimana richiesta
+        lunedi = data_richiesta - timedelta(days=data_richiesta.weekday())
+        giorni_settimana = [lunedi + timedelta(days=i) for i in range(5)]  # lun-ven
+
+        GIORNI_IT = ['Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì']
+        TIPO_ORDER = ['primo', 'secondo', 'contorno', 'frutta', 'merenda', 'altro']
+        TIPO_LABEL = {
+            'primo': 'Primo', 'secondo': 'Secondo', 'contorno': 'Contorno',
+            'frutta': 'Frutta', 'merenda': 'Merenda', 'altro': 'Altro',
+        }
+
+        gruppi = Gruppo.objects.filter(attivo=True).order_by('ordine')
+
+        def get_piatti_giorno(gruppo_id, data):
+            settimana = ConfigMenuCiclo.settimana_ciclo(data)
+            weekday = data.weekday()
+            assegnazioni = (
+                PiattoAssegnazione.objects
+                .filter(gruppi__id=gruppo_id, piatto__attivo=True)
+                .select_related('piatto')
+            )
+            ciclo: dict = {}
+            for asseg in assegnazioni:
+                if asseg.sempre:
+                    ciclo.setdefault(asseg.piatto.tipo, []).append(asseg.piatto.descrizione)
+                elif settimana is not None:
+                    giorni = asseg.giorni_per_settimana.get(str(settimana), [])
+                    if weekday in giorni:
+                        ciclo.setdefault(asseg.piatto.tipo, []).append(asseg.piatto.descrizione)
+            sostituzioni = SostituzionePiatto.objects.filter(data=data).filter(
+                Q(gruppi__id=gruppo_id) | Q(gruppi__isnull=True)
+            ).distinct()
+            for s in sostituzioni:
+                ciclo[s.tipo] = [s.descrizione]
+            return ciclo
+
+        # Costruisci tabella: righe = tipo piatto, colonne = giorni
+        intestazione = ''.join(f'<th>{g_it}<br><small>{g.strftime("%d/%m")}</small></th>'
+                               for g_it, g in zip(GIORNI_IT, giorni_settimana))
+
+        gruppi_html = ''
+        for g in gruppi:
+            righe_tipo = ''
+            for tipo in TIPO_ORDER:
+                celle = ''
+                for data_g in giorni_settimana:
+                    piatti = get_piatti_giorno(g.id, data_g).get(tipo, [])
+                    testo = ', '.join(piatti) if piatti else '—'
+                    celle += f'<td>{testo}</td>'
+                righe_tipo += f'<tr><td class="tipo">{TIPO_LABEL.get(tipo, tipo)}</td>{celle}</tr>'
+
+            gruppi_html += f'''
+            <div class="gruppo-header" style="background:{g.colore}20; border-left:4px solid {g.colore}">
+              <strong>{g.nome}</strong>
+            </div>
+            <table>
+              <thead>
+                <tr><th class="tipo-h"></th>{intestazione}</tr>
+              </thead>
+              <tbody>{righe_tipo}</tbody>
+            </table>
+            '''
+
+        settimana_num = ConfigMenuCiclo.settimana_ciclo(lunedi)
+        sett_label = f'Settimana ciclo {settimana_num}' if settimana_num else 'Settimana ciclo non configurata'
+        dal = lunedi.strftime('%d/%m/%Y')
+        al = giorni_settimana[-1].strftime('%d/%m/%Y')
+        from django.utils import timezone as tz
+        stampa = tz.now().strftime('%d/%m/%Y %H:%M')
+
+        html = f'''<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<style>
+  @page {{ size: A4 landscape; margin: 1.5cm; }}
+  body {{ font-family: Arial, sans-serif; font-size: 9pt; color: #222; }}
+  h1 {{ font-size: 14pt; color: #E67E22; margin-bottom: 0.1cm; }}
+  .meta {{ font-size: 8pt; color: #888; margin-bottom: 0.6cm; }}
+  .gruppo-header {{ padding: 5px 10px; margin: 0.4cm 0 0.1cm; font-size: 10pt; border-radius: 4px; }}
+  table {{ width: 100%; border-collapse: collapse; margin-bottom: 0.3cm; }}
+  th {{ background: #FFF9E6; padding: 4px 8px; border: 1px solid #FED7AA; font-size: 8.5pt; text-align: center; }}
+  th.tipo-h {{ width: 1.8cm; }}
+  td {{ padding: 3px 6px; border: 1px solid #EEE; font-size: 8.5pt; vertical-align: top; }}
+  td.tipo {{ font-weight: bold; color: #E67E22; background: #FFF9E6; white-space: nowrap; }}
+  .footer {{ margin-top: 0.5cm; font-size: 7.5pt; color: #aaa; border-top: 1px solid #EEE; padding-top: 0.2cm; }}
+</style>
+</head>
+<body>
+<h1>🍽 Menu Settimanale — dal {dal} al {al}</h1>
+<div class="meta">{sett_label} &nbsp;|&nbsp; Stampa: {stampa}</div>
+{gruppi_html}
+<div class="footer">Generato da Sherazade</div>
+</body>
+</html>'''
+
+        pdf_bytes = HTML(string=html).write_pdf()
+        filename = f'menu_{lunedi.strftime("%Y_%m_%d")}.pdf'
+        resp = HttpResponse(pdf_bytes, content_type='application/pdf')
+        resp['Content-Disposition'] = f'attachment; filename="{filename}"'
+        return resp
+
 
 class PiattoAssegnazioneViewSet(viewsets.ModelViewSet):
     serializer_class = PiattoAssegnazioneSerializer

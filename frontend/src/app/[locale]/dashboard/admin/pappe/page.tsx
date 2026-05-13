@@ -794,6 +794,14 @@ export default function AdminPappePage() {
           <p style={{ margin: '0.25rem 0 0', opacity: 0.85, fontSize: '0.875rem' }}>
             Menu ciclico 5 settimane — catalogo piatti e calendario
           </p>
+          <div style={{ marginTop: '0.75rem' }}>
+            <button
+              onClick={() => window.open('/api/pappe/export-pdf', '_blank')}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem', background: 'rgba(255,255,255,0.15)', color: 'white', border: '1.5px solid rgba(255,255,255,0.3)', borderRadius: '20px', padding: '0.35rem 0.875rem', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 600, fontFamily: 'inherit' }}
+            >
+              📄 Esporta menu PDF (settimana corrente)
+            </button>
+          </div>
         </div>
       </div>
 

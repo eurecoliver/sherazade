@@ -656,10 +656,13 @@ export default function AdminPresenzePage() {
               </button>
               {report && (
                 <button
-                  onClick={() => window.print()}
-                  style={{ padding: '0.5rem 1.25rem', background: '#E2E8F0', color: '#2D3436', border: 'none', borderRadius: '8px', fontWeight: 700, fontSize: '0.875rem', cursor: 'pointer', fontFamily: 'inherit' }}
+                  onClick={() => {
+                    const params = new URLSearchParams({ anno: String(reportAnno), mese: String(reportMese) })
+                    window.open(`/api/presenze/export-pdf?${params}`, '_blank')
+                  }}
+                  style={{ padding: '0.5rem 1.25rem', background: '#27AE60', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 700, fontSize: '0.875rem', cursor: 'pointer', fontFamily: 'inherit' }}
                 >
-                  🖨️ Stampa / PDF
+                  📄 Esporta PDF
                 </button>
               )}
             </div>
