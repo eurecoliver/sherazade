@@ -156,6 +156,10 @@ class Presenza(models.Model):
         blank=True,
     )
     note = models.TextField(blank=True)
+    via_qr = models.BooleanField(
+        default=False,
+        verbose_name='Registrata via QR',
+    )
     registrato_da = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.PROTECT,
@@ -247,6 +251,10 @@ class PresenzaInsegnante(models.Model):
     )
     ora_entrata = models.TimeField(null=True, blank=True)
     ora_uscita = models.TimeField(null=True, blank=True)
+    via_qr = models.BooleanField(
+        default=False,
+        verbose_name='Registrata via QR',
+    )
     registrato_da = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.SET_NULL,

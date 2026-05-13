@@ -13,7 +13,8 @@ function isProtectedPath(pathname: string): boolean {
   return (
     pathname.includes('/dashboard/') ||
     /^\/(it|en)\/checkin(?:\/|$)/.test(pathname) ||
-    /^\/(it|en)\/checkin-insegnanti(?:\/|$)/.test(pathname)
+    /^\/(it|en)\/checkin-insegnanti(?:\/|$)/.test(pathname) ||
+    /^\/(it|en)\/bacheca-presenze(?:\/|$)/.test(pathname)
   )
 }
 

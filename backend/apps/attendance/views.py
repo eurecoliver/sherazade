@@ -612,6 +612,7 @@ class PresenzaViewSet(LogAccessoMixin, viewsets.ModelViewSet):
             defaults={
                 'presente': True,
                 'ora_arrivo': ora_ora,
+                'via_qr': True,
                 'registrato_da': user,
             },
         )
@@ -627,11 +628,13 @@ class PresenzaViewSet(LogAccessoMixin, viewsets.ModelViewSet):
         elif presenza.ora_arrivo is None:
             presenza.ora_arrivo = ora_ora
             presenza.presente = True
+            presenza.via_qr = True
             presenza.registrato_da = user
             presenza.save()
             azione = 'arrivo'
         elif presenza.ora_uscita is None:
             presenza.ora_uscita = ora_ora
+            presenza.via_qr = True
             presenza.registrato_da = user
             presenza.save()
             azione = 'uscita'
@@ -640,6 +643,30 @@ class PresenzaViewSet(LogAccessoMixin, viewsets.ModelViewSet):
                 {'detail': f'{bambino.nome} è già stato registrato in entrata e uscita oggi.'},
                 status=status.HTTP_409_CONFLICT,
             )
+
+        # Push notification allo staff
+        import threading
+        def _push():
+            try:
+                from apps.notifications.push import send_push_to_users
+                from apps.users.models import User as UserModel
+                staff_ids = list(
+                    UserModel.objects.filter(
+                        is_active=True,
+                        role__in=[Role.ADMIN, Role.DIRETTRICE, Role.COORDINATRICE, Role.INSEGNANTE],
+                    ).values_list('id', flat=True)
+                )
+                orario = ora_ora.strftime('%H:%M')
+                verbo = 'è arrivato/a' if azione == 'arrivo' else 'è uscito/a'
+                send_push_to_users(
+                    staff_ids,
+                    title=f'QR Check-in — {bambino.nome} {verbo}',
+                    body=f'{bambino.nome} {bambino.cognome} {verbo} alle {orario}',
+                    url='/it/dashboard/staff/presenze',
+                )
+            except Exception:
+                pass
+        threading.Thread(target=_push, daemon=True).start()
 
         return Response({
             'azione': azione,
@@ -813,6 +840,7 @@ class PresenzaViewSet(LogAccessoMixin, viewsets.ModelViewSet):
             defaults={
                 'presente': True,
                 'ora_entrata': ora_ora,
+                'via_qr': True,
                 'registrato_da': request.user,
             },
         )
@@ -828,13 +856,15 @@ class PresenzaViewSet(LogAccessoMixin, viewsets.ModelViewSet):
             azione = 'entrata'
         elif presenza.ora_entrata is None:
             presenza.ora_entrata = ora_ora
+            presenza.via_qr = True
             presenza.registrato_da = request.user
-            presenza.save(update_fields=['ora_entrata', 'registrato_da', 'aggiornato_at'])
+            presenza.save(update_fields=['ora_entrata', 'via_qr', 'registrato_da', 'aggiornato_at'])
             azione = 'entrata'
         elif presenza.ora_uscita is None:
             presenza.ora_uscita = ora_ora
+            presenza.via_qr = True
             presenza.registrato_da = request.user
-            presenza.save(update_fields=['ora_uscita', 'registrato_da', 'aggiornato_at'])
+            presenza.save(update_fields=['ora_uscita', 'via_qr', 'registrato_da', 'aggiornato_at'])
             azione = 'uscita'
         else:
             return Response(
@@ -846,4 +876,204 @@ class PresenzaViewSet(LogAccessoMixin, viewsets.ModelViewSet):
             'azione': azione,
             'ora': ora_ora.strftime('%H:%M'),
             'presenza': PresenzaInsegnanteSerializer(presenza).data,
+        })
+
+    # ── Bacheca live ─────────────────────────────────────────────────────────
+
+    @action(detail=False, methods=['get'], url_path='live-oggi')
+    def live_oggi(self, request):
+        """
+        Bacheca presenze in tempo reale per oggi.
+        - Bambini raggruppati per gruppo con stato: presente/assente/non_registrato
+        - Insegnanti presenti oggi
+        Accessibile a tutti gli utenti staff autenticati.
+        """
+        if not check_permesso(request.user, 'presenze', 'leggi'):
+            return Response({'detail': 'Non autorizzato.'}, status=status.HTTP_403_FORBIDDEN)
+
+        oggi = date.today()
+
+        # ── Bambini ──────────────────────────────────────────────────────────
+        from apps.children.models import Bambino
+        from apps.config.models import Gruppo
+
+        bambini_qs = (
+            Bambino.objects
+            .filter(attivo=True)
+            .select_related('gruppo', 'orario_uscita')
+            .order_by('gruppo__ordine', 'cognome', 'nome')
+        )
+
+        presenze_oggi = {
+            p.bambino_id: p
+            for p in Presenza.objects.filter(data=oggi).select_related('bambino')
+        }
+
+        gruppi_map: dict = {}
+        totale_presenti = 0
+        totale_assenti = 0
+        totale_non_registrati = 0
+
+        for b in bambini_qs:
+            p = presenze_oggi.get(b.id)
+            if p is None:
+                stato = 'non_registrato'
+                ora_arrivo = None
+                ora_uscita = None
+                via_qr = False
+                totale_non_registrati += 1
+            elif not p.presente:
+                stato = 'assente'
+                ora_arrivo = None
+                ora_uscita = None
+                via_qr = p.via_qr
+                totale_assenti += 1
+            elif p.ora_uscita:
+                stato = 'uscito'
+                ora_arrivo = p.ora_arrivo.strftime('%H:%M') if p.ora_arrivo else None
+                ora_uscita = p.ora_uscita.strftime('%H:%M')
+                via_qr = p.via_qr
+                totale_presenti += 1
+            else:
+                stato = 'presente'
+                ora_arrivo = p.ora_arrivo.strftime('%H:%M') if p.ora_arrivo else None
+                ora_uscita = None
+                via_qr = p.via_qr
+                totale_presenti += 1
+
+            gruppo_id = b.gruppo_id or 0
+            gruppo_nome = b.gruppo.nome if b.gruppo else 'Senza gruppo'
+            gruppo_colore = b.gruppo.colore if b.gruppo else '#888888'
+
+            if gruppo_id not in gruppi_map:
+                gruppi_map[gruppo_id] = {
+                    'gruppo_id': gruppo_id,
+                    'gruppo_nome': gruppo_nome,
+                    'gruppo_colore': gruppo_colore,
+                    'bambini': [],
+                }
+
+            gruppi_map[gruppo_id]['bambini'].append({
+                'id': b.id,
+                'nome': b.nome,
+                'cognome': b.cognome,
+                'stato': stato,
+                'ora_arrivo': ora_arrivo,
+                'ora_uscita': ora_uscita,
+                'via_qr': via_qr,
+            })
+
+        # ── Insegnanti ────────────────────────────────────────────────────────
+        insegnanti_oggi = list(
+            PresenzaInsegnante.objects
+            .filter(data=oggi)
+            .select_related('insegnante')
+            .order_by('insegnante__last_name', 'insegnante__first_name')
+        )
+
+        insegnanti_data = []
+        for pi in insegnanti_oggi:
+            u = pi.insegnante
+            insegnanti_data.append({
+                'id': u.pk,
+                'nome': u.first_name,
+                'cognome': u.last_name,
+                'ruolo': u.role,
+                'presente': pi.presente,
+                'ora_entrata': pi.ora_entrata.strftime('%H:%M') if pi.ora_entrata else None,
+                'ora_uscita': pi.ora_uscita.strftime('%H:%M') if pi.ora_uscita else None,
+                'via_qr': pi.via_qr,
+            })
+
+        return Response({
+            'data': str(oggi),
+            'aggiornato_at': dt.now().strftime('%H:%M:%S'),
+            'totali': {
+                'presenti': totale_presenti,
+                'assenti': totale_assenti,
+                'non_registrati': totale_non_registrati,
+                'totale': totale_presenti + totale_assenti + totale_non_registrati,
+            },
+            'gruppi': list(gruppi_map.values()),
+            'insegnanti': insegnanti_data,
+        })
+
+    @action(detail=False, methods=['get'], url_path='storico-qr')
+    def storico_qr(self, request):
+        """
+        Log dei check-in via QR di oggi (o per data specificata).
+        Parametri opzionali: data (YYYY-MM-DD), gruppo
+        """
+        if not check_permesso(request.user, 'presenze', 'leggi'):
+            return Response({'detail': 'Non autorizzato.'}, status=status.HTTP_403_FORBIDDEN)
+
+        data_str = request.query_params.get('data', str(date.today()))
+        gruppo_id = request.query_params.get('gruppo')
+
+        bambini_qs = (
+            Presenza.objects
+            .filter(data=data_str, via_qr=True)
+            .select_related('bambino__gruppo', 'registrato_da')
+            .order_by('aggiornato_at')
+        )
+        if gruppo_id:
+            bambini_qs = bambini_qs.filter(bambino__gruppo_id=gruppo_id)
+
+        insegnanti_qs = (
+            PresenzaInsegnante.objects
+            .filter(data=data_str, via_qr=True)
+            .select_related('insegnante')
+            .order_by('aggiornato_at')
+        )
+
+        events = []
+        for p in bambini_qs:
+            b = p.bambino
+            if p.ora_arrivo:
+                events.append({
+                    'tipo': 'bambino',
+                    'azione': 'arrivo',
+                    'nome': f'{b.nome} {b.cognome}',
+                    'gruppo': b.gruppo.nome if b.gruppo else '',
+                    'ora': p.ora_arrivo.strftime('%H:%M'),
+                    'timestamp': str(p.aggiornato_at),
+                })
+            if p.ora_uscita:
+                events.append({
+                    'tipo': 'bambino',
+                    'azione': 'uscita',
+                    'nome': f'{b.nome} {b.cognome}',
+                    'gruppo': b.gruppo.nome if b.gruppo else '',
+                    'ora': p.ora_uscita.strftime('%H:%M'),
+                    'timestamp': str(p.aggiornato_at),
+                })
+
+        for pi in insegnanti_qs:
+            u = pi.insegnante
+            nome = u.get_full_name() or u.email
+            if pi.ora_entrata:
+                events.append({
+                    'tipo': 'insegnante',
+                    'azione': 'entrata',
+                    'nome': nome,
+                    'gruppo': '',
+                    'ora': pi.ora_entrata.strftime('%H:%M'),
+                    'timestamp': str(pi.aggiornato_at),
+                })
+            if pi.ora_uscita:
+                events.append({
+                    'tipo': 'insegnante',
+                    'azione': 'uscita',
+                    'nome': nome,
+                    'gruppo': '',
+                    'ora': pi.ora_uscita.strftime('%H:%M'),
+                    'timestamp': str(pi.aggiornato_at),
+                })
+
+        events.sort(key=lambda e: e['ora'])
+
+        return Response({
+            'data': data_str,
+            'eventi': events,
+            'totale': len(events),
         })

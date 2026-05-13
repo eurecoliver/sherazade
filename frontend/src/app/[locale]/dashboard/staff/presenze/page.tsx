@@ -232,13 +232,85 @@ function BambinoRow({
   )
 }
 
+// ─── StoricoQRPanel ───────────────────────────────────────────────────────────
+
+interface EventoQR {
+  tipo: 'bambino' | 'insegnante'
+  azione: 'arrivo' | 'uscita' | 'entrata'
+  nome: string
+  gruppo: string
+  ora: string
+}
+
+function StoricoQRPanel() {
+  const [dataFiltro, setDataFiltro] = useState(oggi())
+  const [eventi, setEventi] = useState<EventoQR[]>([])
+  const [loading, setLoading] = useState(false)
+  const [totale, setTotale] = useState(0)
+
+  const carica = useCallback(async (d: string) => {
+    setLoading(true)
+    try {
+      const res = await fetch(`/api/presenze/storico-qr?data=${d}`)
+      if (res.ok) {
+        const dati = await res.json()
+        setEventi(dati.eventi ?? [])
+        setTotale(dati.totale ?? 0)
+      }
+    } catch { /* silenzioso */ }
+    finally { setLoading(false) }
+  }, [])
+
+  useEffect(() => { carica(dataFiltro) }, [dataFiltro, carica])
+
+  const azioneLabel = (e: EventoQR) => {
+    if (e.tipo === 'bambino') return e.azione === 'arrivo' ? '🟢 Arrivo' : '🔵 Uscita'
+    return e.azione === 'entrata' ? '🟢 Entrata' : '🔵 Uscita'
+  }
+
+  return (
+    <div style={{ background: 'white', borderRadius: '14px', padding: '1rem', boxShadow: '0 2px 8px rgba(9,132,227,0.08)' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
+        <h2 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: '#222' }}>📋 Storico Check-in QR</h2>
+        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+          <input
+            type="date"
+            value={dataFiltro}
+            onChange={e => setDataFiltro(e.target.value)}
+            style={{ padding: '0.4rem 0.75rem', border: '1px solid #CBD5E0', borderRadius: '8px', fontSize: '0.875rem', fontFamily: 'inherit' }}
+          />
+          <span style={{ fontSize: '0.8rem', color: '#888' }}>{totale} eventi</span>
+        </div>
+      </div>
+
+      {loading ? (
+        <p style={{ textAlign: 'center', color: '#888', padding: '1rem' }}>Caricamento...</p>
+      ) : eventi.length === 0 ? (
+        <p style={{ textAlign: 'center', color: '#aaa', padding: '1rem' }}>Nessun check-in QR per questo giorno.</p>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
+          {eventi.map((e, i) => (
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', padding: '0.5rem 0.75rem', background: '#F7FAFF', borderRadius: '10px', borderLeft: `4px solid ${e.tipo === 'bambino' ? '#0984E3' : '#6C5CE7'}` }}>
+              <span style={{ fontWeight: 800, fontSize: '0.9rem', minWidth: '3.5rem', color: '#555' }}>{e.ora}</span>
+              <span style={{ fontSize: '0.8rem', color: '#888', minWidth: '5rem' }}>{azioneLabel(e)}</span>
+              <span style={{ flex: 1, fontWeight: 700, color: '#222', fontSize: '0.875rem' }}>{e.nome}</span>
+              {e.gruppo && <span style={{ fontSize: '0.75rem', background: '#EAF4FF', color: '#0652DD', borderRadius: '8px', padding: '0.1rem 0.5rem', fontWeight: 600 }}>{e.gruppo}</span>}
+              <span style={{ fontSize: '0.72rem', color: '#aaa' }}>{e.tipo === 'bambino' ? '👶' : '👩‍🏫'}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default function StaffPresenzePage() {
   const router = useRouter()
   const locale = useLocale()
 
-  const [activeTab, setActiveTab] = useState<'presenze' | 'insegnanti' | 'qr'>('presenze')
+  const [activeTab, setActiveTab] = useState<'presenze' | 'insegnanti' | 'qr' | 'storico_qr'>('presenze')
   const [userRole, setUserRole] = useState('')
   const [qrAbilitatoGlobale, setQrAbilitatoGlobale] = useState(true)
   const [qrInsegnantiAbilitato, setQrInsegnantiAbilitato] = useState(true)
@@ -357,7 +429,7 @@ export default function StaffPresenzePage() {
       <div style={{ background: 'linear-gradient(135deg, #0984E3 0%, #0652DD 100%)', padding: '1.25rem 1.25rem 1.75rem', color: 'white' }}>
         <div style={{ maxWidth: '720px', margin: '0 auto' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.875rem' }}>
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
               <button
                 onClick={() => router.push(`/${locale}/dashboard/staff`)}
                 style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem', background: 'rgba(255,255,255,0.15)', color: 'white', border: '1.5px solid rgba(255,255,255,0.3)', borderRadius: '20px', padding: '0.35rem 0.875rem 0.35rem 0.625rem', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 600, fontFamily: 'inherit' }}
@@ -370,6 +442,12 @@ export default function StaffPresenzePage() {
               >
                 📊 Storico
               </button>
+              <button
+                onClick={() => router.push(`/${locale}/bacheca-presenze`)}
+                style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem', background: 'rgba(255,255,255,0.15)', color: 'white', border: '1.5px solid rgba(255,255,255,0.3)', borderRadius: '20px', padding: '0.35rem 0.875rem', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 600, fontFamily: 'inherit' }}
+              >
+                📺 Bacheca
+              </button>
             </div>
             <UserChip onLogout={handleLogout} />
           </div>
@@ -381,8 +459,8 @@ export default function StaffPresenzePage() {
           </p>
           {/* Tab switcher — mostra QR se almeno uno dei due QR è attivo (o se admin che gestisce) */}
           {(qrAbilitatoGlobale || qrInsegnantiAbilitato || ['admin', 'direttrice'].includes(userRole)) && (
-            <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
-              {(['presenze', 'insegnanti', 'qr'] as const).map(tab => (
+            <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem', flexWrap: 'wrap' }}>
+              {(['presenze', 'insegnanti', 'qr', 'storico_qr'] as const).map(tab => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
@@ -393,7 +471,10 @@ export default function StaffPresenzePage() {
                     color: activeTab === tab ? '#0652DD' : 'white',
                   }}
                 >
-                  {tab === 'presenze' ? '✅ Presenze bimbi' : tab === 'insegnanti' ? '👩‍🏫 Insegnanti' : '📱 QR Check-in'}
+                  {tab === 'presenze' ? '✅ Presenze bimbi'
+                    : tab === 'insegnanti' ? '👩‍🏫 Insegnanti'
+                    : tab === 'qr' ? '📱 QR Check-in'
+                    : '📋 Storico QR'}
                 </button>
               ))}
             </div>
@@ -408,6 +489,10 @@ export default function StaffPresenzePage() {
             <TabQRCheckin isAdmin={['admin', 'direttrice'].includes(userRole)} />
             <TabQRCheckinInsegnanti isAdmin={['admin', 'direttrice'].includes(userRole)} />
           </>
+        )}
+
+        {activeTab === 'storico_qr' && (
+          <StoricoQRPanel />
         )}
 
         {activeTab === 'insegnanti' && (
