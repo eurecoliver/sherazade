@@ -847,4 +847,13 @@ Completato: Reset password via email + Cambio password utente
 30 3 1 * * cd /var/www/sherazade && docker compose exec -T backend python manage.py cleanup_log_accessi
 ```
 
+### Fix URL email reset password (13 maggio 2026)
+- `docker-compose.yml`: `NEXTAUTH_URL=http://159.69.9.230:3000` → `http://159.69.9.230` (rimossa porta interna Docker)
+- `frontend/src/app/api/auth/password-reset/route.ts`: usa `process.env.NEXTAUTH_URL` come URL pubblico invece di `request.nextUrl.origin` (che restituiva la porta interna 3000)
+- Funzionalità testata e funzionante in produzione: reset password, conferma token, cambio password da UserChip
+
+## Ultimo Aggiornamento
+Data: 13 maggio 2026
+Completato: Reset password via email + Cambio password — testato e deployato in produzione
+
 Prossimo task: HTTPS + Nginx (in attesa dominio) oppure 2FA
