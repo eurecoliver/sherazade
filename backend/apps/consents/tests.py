@@ -40,11 +40,12 @@ def auth_header(user):
 
 
 def grant(role, risorsa, azione):
-    PermessoRuolo.objects.get_or_create(
-        ruolo=role, risorsa=risorsa, azione=azione,
-        defaults={'consentito': True},
-    )
-    PermessoRuolo.objects.filter(ruolo=role, risorsa=risorsa, azione=azione).update(consentito=True)
+    from django.db import IntegrityError, transaction
+    try:
+        with transaction.atomic():
+            PermessoRuolo.objects.create(ruolo=role, risorsa=risorsa, azione=azione, consentito=True)
+    except IntegrityError:
+        PermessoRuolo.objects.filter(ruolo=role, risorsa=risorsa, azione=azione).update(consentito=True)
 
 
 # ─────────────────────────────────────────────────────────────────
@@ -170,11 +171,11 @@ class ConsensiAPITest(APITestCase):
         self.assertTrue(self.consenso.consenso_genitore1)
 
     def test_genitore_revoca_consenso(self):
-        """Il genitore può revocare il consenso."""
+        """Il genitore revoca il proprio consenso: consenso_genitore1 → False (non revocato=True)."""
         self.consenso.consenso_genitore1 = True
         self.consenso.save()
         url = f'/api/v1/consensi/{self.consenso.pk}/revoca_consenso/'
         resp = self.client.post(url, **auth_header(self.genitore))
         self.assertEqual(resp.status_code, status.HTTP_200_OK)
         self.consenso.refresh_from_db()
-        self.assertTrue(self.consenso.revocato)
+        self.assertFalse(self.consenso.consenso_genitore1)

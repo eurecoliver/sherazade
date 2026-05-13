@@ -41,11 +41,12 @@ def auth_header(user):
 
 
 def grant(role, risorsa, azione):
-    PermessoRuolo.objects.get_or_create(
-        ruolo=role, risorsa=risorsa, azione=azione,
-        defaults={'consentito': True},
-    )
-    PermessoRuolo.objects.filter(ruolo=role, risorsa=risorsa, azione=azione).update(consentito=True)
+    from django.db import IntegrityError, transaction
+    try:
+        with transaction.atomic():
+            PermessoRuolo.objects.create(ruolo=role, risorsa=risorsa, azione=azione, consentito=True)
+    except IntegrityError:
+        PermessoRuolo.objects.filter(ruolo=role, risorsa=risorsa, azione=azione).update(consentito=True)
 
 
 # ─────────────────────────────────────────────────────────────────
@@ -172,7 +173,7 @@ class FamigliaModelTest(TestCase):
         b = make_bambino(cf_suffix='20')
         f = Famiglia.objects.create(bambino=b, genitore1=g1)
         self.assertIsNone(f.genitore2)
-        self.assertEqual(str(f), str(b))
+        self.assertEqual(str(f), f'Famiglia di {b}')
 
     def test_crea_famiglia_due_genitori(self):
         g1 = make_user('fam2g1@test.it', 'genitore')

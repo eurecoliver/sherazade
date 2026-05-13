@@ -14,6 +14,15 @@ from apps.children.models import Bambino, Famiglia
 from .models import Presenza, DailyQRCodeToken, ConfigurazioneCheckin
 
 
+def grant(role, risorsa, azione):
+    from django.db import IntegrityError, transaction
+    try:
+        with transaction.atomic():
+            PermessoRuolo.objects.create(ruolo=role, risorsa=risorsa, azione=azione, consentito=True)
+    except IntegrityError:
+        PermessoRuolo.objects.filter(ruolo=role, risorsa=risorsa, azione=azione).update(consentito=True)
+
+
 # ─────────────────────────────────────────────────────────────────
 # Helpers
 # ─────────────────────────────────────────────────────────────────
@@ -221,9 +230,9 @@ class PresenzaAPITest(APITestCase):
         }
         resp = self.client.post('/api/v1/presenze/', payload, **auth_header(self.admin))
         self.assertEqual(resp.status_code, status.HTTP_201_CREATED)
-        self.assertIsNotNone(resp.data.get('minuti_ritardo_arrivo'))
-        # 09:45 è 15 min dopo le 09:30
-        self.assertEqual(resp.data['minuti_ritardo_arrivo'], 15)
+        # Il WriteSerializer non espone minuti_ritardo: verifica sul modello
+        p = Presenza.objects.get(bambino=self.bambino, data=date.today())
+        self.assertEqual(p.minuti_ritardo_arrivo, 15)
 
     def test_crea_presenza_non_autenticato(self):
         resp = self.client.post('/api/v1/presenze/', {})
