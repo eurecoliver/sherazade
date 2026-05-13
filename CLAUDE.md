@@ -961,4 +961,28 @@ Export PDF tramite WeasyPrint:
 - `admin/pappe` header: bottone "📄 Esporta menu PDF (settimana corrente)"
 - `staff/diario` toolbar: bottone "📄 Esporta PDF diario" + mini-modale (bambino ID + mese + anno), visibile solo a admin/direttrice/coordinatrice
 
-Prossimo task: feature/tests — test automatici Django + Playwright
+---
+
+## feature/tests (13 maggio 2026)
+
+**85 test Django automatici** eseguiti su server (container backend) con `python manage.py test`.
+
+**Come eseguire:**
+```
+docker compose exec backend python manage.py test apps.users.tests apps.attendance.tests apps.consents.tests apps.config.tests apps.children.tests
+```
+
+**Coverage:**
+- `apps/users/tests.py` (18 test): login, 2FA, cambio password, reset token, /me endpoint
+- `apps/attendance/tests.py` (26 test): calcolo ritardi (arrivo/uscita), `_to_time()`, QR token (get/valida/rinnova), API presenze, permessi per ruolo
+- `apps/consents/tests.py` (13 test): property `stato` (completo/parziale/nessuno/revocato/non_fotografabile), API dai/revoca consenso
+- `apps/config/tests.py` (14 test): `check_permesso()` admin bypass, ruoli custom, PermessoRuolo, Gruppo, Ruolo, API permessi-utente
+- `apps/children/tests.py` (14 test): Bambino CRUD, sezione property, CF univoco, Famiglia, permessi per ruolo (admin/genitore/insegnante)
+
+**Note tecniche:**
+- Rate limiter disabilitato nei test login con `@override_settings(RATELIMIT_ENABLE=False)`
+- `grant()` usa try/except IntegrityError per gestire record già seedati dalle migration
+- CF di test = 16 chars esatti (es. `TSTBMB{n:02d}X00X000X`)
+- `DailyQRCodeToken.get_or_create_today()` ritorna `(obj, created)` — da unpackare
+
+Prossimo task: backup offsite (Hetzner Storage Box o Backblaze B2 — da decidere)
