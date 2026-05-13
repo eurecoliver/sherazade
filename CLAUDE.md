@@ -218,7 +218,7 @@ IMPORTANTE: Al termine di ogni task, prima di considerarlo completato, aggiorna 
 - HTTPS con Let's Encrypt + Nginx (richiede dominio definitivo)
 
 ### Da fare post go-live 🟡
-- Monitoring e alerting (es. Uptime Robot per downtime)
+- [x] Monitoring e alerting — `/api/v1/health/` endpoint (DB check), script monitor.sh (disco/RAM/container) cron ogni 10 min → `/var/log/sherazade_monitor.log`; Uptime Robot da configurare manualmente
 - Backup offsite (copia backup su storage esterno)
 
 ### Presenze v2 — ritardi arrivo/uscita (2 aprile 2026)
@@ -886,6 +886,6 @@ Prossimo task: HTTPS + Nginx (in attesa dominio) oppure 2FA
 
 ## Ultimo Aggiornamento
 Data: 13 maggio 2026
-Completato: 2FA TOTP — attivazione con QR, step TOTP nel login, pagina sicurezza — testato e deployato in produzione
+Completato: Monitoring — health endpoint `/api/v1/health/` (testa DB), monitor.sh (disco/RAM/container Docker) con cron ogni 10 min; code review fixes deployati (MIME validation, CORS, middleware regex, fetchBackend, NEXTAUTH_SECRET)
 
-Prossimo task: HTTPS + Nginx (in attesa dominio)
+Prossimo task: Pappe v2 (ciclo 5 settimane)
