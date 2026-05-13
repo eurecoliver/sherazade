@@ -1,5 +1,22 @@
 from rest_framework import serializers
+import mimetypes
 from .models import RegistroDiario, MediaDiario, TagCosaPortare
+
+_MIME_MEDIA = {
+    'image/jpeg', 'image/png', 'image/webp', 'image/gif',
+    'video/mp4', 'video/quicktime', 'video/x-msvideo', 'video/webm',
+}
+
+
+def _check_mime_media(value):
+    """Valida che il file sia un'immagine o un video supportato."""
+    content_type = getattr(value, 'content_type', None)
+    if not content_type:
+        content_type, _ = mimetypes.guess_type(value.name)
+    if content_type not in _MIME_MEDIA:
+        raise serializers.ValidationError(
+            f'Tipo non supportato ({content_type}). Accettati: JPEG, PNG, WebP, GIF, MP4, MOV, WebM.'
+        )
 
 
 class TagCosaPortareSerializer(serializers.ModelSerializer):
@@ -21,6 +38,10 @@ class MediaDiarioSerializer(serializers.ModelSerializer):
             'visibile_a_genitori', 'caricato_da', 'creato_at',
         )
         read_only_fields = ('caricato_da', 'creato_at', 'thumbnail')
+
+    def validate_file(self, value):
+        _check_mime_media(value)
+        return value
 
     def get_file_url(self, obj):
         request = self.context.get('request')

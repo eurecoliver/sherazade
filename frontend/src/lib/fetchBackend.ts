@@ -45,9 +45,17 @@ export async function fetchBackend(
     })
 
     if (refreshRes.ok) {
-      const { access } = await refreshRes.json()
-      res = await call(access)
-      return { res, newAccessToken: access }
+      let access: string | undefined
+      try {
+        const data = await refreshRes.json() as Record<string, unknown>
+        access = typeof data?.access === 'string' ? data.access : undefined
+      } catch {
+        // risposta non parsabile — prosegue senza refresh
+      }
+      if (access) {
+        res = await call(access)
+        return { res, newAccessToken: access }
+      }
     }
   }
 

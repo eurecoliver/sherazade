@@ -97,3 +97,19 @@ class MediaPortfolioWriteSerializer(serializers.ModelSerializer):
     class Meta:
         model = MediaPortfolio
         fields = ['anno', 'gruppo', 'file', 'tipo', 'data', 'descrizione']
+
+    def validate_file(self, value):
+        import mimetypes
+        _MIME_MEDIA = {
+            'image/jpeg', 'image/png', 'image/webp', 'image/gif',
+            'video/mp4', 'video/quicktime', 'video/x-msvideo', 'video/webm',
+        }
+        content_type = getattr(value, 'content_type', None)
+        if not content_type:
+            content_type, _ = mimetypes.guess_type(value.name)
+        if content_type not in _MIME_MEDIA:
+            from rest_framework import serializers as s
+            raise s.ValidationError(
+                f'Tipo non supportato ({content_type}). Accettati: JPEG, PNG, WebP, GIF, MP4, MOV, WebM.'
+            )
+        return value

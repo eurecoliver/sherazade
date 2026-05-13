@@ -10,7 +10,11 @@ function getLocale(pathname: string): string {
 }
 
 function isProtectedPath(pathname: string): boolean {
-  return pathname.includes('/dashboard/') || pathname.match(/\/(it|en)\/checkin/) !== null
+  return (
+    pathname.includes('/dashboard/') ||
+    /^\/(it|en)\/checkin(?:\/|$)/.test(pathname) ||
+    /^\/(it|en)\/checkin-insegnanti(?:\/|$)/.test(pathname)
+  )
 }
 
 export default function middleware(request: NextRequest) {

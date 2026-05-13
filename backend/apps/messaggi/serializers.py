@@ -1,4 +1,5 @@
 from rest_framework import serializers
+import mimetypes
 from apps.config.models import Gruppo
 from .models import Circolare, LetturaCircolare
 
@@ -26,6 +27,18 @@ class CircolareSerializer(serializers.ModelSerializer):
             'creato_at', 'aggiornato_at',
         ]
         read_only_fields = ['notifica_inviata']
+
+    def validate_allegato(self, value):
+        if value:
+            content_type = getattr(value, 'content_type', None)
+            if not content_type:
+                content_type, _ = mimetypes.guess_type(value.name)
+            allowed = {'application/pdf', 'image/jpeg', 'image/png', 'image/webp'}
+            if content_type not in allowed:
+                raise serializers.ValidationError(
+                    'Solo PDF e immagini (JPEG, PNG, WebP) sono supportati come allegato.'
+                )
+        return value
 
     def get_autore_nome(self, obj):
         return obj.autore.get_full_name() or obj.autore.email

@@ -135,7 +135,7 @@ class CircolareViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['get'], url_path='letture')
     def letture(self, request, pk=None):
         """Admin/Direttrice vede chi ha letto la circolare."""
-        if request.user.role != Role.ADMIN:
+        if request.user.role not in (Role.ADMIN, Role.DIRETTRICE):
             return Response(status=403)
         circolare = self.get_object()
         letture = circolare.letture.select_related('utente').order_by('letto_at')
