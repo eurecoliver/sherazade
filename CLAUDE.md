@@ -986,3 +986,40 @@ docker compose exec backend python manage.py test apps.users.tests apps.attendan
 - `DailyQRCodeToken.get_or_create_today()` ritorna `(obj, created)` — da unpackare
 
 Prossimo task: backup offsite (Hetzner Storage Box o Backblaze B2 — da decidere)
+
+### Colloqui genitori (data da definire) — branch feature/colloqui-genitori
+- Nuova app Django `apps.colloqui` con 2 modelli:
+  - `SessioneColloqui`: titolo, descrizione, data, ora_inizio/fine, durata_slot (int minuti), aperto bool, gruppi M2M, creato_da FK
+  - `PrenotazioneColloquio`: sessione FK, genitore FK, bambino FK (null), slot_index int, note_genitore, disdetta bool; `UniqueConstraint(condition=Q(disdetta=False), fields=['sessione','slot_index'])` — un solo genitore per slot attivo
+- Slot calcolati dinamicamente da `get_slots()` (no tabella DB), action `slots/` li restituisce con disponibilità e chi ha prenotato (solo staff)
+- Action `toggle-aperto/` con push notification ai genitori quando la sessione viene aperta
+- Genitore filtra sessioni per gruppo dei propri figli (via Famiglia → bambini → gruppo)
+- Soft-delete prenotazioni: `disdetta=True` invece di DELETE fisico
+- Permessi via `PermessoRuolo` risorsa 'colloqui': direttrice/coordinatrice=CRUD, insegnante=leggi, genitore=leggi+scrivi, cuoca/custom=nessuno
+- Migration `config/0010_seed_permessi_colloqui` in `colloqui/migrations/0002_seed_permessi_colloqui.py`
+- Frontend staff (`/dashboard/staff/colloqui`): shared page (back button role-aware), lista sessioni future/passate, modal crea/modifica con preview slot count, griglia slot con chi ha prenotato, toggle aperto/chiuso, elimina
+- Frontend genitore (`/dashboard/genitore/colloqui`): lista sessioni aperte per il proprio gruppo, selezione slot + note, disdici prenotazione, feedback visivo
+- Push notification ai genitori quando una sessione viene aperta
+- Dashboard admin: aggiunto pulsante "🗓️ Colloqui" → `staff/colloqui` (shared page)
+- Dashboard staff: aggiunto "🗓️ Colloqui" in NAV_ITEMS
+- Dashboard genitore: aggiunto "🗓️ Colloqui" in NAV_ITEMS
+
+**File creati:**
+- `backend/apps/colloqui/__init__.py`, `apps.py`, `admin.py`, `models.py`, `permissions.py`, `serializers.py`, `views.py`, `urls.py`
+- `backend/apps/colloqui/migrations/0001_initial.py`, `0002_seed_permessi_colloqui.py`, `migrations/__init__.py`
+- `frontend/src/app/api/colloqui/sessioni/route.ts`
+- `frontend/src/app/api/colloqui/sessioni/[id]/route.ts`
+- `frontend/src/app/api/colloqui/sessioni/[id]/slots/route.ts`
+- `frontend/src/app/api/colloqui/sessioni/[id]/toggle-aperto/route.ts`
+- `frontend/src/app/api/colloqui/prenotazioni/route.ts`
+- `frontend/src/app/api/colloqui/prenotazioni/[id]/route.ts`
+- `frontend/src/app/[locale]/dashboard/staff/colloqui/page.tsx`
+- `frontend/src/app/[locale]/dashboard/genitore/colloqui/page.tsx`
+
+**File modificati:**
+- `backend/sherazade/settings/base.py`: aggiunto `apps.colloqui` in LOCAL_APPS
+- `backend/sherazade/urls.py`: aggiunto include apps.colloqui.urls
+- `backend/apps/config/models.py`: aggiunta risorsa 'colloqui' in RISORSE
+- `frontend/src/app/[locale]/dashboard/staff/page.tsx`: aggiunto Colloqui in NAV_ITEMS
+- `frontend/src/app/[locale]/dashboard/admin/page.tsx`: aggiunto COLLOQUI_ITEM + bottone
+- `frontend/src/app/[locale]/dashboard/genitore/page.tsx`: aggiunto Colloqui in NAV_ITEMS

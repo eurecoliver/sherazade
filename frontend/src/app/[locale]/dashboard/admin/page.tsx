@@ -30,6 +30,7 @@ const CALENDARIO_ITEM = { icon: '📅', label: 'Calendario', sub: 'Eventi e chiu
 const PORTFOLIO_ITEM = { icon: '📸', label: 'Portfolio', sub: 'Foto e video del gruppo', risorsa: 'portfolio' }
 const BACHECA_ITEM = { icon: '📺', label: 'Bacheca Live', sub: 'Presenze in tempo reale', risorsa: 'presenze' }
 const STATISTICHE_ITEM = { icon: '📊', label: 'Statistiche', sub: 'Trend presenze e grafici', risorsa: 'presenze' }
+const COLLOQUI_ITEM = { icon: '🗓️', label: 'Colloqui', sub: 'Colloqui con i genitori', risorsa: 'colloqui' }
 
 const ADMIN_ONLY = { icon: '👥', label: 'Utenti', sub: 'Gestione account', path: '/utenti', bg: '#EBF8FF', color: '#2B6CB0', border: '#90CDF4', risorsa: 'utenti' }
 
@@ -181,6 +182,18 @@ export default function AdminDashboard() {
               <div>
                 <p style={{ margin: 0, fontWeight: 700, fontSize: '0.9rem' }}>{BACHECA_ITEM.label}</p>
                 <p style={{ margin: 0, fontSize: '0.72rem', opacity: 0.75 }}>{BACHECA_ITEM.sub}</p>
+              </div>
+            </button>
+          )}
+          {canSee(COLLOQUI_ITEM.risorsa) && (
+            <button
+              onClick={() => router.push(`/${locale}/dashboard/staff/colloqui`)}
+              style={{ padding: '1rem', background: '#F0FDFA', color: '#0D9488', border: '2px solid #99F6E4', borderRadius: '14px', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '0.75rem' }}
+            >
+              <span style={{ fontSize: '1.4rem', flexShrink: 0 }}>{COLLOQUI_ITEM.icon}</span>
+              <div>
+                <p style={{ margin: 0, fontWeight: 700, fontSize: '0.9rem' }}>{COLLOQUI_ITEM.label}</p>
+                <p style={{ margin: 0, fontSize: '0.72rem', opacity: 0.75 }}>{COLLOQUI_ITEM.sub}</p>
               </div>
             </button>
           )}

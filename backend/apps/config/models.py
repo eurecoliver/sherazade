@@ -36,6 +36,7 @@ class PermessoRuolo(models.Model):
         ('portfolio',  'Portfolio digitale'),
         ('utenti',     'Gestione utenti'),
         ('audit',      'Log Accessi GDPR'),
+        ('colloqui',   'Colloqui genitori'),
     ]
     AZIONI = [
         ('leggi',    'Visualizza'),
