@@ -326,6 +326,338 @@ class BambinoViewSet(LogAccessoMixin, viewsets.ModelViewSet):
         resp['Content-Disposition'] = f'attachment; filename="{nome_file}"'
         return resp
 
+    # ─── Export GDPR ─────────────────────────────────────────────────────────
+
+    @action(detail=True, methods=['get'], url_path='export-gdpr')
+    def export_gdpr(self, request, pk=None):
+        """
+        Genera un PDF con tutti i dati personali del bambino (GDPR Art. 20).
+        Admin/Direttrice/Coordinatrice/Insegnante: qualsiasi bambino.
+        Genitore: solo i propri figli.
+        Cuoca: nessun accesso.
+        """
+        from django.http import HttpResponse
+        from django.utils import timezone as tz
+        from html import escape as he
+        from weasyprint import HTML
+        import re
+
+        from apps.attendance.models import Presenza
+        from apps.meals.models import RegistroPasto
+        from apps.diary.models import RegistroDiario
+        from apps.consents.models import ConsensoFotografico
+
+        bambino = self.get_object()
+        user = request.user
+
+        if user.role == Role.GENITORE:
+            fam = getattr(bambino, 'famiglia', None)
+            if fam is None or (fam.genitore1_id != user.pk and fam.genitore2_id != user.pk):
+                return Response({'detail': 'Non autorizzato.'}, status=status.HTTP_403_FORBIDDEN)
+        elif user.role == Role.CUOCA:
+            return Response({'detail': 'Non autorizzato.'}, status=status.HTTP_403_FORBIDDEN)
+
+        oggi = date.today()
+        due_anni_fa = date(oggi.year - 2, oggi.month, oggi.day)
+        anno_fa = date(oggi.year - 1, oggi.month, oggi.day)
+
+        fam = getattr(bambino, 'famiglia', None)
+        deleghe = list(bambino.deleghe_ritiro.all().order_by('nominativo'))
+        consensi = list(ConsensoFotografico.objects.filter(bambino=bambino).order_by('finalita'))
+        presenze = list(Presenza.objects.filter(bambino=bambino, data__gte=due_anni_fa).order_by('data'))
+        pasti = list(RegistroPasto.objects.filter(bambino=bambino, data__gte=anno_fa).order_by('data'))
+        diari = list(
+            RegistroDiario.objects
+            .filter(bambino=bambino, data__gte=anno_fa)
+            .prefetch_related('tags_cosa_portare')
+            .order_by('data')
+        )
+
+        FINALITA_LABEL = {
+            'uso_interno': 'Uso interno (documentazione)',
+            'genitori_diretti': 'Condivisione con genitori',
+            'materiale_promozionale': 'Materiale promozionale',
+        }
+        STATO_LABEL = {
+            'completo': '✅ Entrambi i consensi',
+            'parziale': '⚠️ Un solo consenso',
+            'nessuno': '❌ Nessun consenso',
+            'revocato': '🚫 Revocato',
+            'non_fotografabile': '🚫 Non fotografabile',
+        }
+        MESI_IT = ['', 'Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu',
+                   'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic']
+        GIORNI_BREVE = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom']
+        QUANTITA_LABEL = {
+            'tutto': '✅', 'meta': '🟡', 'poco': '🟠', 'nulla': '❌',
+        }
+        PORTATE = [
+            ('colazione', 'Colaz.'), ('primo', 'Primo'), ('secondo', 'Secondo'),
+            ('monopiatto', 'Mono'), ('contorno', 'Cont.'),
+            ('frutta', 'Frutta'), ('merenda', 'Mer.'),
+        ]
+
+        def fmt_date(d):
+            if d is None:
+                return '—'
+            return d.strftime('%d/%m/%Y')
+
+        def nome_utente(u):
+            if u is None:
+                return '—'
+            parts = [u.first_name, u.last_name]
+            n = ' '.join(p for p in parts if p).strip()
+            return he(n or u.email)
+
+        # ── 1. Anagrafica ─────────────────────────────────────────────────────
+        nome_completo = he(f'{bambino.nome} {bambino.cognome}')
+        alias_str = he(bambino.alias_nome or '') if bambino.alias_attivo and bambino.alias_nome else ''
+        gruppo_nome = he(bambino.gruppo.nome if bambino.gruppo else '—')
+        orario_str = he(str(bambino.orario_uscita.orario) if bambino.orario_uscita else '—')
+
+        righe_anag = f'''
+<tr><th>Nome completo</th><td>{nome_completo}</td></tr>
+<tr><th>Alias</th><td>{alias_str or '—'}</td></tr>
+<tr><th>Codice Fiscale</th><td>{he(bambino.codice_fiscale or '—')}</td></tr>
+<tr><th>Data di nascita</th><td>{fmt_date(bambino.data_nascita)}</td></tr>
+<tr><th>Luogo di nascita</th><td>{he(bambino.luogo_nascita or '—')}</td></tr>
+<tr><th>Sesso</th><td>{he(bambino.sesso or '—')}</td></tr>
+<tr><th>Gruppo</th><td>{gruppo_nome}</td></tr>
+<tr><th>Orario uscita previsto</th><td>{orario_str}</td></tr>
+<tr><th>Attivo</th><td>{'Sì' if bambino.attivo else 'No'}</td></tr>
+<tr><th>Note mediche</th><td>{he(bambino.note_mediche or '—')}</td></tr>
+<tr><th>Non fotografabile</th><td>{'Sì (override assoluto consensi)' if bambino.non_fotografabile else 'No'}</td></tr>
+'''
+
+        # ── 2. Famiglia ──────────────────────────────────────────────────────
+        righe_fam = '<tr><td colspan="2" class="no-data">Nessuna famiglia associata.</td></tr>'
+        if fam:
+            g1 = fam.genitore1
+            g2 = fam.genitore2
+            g1_cf = he(getattr(g1, 'codice_fiscale', '') or '—') if g1 else '—'
+            g1_ind = he(getattr(g1, 'indirizzo', '') or '—') if g1 else '—'
+            g2_cf = he(getattr(g2, 'codice_fiscale', '') or '—') if g2 else '—'
+            g2_ind = he(getattr(g2, 'indirizzo', '') or '—') if g2 else '—'
+            righe_fam = f'''
+<tr><th>Genitore 1 — Nome</th><td>{nome_utente(g1)}</td></tr>
+<tr><th>Genitore 1 — Email</th><td>{he(g1.email) if g1 else '—'}</td></tr>
+<tr><th>Genitore 1 — Telefono</th><td>{he(getattr(g1, 'telefono', '') or '—') if g1 else '—'}</td></tr>
+<tr><th>Genitore 1 — CF</th><td>{g1_cf}</td></tr>
+<tr><th>Genitore 1 — Indirizzo</th><td>{g1_ind}</td></tr>
+<tr><th>Genitore 2 — Nome</th><td>{nome_utente(g2)}</td></tr>
+<tr><th>Genitore 2 — Email</th><td>{he(g2.email) if g2 else '—'}</td></tr>
+<tr><th>Genitore 2 — Telefono</th><td>{he(getattr(g2, 'telefono', '') or '—') if g2 else '—'}</td></tr>
+<tr><th>Genitore 2 — CF</th><td>{g2_cf}</td></tr>
+<tr><th>Genitore 2 — Indirizzo</th><td>{g2_ind}</td></tr>
+<tr><th>Indirizzo famiglia</th><td>{he(fam.indirizzo or '—')}</td></tr>
+'''
+
+        # ── 3. Deleghe ritiro ────────────────────────────────────────────────
+        righe_deleghe = ''
+        for d in deleghe:
+            stato_d = 'Attiva' if d.attivo else 'Revocata'
+            righe_deleghe += f'<tr><td>{he(d.nominativo)}</td><td>{he(d.telefono or "—")}</td><td>{he(d.relazione or "—")}</td><td>{stato_d}</td></tr>\n'
+        if not righe_deleghe:
+            righe_deleghe = '<tr><td colspan="4" class="no-data">Nessuna delega registrata.</td></tr>'
+
+        # ── 4. Consensi fotografici ──────────────────────────────────────────
+        righe_consensi = ''
+        for c in consensi:
+            finalita = FINALITA_LABEL.get(c.finalita, c.finalita)
+            stato = STATO_LABEL.get(c.stato, c.stato)
+            data_g1 = fmt_date(c.data_consenso_genitore1)
+            data_g2 = fmt_date(c.data_consenso_genitore2)
+            rev = f' (revocato il {fmt_date(c.data_revoca)})' if c.revocato and c.data_revoca else ''
+            righe_consensi += f'<tr><td>{finalita}</td><td>{stato}{rev}</td><td>{data_g1}</td><td>{data_g2}</td></tr>\n'
+        if not righe_consensi:
+            righe_consensi = '<tr><td colspan="4" class="no-data">Nessun consenso registrato.</td></tr>'
+
+        # ── 5. Presenze ──────────────────────────────────────────────────────
+        righe_presenze = ''
+        for p in presenze:
+            dow = p.data.weekday()
+            stato_p = 'Presente' if p.presente else f'Assente ({p.get_motivo_assenza_display() if p.motivo_assenza else "non specificato"})'
+            ora_a = p.ora_arrivo.strftime('%H:%M') if p.ora_arrivo else '—'
+            ora_u = p.ora_uscita.strftime('%H:%M') if p.ora_uscita else '—'
+            ritardo_a = f'+{p.minuti_ritardo_arrivo}m' if p.minuti_ritardo_arrivo else ''
+            ritardo_u = f'+{p.minuti_ritardo_uscita}m' if p.minuti_ritardo_uscita else ''
+            righe_presenze += (
+                f'<tr><td class="data-col">{p.data.day} {MESI_IT[p.data.month]} {p.data.year} {GIORNI_BREVE[dow]}</td>'
+                f'<td>{stato_p}</td><td>{ora_a} {ritardo_a}</td><td>{ora_u} {ritardo_u}</td></tr>\n'
+            )
+        if not righe_presenze:
+            righe_presenze = '<tr><td colspan="4" class="no-data">Nessuna presenza registrata negli ultimi 2 anni.</td></tr>'
+
+        # ── 6. Diario ────────────────────────────────────────────────────────
+        UMORE_EMOJI = {
+            'felice': '😊', 'sereno': '🙂', 'stanco': '😴',
+            'agitato': '😤', 'triste': '😢',
+        }
+        righe_diario = ''
+        for rd in diari:
+            dow = rd.data.weekday()
+            umore = UMORE_EMOJI.get(rd.umore, '') if rd.umore else ''
+            sonno_str = ''
+            if rd.sonno_inizio and rd.sonno_fine:
+                sonno_str = f'💤 {rd.sonno_inizio.strftime("%H:%M")}–{rd.sonno_fine.strftime("%H:%M")}'
+            popo_str = '🚽' if rd.popo else ''
+            tags = ', '.join(he(t.nome) for t in rd.tags_cosa_portare.all())
+            attivita = he(rd.attivita_descrizione or '')
+            note = he(rd.note_giornata or '')
+            extra = ' | '.join(x for x in [sonno_str, popo_str, tags] if x)
+            righe_diario += (
+                f'<tr><td class="data-col">{rd.data.day} {MESI_IT[rd.data.month]} {GIORNI_BREVE[dow]}</td>'
+                f'<td>{umore}</td><td>{attivita}</td><td style="font-style:italic;color:#666">{note}</td>'
+                f'<td style="font-size:7.5pt;color:#888">{extra}</td></tr>\n'
+            )
+        if not righe_diario:
+            righe_diario = '<tr><td colspan="5" class="no-data">Nessun diario registrato nell\'ultimo anno.</td></tr>'
+
+        # ── 7. Pasti ─────────────────────────────────────────────────────────
+        header_portate = ''.join(f'<th>{lbl}</th>' for _, lbl in PORTATE)
+        righe_pasti = ''
+        for rp in pasti:
+            dow = rp.data.weekday()
+            celle = ''
+            for campo, _ in PORTATE:
+                val = getattr(rp, f'{campo}_quantita', '')
+                celle += f'<td>{QUANTITA_LABEL.get(val, "—")}</td>' if val else '<td class="q-vuoto">—</td>'
+            note_row = (
+                f'<tr><td colspan="{len(PORTATE) + 1}" class="nota-pasto-cell">{he(rp.note_pasto)}</td></tr>'
+                if rp.note_pasto else ''
+            )
+            righe_pasti += (
+                f'<tr><td class="data-col">{rp.data.day} {MESI_IT[rp.data.month]} {GIORNI_BREVE[dow]}</td>'
+                f'{celle}</tr>{note_row}\n'
+            )
+        if not righe_pasti:
+            righe_pasti = f'<tr><td colspan="{len(PORTATE) + 1}" class="no-data">Nessun pasto registrato nell\'ultimo anno.</td></tr>'
+
+        data_gen = tz.now().strftime('%d/%m/%Y alle %H:%M')
+
+        html = f'''<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<style>
+  @page {{ size: A4; margin: 1.5cm; }}
+  body {{ font-family: Arial, sans-serif; font-size: 8.5pt; color: #222; line-height: 1.45; }}
+  /* Header GDPR */
+  .gdpr-header {{ background: linear-gradient(135deg, #2D3748, #4A5568); color: white;
+    padding: 14px 20px; border-radius: 10px; margin-bottom: 12px; display: flex;
+    justify-content: space-between; align-items: center; }}
+  .gdpr-header .h1 {{ margin: 0; font-size: 16pt; font-weight: bold; }}
+  .gdpr-header .sub {{ font-size: 8.5pt; opacity: 0.8; margin-top: 3px; }}
+  .gdpr-badge {{ background: rgba(255,255,255,0.15); border: 1.5px solid rgba(255,255,255,0.4);
+    border-radius: 8px; padding: 6px 12px; text-align: center; font-size: 8pt; font-weight: bold; }}
+  /* Sezioni */
+  h2 {{ font-size: 10.5pt; color: #2D3748; border-bottom: 2px solid #E2E8F0;
+    padding-bottom: 3px; margin-top: 14px; margin-bottom: 6px; }}
+  /* Tabella anagrafica key-value */
+  .kv-table {{ width: 100%; border-collapse: collapse; margin-bottom: 8px; }}
+  .kv-table th {{ background: #F7FAFC; color: #4A5568; text-align: left;
+    padding: 4px 8px; border: 1px solid #E2E8F0; font-size: 7.5pt;
+    font-weight: bold; width: 38%; }}
+  .kv-table td {{ padding: 4px 8px; border: 1px solid #E2E8F0; font-size: 8pt; }}
+  /* Tabelle dati */
+  table.data-table {{ width: 100%; border-collapse: collapse; margin-top: 4px; }}
+  table.data-table th {{ background: #EBF8FF; padding: 4px 5px; border: 1px solid #BEE3F8;
+    font-size: 7.5pt; text-align: center; }}
+  table.data-table td {{ padding: 3px 5px; border: 1px solid #EEE; font-size: 7.5pt; }}
+  td.data-col {{ text-align: left; font-weight: bold; white-space: nowrap; }}
+  .q-vuoto {{ color: #CCC; }}
+  .nota-pasto-cell {{ font-style: italic; color: #888; font-size: 7pt; border-top: none; text-align: left; }}
+  /* Avviso GDPR */
+  .gdpr-notice {{ background: #FFFBEB; border: 1.5px solid #F6E05E; border-radius: 8px;
+    padding: 8px 12px; margin-top: 14px; font-size: 7.5pt; color: #744210; }}
+  .no-data {{ color: #AAA; font-style: italic; }}
+  /* Footer */
+  .footer {{ margin-top: 12px; font-size: 7pt; color: #AAA; border-top: 1px solid #EEE;
+    padding-top: 6px; display: flex; justify-content: space-between; }}
+  /* Page break */
+  .page-break {{ page-break-before: always; }}
+</style>
+</head>
+<body>
+
+<div class="gdpr-header">
+  <div>
+    <div class="h1">📋 Export Dati Personali</div>
+    <div class="sub">Ai sensi del Regolamento UE 2016/679 (GDPR) — Art. 20 Diritto alla portabilità</div>
+    <div class="sub">Generato il {data_gen} — Richiedente: {he(user.get_full_name() or user.email)}</div>
+  </div>
+  <div class="gdpr-badge">GDPR<br>Art. 20</div>
+</div>
+
+<!-- 1. Anagrafica bambino -->
+<h2>👶 Dati anagrafici — {nome_completo}</h2>
+<table class="kv-table">
+{righe_anag}
+</table>
+
+<!-- 2. Famiglia -->
+<h2>👨‍👩‍👧 Nucleo familiare</h2>
+<table class="kv-table">
+{righe_fam}
+</table>
+
+<!-- 3. Deleghe ritiro -->
+<h2>🤝 Deleghe di ritiro</h2>
+<table class="data-table">
+  <thead><tr><th>Nominativo</th><th>Telefono</th><th>Relazione</th><th>Stato</th></tr></thead>
+  <tbody>{righe_deleghe}</tbody>
+</table>
+
+<!-- 4. Consensi fotografici -->
+<h2>📸 Consensi fotografici (GDPR)</h2>
+<table class="data-table">
+  <thead><tr><th>Finalità</th><th>Stato</th><th>Data G1</th><th>Data G2</th></tr></thead>
+  <tbody>{righe_consensi}</tbody>
+</table>
+
+<!-- 5. Presenze (ultimi 2 anni) -->
+<h2 class="page-break">📅 Registro presenze (ultimi 2 anni — dal {fmt_date(due_anni_fa)})</h2>
+<table class="data-table">
+  <thead><tr><th>Data</th><th>Stato</th><th>Ora arrivo</th><th>Ora uscita</th></tr></thead>
+  <tbody>{righe_presenze}</tbody>
+</table>
+
+<!-- 6. Diario (ultimo anno) -->
+<h2 class="page-break">📔 Diario (ultimo anno — dal {fmt_date(anno_fa)})</h2>
+<table class="data-table">
+  <thead><tr><th>Data</th><th>😊</th><th style="text-align:left">Attività</th><th style="text-align:left">Note</th><th>Extra</th></tr></thead>
+  <tbody>{righe_diario}</tbody>
+</table>
+
+<!-- 7. Pasti (ultimo anno) -->
+<h2 class="page-break">🍽️ Registro pasti (ultimo anno — dal {fmt_date(anno_fa)})</h2>
+<table class="data-table">
+  <thead><tr><th>Data</th>{header_portate}</tr></thead>
+  <tbody>{righe_pasti}</tbody>
+</table>
+
+<!-- Avviso GDPR -->
+<div class="gdpr-notice">
+  <strong>Informativa GDPR</strong> — I dati contenuti in questo documento sono trattati ai sensi del Regolamento UE 2016/679.
+  Il titolare del trattamento è la scuola. I dati sono conservati secondo le policy di retention configurate nel sistema.
+  Per esercitare i diritti di rettifica (Art. 16), cancellazione (Art. 17) o limitazione (Art. 18), contattare la direzione.
+  Questo documento è riservato e non deve essere diffuso a terzi non autorizzati.
+</div>
+
+<div class="footer">
+  <span>Sherazade — Portale scolastico — documento riservato</span>
+  <span>Export generato il {data_gen}</span>
+</div>
+</body>
+</html>'''
+
+        pdf_bytes = HTML(string=html).write_pdf()
+        safe = re.sub(r'[^\w\-]', '_', f'{bambino.cognome}_{bambino.nome}', flags=re.ASCII)
+        nome_file = f'gdpr_export_{safe}_{oggi.strftime("%Y%m%d")}.pdf'
+        resp = HttpResponse(pdf_bytes, content_type='application/pdf')
+        resp['Content-Disposition'] = f'attachment; filename="{nome_file}"'
+        return resp
+
 
 class FamigliaViewSet(LogAccessoMixin, viewsets.ModelViewSet):
     risorsa_nome = 'famiglia'

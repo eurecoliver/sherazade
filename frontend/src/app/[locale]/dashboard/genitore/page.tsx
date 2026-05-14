@@ -50,6 +50,9 @@ export default function GenitoreDashboard() {
   const [reportMese, setReportMese] = useState(new Date().getMonth() + 1)
   const [reportLoading, setReportLoading] = useState(false)
   const [showReportSection, setShowReportSection] = useState(false)
+  const [showGdprSection, setShowGdprSection] = useState(false)
+  const [gdprBambinoId, setGdprBambinoId] = useState<number | ''>('')
+  const [gdprLoading, setGdprLoading] = useState(false)
 
   useEffect(() => {
     Promise.all([
@@ -62,7 +65,7 @@ export default function GenitoreDashboard() {
         setUser(meData)
         const list = Array.isArray(bambiniData) ? bambiniData : (bambiniData.results ?? [])
         setBambini(list)
-        if (list.length === 1) setReportBambinoId(list[0].id)
+        if (list.length === 1) { setReportBambinoId(list[0].id); setGdprBambinoId(list[0].id) }
         const circ = Array.isArray(circolariData) ? circolariData : (circolariData.results ?? [])
         setNonLette(circ.filter((c: { letta: boolean }) => !c.letta).length)
         setRisorse(permData.risorse ?? null)
@@ -91,6 +94,25 @@ export default function GenitoreDashboard() {
       URL.revokeObjectURL(url)
     } finally {
       setReportLoading(false)
+    }
+  }
+
+  const downloadGdpr = async () => {
+    if (!gdprBambinoId) return
+    const b = bambini.find(x => x.id === gdprBambinoId)
+    setGdprLoading(true)
+    try {
+      const res = await fetch(`/api/bambini/${gdprBambinoId}/export-gdpr`)
+      if (!res.ok) { alert('Errore durante l\'export GDPR.'); return }
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `gdpr_${b?.cognome ?? ''}_${b?.nome ?? ''}.pdf`
+      a.click()
+      URL.revokeObjectURL(url)
+    } finally {
+      setGdprLoading(false)
     }
   }
 
@@ -324,6 +346,42 @@ export default function GenitoreDashboard() {
             <button onClick={downloadReport} disabled={!reportBambinoId || reportLoading}
               style={{ padding: '0.5rem 1.25rem', background: reportBambinoId ? '#1D4ED8' : '#93C5FD', color: 'white', border: 'none', borderRadius: '8px', fontSize: '0.875rem', fontWeight: 700, cursor: reportBambinoId && !reportLoading ? 'pointer' : 'not-allowed', fontFamily: 'inherit' }}>
               {reportLoading ? '⏳ Generando...' : '⬇ Scarica PDF'}
+            </button>
+          </div>
+        )}
+
+        {/* ── Export GDPR ──────────────────────────────────────────── */}
+        <button
+          onClick={() => setShowGdprSection(v => !v)}
+          style={{ width: '100%', textAlign: 'left', padding: '0.85rem 1.25rem', borderRadius: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.75rem', background: showGdprSection ? '#F5F3FF' : 'white', border: `2px solid ${showGdprSection ? '#C4B5FD' : '#E5E7EB'}` }}>
+          <span style={{ fontSize: '1.3rem' }}>📤</span>
+          <div>
+            <p style={{ margin: 0, fontWeight: 700, fontSize: '0.9rem', color: '#7C3AED' }}>I miei dati (GDPR)</p>
+            <p style={{ margin: 0, fontSize: '0.75rem', color: '#888' }}>Scarica tutti i dati del tuo bambino (Art. 20 GDPR)</p>
+          </div>
+          <span style={{ marginLeft: 'auto', fontSize: '0.9rem', color: '#C4B5FD' }}>{showGdprSection ? '▲' : '▼'}</span>
+        </button>
+        {showGdprSection && (
+          <div style={{ marginTop: '0.5rem', padding: '1rem', background: '#F5F3FF', borderRadius: '12px', border: '1px solid #C4B5FD', display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
+            {bambini.length > 1 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                <label style={{ fontSize: '0.75rem', fontWeight: 600, color: '#7C3AED' }}>Bambino</label>
+                <select value={gdprBambinoId} onChange={e => setGdprBambinoId(Number(e.target.value))}
+                  style={{ padding: '0.4rem 0.6rem', border: '1.5px solid #C4B5FD', borderRadius: '8px', fontSize: '0.85rem', fontFamily: 'inherit', background: 'white' }}>
+                  <option value="">— seleziona —</option>
+                  {bambini.map(b => {
+                    const nome = b.alias_attivo && b.alias_nome ? b.alias_nome : b.nome
+                    return <option key={b.id} value={b.id}>{nome} {b.cognome}</option>
+                  })}
+                </select>
+              </div>
+            )}
+            <p style={{ margin: 0, fontSize: '0.78rem', color: '#6B21A8', lineHeight: 1.5 }}>
+              Include anagrafica, consensi fotografici, presenze (2 anni), diario e pasti (1 anno).
+            </p>
+            <button onClick={downloadGdpr} disabled={!gdprBambinoId || gdprLoading}
+              style={{ padding: '0.5rem 1.25rem', background: gdprBambinoId ? '#7C3AED' : '#C4B5FD', color: 'white', border: 'none', borderRadius: '8px', fontSize: '0.875rem', fontWeight: 700, cursor: gdprBambinoId && !gdprLoading ? 'pointer' : 'not-allowed', fontFamily: 'inherit' }}>
+              {gdprLoading ? '⏳ Generando...' : '⬇ Scarica PDF'}
             </button>
           </div>
         )}

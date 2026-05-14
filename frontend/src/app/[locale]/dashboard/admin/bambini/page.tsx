@@ -196,6 +196,7 @@ export default function BambiniPage() {
 
   // Report mensile
   const [showReportPicker, setShowReportPicker] = useState(false)
+  const [gdprLoading, setGdprLoading] = useState(false)
   const [reportAnno, setReportAnno] = useState(new Date().getFullYear())
   const [reportMese, setReportMese] = useState(new Date().getMonth() + 1)
   const [reportLoading, setReportLoading] = useState(false)
@@ -681,6 +682,24 @@ export default function BambiniPage() {
     if (res.ok || res.status === 204) {
       setSelected(null)
       await fetchBambini()
+    }
+  }
+
+  const downloadGdpr = async () => {
+    if (!selected) return
+    setGdprLoading(true)
+    try {
+      const res = await fetch(`/api/bambini/${selected.id}/export-gdpr`)
+      if (!res.ok) { alert('Errore durante l\'export GDPR.'); return }
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `gdpr_${selected.cognome}_${selected.nome}.pdf`
+      a.click()
+      URL.revokeObjectURL(url)
+    } finally {
+      setGdprLoading(false)
     }
   }
 
@@ -1272,6 +1291,10 @@ export default function BambiniPage() {
             <button onClick={() => { setShowReportPicker(v => !v); setReportAnno(new Date().getFullYear()); setReportMese(new Date().getMonth() + 1) }}
               style={{ ...secondaryBtn, marginBottom: 0, color: '#0952A5', borderColor: '#BFDBFE' }}>
               📄 Report mensile
+            </button>
+            <button onClick={downloadGdpr} disabled={gdprLoading}
+              style={{ ...secondaryBtn, marginBottom: 0, color: '#7C3AED', borderColor: '#DDD6FE' }}>
+              {gdprLoading ? '⏳...' : '📤 Export GDPR'}
             </button>
             <button onClick={handleDelete}
               style={{ ...secondaryBtn, marginBottom: 0, marginLeft: 'auto', color: '#C0392B', borderColor: '#FADBD8' }}>
