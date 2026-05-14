@@ -885,6 +885,28 @@ Prossimo task: HTTPS + Nginx (in attesa dominio) oppure 2FA
 - `frontend/src/components/UserChip.tsx`: link "🔐 Sicurezza"
 
 ## Ultimo Aggiornamento
+Data: 14 maggio 2026
+Completato: Export GDPR (Art. 20 — Diritto alla portabilità) — PDF bambino con anagrafica, consensi, presenze, diario, pasti
+
+### Export GDPR per bambino (14 maggio 2026) — branch feature/iscrizioni
+- Action `export_gdpr` su `BambinoViewSet`: `GET /api/v1/bambini/{id}/export-gdpr/`
+- PDF A4 WeasyPrint, 7 sezioni: Anagrafica, Famiglia, Deleghe, Consensi fotografici, Presenze (2 anni), Diario (1 anno), Pasti (1 anno)
+- Permessi: genitore solo propri figli, cuoca bloccata, staff libero accesso
+- Testi utente sanitizzati con `html.escape()`, filename sanificato con `re.sub()`
+- Frontend admin bambini: pulsante "📤 Export GDPR" (viola) nel modal dettaglio
+- Frontend genitore: card collassabile "📤 I miei dati (GDPR)" con selettore figlio se multipli
+
+**File creati/modificati:**
+- `backend/apps/children/views.py`: action `export_gdpr`
+- `frontend/src/app/api/bambini/[id]/export-gdpr/route.ts` (creato)
+- `frontend/src/app/[locale]/dashboard/admin/bambini/page.tsx`: pulsante GDPR
+- `frontend/src/app/[locale]/dashboard/genitore/page.tsx`: sezione GDPR
+
+Prossimo task: HTTPS + Nginx (in attesa dominio) oppure backup offsite
+
+---
+
+## Ultimo Aggiornamento (precedente)
 Data: 13 maggio 2026
 Completato: Migliorie QR check-in (feature/migliorie-qr) — bacheca presenze live, storico QR, campo via_qr, push notifications check-in bambino
 
