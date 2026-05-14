@@ -72,6 +72,19 @@ function localIso(d: Date): string {
 
 function isoToday(): string { return localIso(new Date()) }
 
+function addMinutes(timeStr: string, minutes: number): string {
+  const [h, m] = timeStr.split(':').map(Number)
+  const total = h * 60 + (m || 0) + minutes
+  const hOut = Math.floor(total / 60) % 24
+  const mOut = total % 60
+  return `${String(hOut).padStart(2, '0')}:${String(mOut).padStart(2, '0')}`
+}
+
+function toMinutes(timeStr: string): number {
+  const [h, m] = timeStr.split(':').map(Number)
+  return h * 60 + (m || 0)
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export default function ColloquiStaffPage() {
@@ -99,7 +112,7 @@ export default function ColloquiStaffPage() {
     descrizione: '',
     data: isoToday(),
     ora_inizio: '09:00',
-    ora_fine: '12:00',
+    numero_slot: 9,
     durata_slot: 20,
     aperto: true,
     gruppi_ids: [] as number[],
@@ -172,7 +185,7 @@ export default function ColloquiStaffPage() {
       descrizione: '',
       data: isoToday(),
       ora_inizio: '09:00',
-      ora_fine: '12:00',
+      numero_slot: 9,
       durata_slot: 20,
       aperto: true,
       gruppi_ids: [],
@@ -182,12 +195,15 @@ export default function ColloquiStaffPage() {
 
   const openEdit = (s: Sessione) => {
     setEditingSessione(s)
+    const iniMin = toMinutes(s.ora_inizio.slice(0, 5))
+    const fineMin = toMinutes(s.ora_fine.slice(0, 5))
+    const nSlot = s.durata_slot > 0 ? Math.max(1, Math.round((fineMin - iniMin) / s.durata_slot)) : 9
     setFormData({
       titolo: s.titolo,
       descrizione: s.descrizione,
       data: s.data,
       ora_inizio: s.ora_inizio.slice(0, 5),
-      ora_fine: s.ora_fine.slice(0, 5),
+      numero_slot: nSlot,
       durata_slot: s.durata_slot,
       aperto: s.aperto,
       gruppi_ids: s.gruppi.map(g => g.id),
@@ -197,6 +213,8 @@ export default function ColloquiStaffPage() {
 
   const handleSave = async () => {
     if (!formData.titolo.trim() || !formData.data) return
+    if (formData.numero_slot < 1) return
+    const oraFineCalcolata = addMinutes(formData.ora_inizio, formData.numero_slot * formData.durata_slot)
     setSaving(true)
     try {
       const body = {
@@ -204,7 +222,7 @@ export default function ColloquiStaffPage() {
         descrizione: formData.descrizione.trim(),
         data: formData.data,
         ora_inizio: formData.ora_inizio,
-        ora_fine: formData.ora_fine,
+        ora_fine: oraFineCalcolata,
         durata_slot: formData.durata_slot,
         aperto: formData.aperto,
         gruppi_ids: formData.gruppi_ids,
@@ -573,28 +591,26 @@ export default function ColloquiStaffPage() {
                 />
               </div>
               <div>
-                <label style={labelStyle}>Ora fine</label>
+                <label style={labelStyle}>Numero di slot</label>
                 <input
-                  type="time"
-                  value={formData.ora_fine}
-                  onChange={e => setFormData(p => ({ ...p, ora_fine: e.target.value }))}
+                  type="number"
+                  value={formData.numero_slot}
+                  min={1}
+                  max={50}
+                  onChange={e => setFormData(p => ({ ...p, numero_slot: parseInt(e.target.value) || 1 }))}
                   style={inputStyle}
                 />
               </div>
             </div>
 
-            {/* Preview num slot */}
-            {formData.ora_inizio && formData.ora_fine && formData.durata_slot > 0 && (() => {
-              const start = formData.ora_inizio.split(':').map(Number)
-              const end = formData.ora_fine.split(':').map(Number)
-              const startMin = start[0] * 60 + (start[1] || 0)
-              const endMin = end[0] * 60 + (end[1] || 0)
-              const num = Math.floor((endMin - startMin) / formData.durata_slot)
-              return num > 0 ? (
+            {/* Preview automatico */}
+            {formData.ora_inizio && formData.numero_slot > 0 && formData.durata_slot > 0 && (() => {
+              const oraFine = addMinutes(formData.ora_inizio, formData.numero_slot * formData.durata_slot)
+              return (
                 <p style={{ margin: '0.25rem 0 0.75rem', fontSize: '0.82rem', color: '#0984E3', fontWeight: 600 }}>
-                  → {num} slot da {formData.durata_slot} min ciascuno
+                  → {formData.numero_slot} slot da {formData.durata_slot} min · dalle {formData.ora_inizio} alle {oraFine}
                 </p>
-              ) : null
+              )
             })()}
 
             <label style={labelStyle}>Gruppi (lascia vuoto = tutti)</label>
