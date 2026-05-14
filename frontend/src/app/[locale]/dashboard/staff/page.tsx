@@ -20,8 +20,8 @@ const NAV_ITEMS = [
   { icon: '📝', label: 'Agenda',            sub: 'Note condivise del turno',      path: '/agenda',     bg: '#FDF2F8', color: '#9B59B6', border: '#E8BFFF', risorsa: 'agenda' },
   { icon: '📅', label: 'Calendario',        sub: 'Eventi e chiusure scolastiche', path: '/calendario', bg: '#EBF8FF', color: '#2B6CB0', border: '#90CDF4', risorsa: 'calendario' },
   { icon: '📸', label: 'Portfolio',         sub: 'Foto e video del gruppo',       path: '/portfolio',  bg: '#FFF0F6', color: '#D63384', border: '#F5BFDF', risorsa: 'portfolio' },
-  { icon: '�️', label: 'Colloqui',         sub: 'Colloqui con i genitori',       path: '/colloqui',   bg: '#F0FDFA', color: '#0D9488', border: '#99F6E4', risorsa: 'colloqui' },
-  { icon: '�📺', label: 'Bacheca Live',      sub: 'Presenze in tempo reale',       path: '__bacheca__', bg: '#F0F4F8', color: '#2D3436', border: '#B2BEC3', risorsa: 'presenze' },
+  { icon: '🤝', label: 'Colloqui',         sub: 'Colloqui con i genitori',       path: '/colloqui',   bg: '#F0FDFA', color: '#0D9488', border: '#99F6E4', risorsa: 'colloqui' },
+  { icon: '📺', label: 'Bacheca Live',      sub: 'Presenze in tempo reale',       path: '__bacheca__', bg: '#F0F4F8', color: '#2D3436', border: '#B2BEC3', risorsa: 'presenze' },
 ]
 
 export default function StaffDashboard() {
