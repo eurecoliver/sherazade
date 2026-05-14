@@ -82,6 +82,7 @@ class BambinoViewSet(LogAccessoMixin, viewsets.ModelViewSet):
         """
         from django.http import HttpResponse
         from django.utils import timezone as tz
+        from html import escape as he
         from weasyprint import HTML
 
         from apps.attendance.models import Presenza
@@ -100,9 +101,12 @@ class BambinoViewSet(LogAccessoMixin, viewsets.ModelViewSet):
             return Response({'detail': 'Non autorizzato.'}, status=status.HTTP_403_FORBIDDEN)
 
         oggi = date.today()
-        anno = int(request.query_params.get('anno', oggi.year))
-        mese = int(request.query_params.get('mese', oggi.month))
-        if not (1 <= mese <= 12) or anno < 2020:
+        try:
+            anno = int(request.query_params.get('anno', oggi.year))
+            mese = int(request.query_params.get('mese', oggi.month))
+        except (ValueError, TypeError):
+            return Response({'detail': 'Parametri anno/mese non validi.'}, status=status.HTTP_400_BAD_REQUEST)
+        if not (1 <= mese <= 12) or anno < 2020 or anno > oggi.year + 1:
             return Response({'detail': 'Parametri anno/mese non validi.'}, status=status.HTTP_400_BAD_REQUEST)
 
         MESI_IT = ['', 'Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno',
@@ -181,8 +185,12 @@ class BambinoViewSet(LogAccessoMixin, viewsets.ModelViewSet):
                     celle_pasti += f'<td class="q-{val}">{emoji}</td>'
                 else:
                     celle_pasti += '<td class="q-vuoto">—</td>'
-            note_str = f'<div class="nota-pasto">{rp.note_pasto}</div>' if rp.note_pasto else ''
-            righe_pasti += f'<tr><td class="data-col">{g} {GIORNI_BREVE[dow]}</td>{celle_pasti}</tr>{note_str}\n'
+            note_row = (
+                f'<tr><td colspan="{len(PORTATE) + 1}" class="nota-pasto-cell">'
+                f'{he(rp.note_pasto)}</td></tr>'
+                if rp.note_pasto else ''
+            )
+            righe_pasti += f'<tr><td class="data-col">{g} {GIORNI_BREVE[dow]}</td>{celle_pasti}</tr>{note_row}\n'
 
         header_pasti = ''.join(f'<th>{label}</th>' for _, label in PORTATE)
 
@@ -198,10 +206,10 @@ class BambinoViewSet(LogAccessoMixin, viewsets.ModelViewSet):
             elif rd.sonno_inizio:
                 sonno_str = f'<span class="badge-sonno">💤 dalle {rd.sonno_inizio.strftime("%H:%M")}</span>'
             popo_str = '<span class="badge-popo">🚽</span>' if rd.popo else ''
-            tags = [t.nome for t in rd.tags_cosa_portare.filter(attivo=True)]
+            tags = [he(t.nome) for t in rd.tags_cosa_portare.filter(attivo=True)]
             tags_str = ' '.join(f'<span class="badge-tag">{t}</span>' for t in tags)
-            attivita = rd.attivita_descrizione or ''
-            note = rd.note_giornata or ''
+            attivita = he(rd.attivita_descrizione or '')
+            note = he(rd.note_giornata or '')
             righe_diario += f'''
 <tr>
   <td class="data-col">{g} {GIORNI_BREVE[dow]}</td>
@@ -213,8 +221,8 @@ class BambinoViewSet(LogAccessoMixin, viewsets.ModelViewSet):
   </td>
 </tr>'''
 
-        nome_completo = f'{bambino.nome} {bambino.cognome}'
-        gruppo_nome = bambino.gruppo.nome if bambino.gruppo else '—'
+        nome_completo = he(f'{bambino.nome} {bambino.cognome}')
+        gruppo_nome = he(bambino.gruppo.nome if bambino.gruppo else '—')
         data_stampa = tz.now().strftime('%d/%m/%Y %H:%M')
 
         html = f'''<!DOCTYPE html>
@@ -228,7 +236,7 @@ class BambinoViewSet(LogAccessoMixin, viewsets.ModelViewSet):
   .report-header {{ background: linear-gradient(135deg, #E8725A, #F0C060); color: white;
     padding: 16px 20px; border-radius: 10px; margin-bottom: 16px; display: flex;
     justify-content: space-between; align-items: center; }}
-  .report-header h1 {{ margin: 0; font-size: 18pt; font-weight: bold; }}
+  .report-header .h1 {{ margin: 0; font-size: 18pt; font-weight: bold; }}
   .report-header .sub {{ font-size: 10pt; opacity: 0.9; margin-top: 4px; }}
   .report-header .periodo {{ font-size: 16pt; font-weight: bold; text-align: right; }}
   /* Sezioni */
@@ -261,7 +269,7 @@ class BambinoViewSet(LogAccessoMixin, viewsets.ModelViewSet):
   td.q-poco {{ color: #CA6F1E; font-size: 11pt; }}
   td.q-nulla {{ color: #A93226; font-size: 11pt; }}
   td.q-vuoto {{ color: #CCC; }}
-  .nota-pasto td {{ font-style: italic; color: #888; font-size: 7.5pt; border-top: none; }}
+  td.nota-pasto-cell {{ font-style: italic; color: #888; font-size: 7.5pt; border-top: none; text-align: left; }}
   /* Diario */
   .umore-col {{ font-size: 14pt; text-align: center; width: 30px; }}
   .testo-col {{ text-align: left; }}
@@ -310,8 +318,10 @@ class BambinoViewSet(LogAccessoMixin, viewsets.ModelViewSet):
 </body>
 </html>'''
 
+        import re
         pdf_bytes = HTML(string=html).write_pdf()
-        nome_file = f'report_{bambino.cognome.lower()}_{bambino.nome.lower()}_{anno}_{mese:02d}.pdf'
+        safe = re.sub(r'[^\w\-]', '_', f'{bambino.cognome}_{bambino.nome}', flags=re.ASCII)
+        nome_file = f'report_{safe}_{anno}_{mese:02d}.pdf'
         resp = HttpResponse(pdf_bytes, content_type='application/pdf')
         resp['Content-Disposition'] = f'attachment; filename="{nome_file}"'
         return resp
