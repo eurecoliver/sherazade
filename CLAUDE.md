@@ -1023,3 +1023,24 @@ Prossimo task: backup offsite (Hetzner Storage Box o Backblaze B2 — da decider
 - `frontend/src/app/[locale]/dashboard/staff/page.tsx`: aggiunto Colloqui in NAV_ITEMS
 - `frontend/src/app/[locale]/dashboard/admin/page.tsx`: aggiunto COLLOQUI_ITEM + bottone
 - `frontend/src/app/[locale]/dashboard/genitore/page.tsx`: aggiunto Colloqui in NAV_ITEMS
+
+### Report mensile PDF (14 maggio 2026) — branch feature/report-mensile — DEPLOYATO
+- Action `report_mensile` su `BambinoViewSet`: `GET /api/v1/bambini/{id}/report-mensile/?anno=YYYY&mese=MM`
+- PDF A4 generato con WeasyPrint, 3 sezioni: presenze (mini-calendario P/A/NR + 4 KPI box), pasti (tabella giorni × portate con emoji quantità), diario (umore + attività + note + sonno + popò + tag)
+- Permessi: genitore solo propri figli, cuoca bloccata, staff libero accesso; `anno`/`mese` validati con try/except
+- Tutti i testi utente (`nome`, `cognome`, `gruppo`, `attivita_descrizione`, `note_giornata`, `note_pasto`, tag) passati per `html.escape()` per prevenire corruzione HTML
+- `Content-Disposition` con filename sanificato via `re.sub(r'[^\w\-]', '_', ...)`
+- Nota-pasto corretta da `<div>` a `<tr><td colspan="N">` (HTML valido in tbody)
+- Frontend admin bambini: pulsante "📄 Report mensile" nel modal dettaglio → expand inline con selettori mese/anno → download
+- Frontend genitore: card collassabile "📄 Report mensile" in fondo alla pagina → selettore figlio (se più di uno) + mese/anno → download
+- Nessuna migrazione DB necessaria
+
+**File creati:**
+- `frontend/src/app/api/bambini/[id]/report-mensile/route.ts`
+
+**File modificati:**
+- `backend/apps/children/views.py`: aggiunta action `report_mensile` + import calendar/date in testa
+- `frontend/src/app/[locale]/dashboard/admin/bambini/page.tsx`: state + downloadReport + UI picker
+- `frontend/src/app/[locale]/dashboard/genitore/page.tsx`: state + downloadReport + card collassabile
+
+Prossimo task: feature/iscrizioni — moduli iscrizione digitali anno scolastico
