@@ -2,6 +2,7 @@ import threading
 
 from datetime import date
 
+from django.db import IntegrityError
 from django.db.models import Q
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
@@ -110,8 +111,8 @@ class SessioneColloquiViewSet(viewsets.ModelViewSet):
 
     @action(detail=True, methods=['patch'], url_path='toggle-aperto')
     def toggle_aperto(self, request, pk=None):
-        """Apre/chiude le prenotazioni per una sessione."""
-        if not check_permesso(request.user, 'colloqui', 'scrivi'):
+        """Apre/chiude le prenotazioni per una sessione. Solo manager."""
+        if request.user.role not in MANAGER_ROLES:
             return Response({'detail': 'Non autorizzato.'}, status=status.HTTP_403_FORBIDDEN)
         sessione = self.get_object()
         sessione.aperto = not sessione.aperto
@@ -163,6 +164,15 @@ class PrenotazioneColloquioViewSet(viewsets.ModelViewSet):
                 from rest_framework.exceptions import ValidationError
                 raise ValidationError('Le prenotazioni per questa sessione sono chiuse.')
 
+            # Verifica che slot_index sia nel range valido
+            slot_index = serializer.validated_data.get('slot_index', -1)
+            num_slots = sessione.get_num_slots()
+            if not (0 <= slot_index < num_slots):
+                from rest_framework.exceptions import ValidationError
+                raise ValidationError(
+                    f'Slot {slot_index} non valido. La sessione ha {num_slots} slot (0–{num_slots - 1}).'
+                )
+
             # Verifica che il genitore non abbia già una prenotazione attiva per questo bambino nella stessa sessione
             bambino = serializer.validated_data.get('bambino')
             existing = PrenotazioneColloquio.objects.filter(
@@ -176,10 +186,22 @@ class PrenotazioneColloquioViewSet(viewsets.ModelViewSet):
                 from rest_framework.exceptions import ValidationError
                 raise ValidationError('Hai già una prenotazione attiva per questa sessione.')
 
-            serializer.save(genitore=self.request.user)
+            try:
+                serializer.save(genitore=self.request.user)
+            except IntegrityError:
+                return Response(
+                    {'detail': 'Questo slot è stato appena prenotato da un altro genitore. Scegline un altro.'},
+                    status=status.HTTP_409_CONFLICT,
+                )
         else:
             # Staff può creare prenotazioni per conto dei genitori
-            serializer.save()
+            try:
+                serializer.save()
+            except IntegrityError:
+                return Response(
+                    {'detail': 'Slot già prenotato.'},
+                    status=status.HTTP_409_CONFLICT,
+                )
 
     def destroy(self, request, *args, **kwargs):
         prenotazione = self.get_object()

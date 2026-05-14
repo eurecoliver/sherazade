@@ -165,6 +165,19 @@ export default function ColloquiGenitore() {
     }
   }
 
+  // Ricarica solo gli slot senza toccare la visibilità della sessione aperta
+  const refreshSlots = async (sessioneId: number) => {
+    try {
+      const res = await fetch(`/api/colloqui/sessioni/${sessioneId}/slots`)
+      if (res.ok) {
+        const d = await res.json()
+        setSlots(Array.isArray(d) ? d : [])
+      }
+    } catch {
+      // silenzioso
+    }
+  }
+
   const handlePrenota = async () => {
     if (!slotSelezionato || !sessioneAperta) return
     setSaving(true)
@@ -185,8 +198,11 @@ export default function ColloquiGenitore() {
         setFeedback({ tipo: 'ok', testo: `✅ Prenotazione confermata: ${slotSelezionato.ora_inizio}–${slotSelezionato.ora_fine}` })
         setSlotSelezionato(null)
         setNoteGenitore('')
-        await Promise.all([fetchPrenotazioni(), apriSlots(sessioneAperta)])
-        // Ricarica i dati della sessione
+        // Ricarica prenotazioni, slot e contatori senza chiudere la vista
+        await Promise.all([
+          fetchPrenotazioni(),
+          sessioneAperta ? refreshSlots(sessioneAperta.id) : Promise.resolve(),
+        ])
         fetchSessioni()
       } else {
         const data = await res.json()
