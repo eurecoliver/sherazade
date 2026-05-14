@@ -31,23 +31,23 @@ class SessioneColloquiViewSet(viewsets.ModelViewSet):
             # Genitori vedono solo sessioni aperte
             qs = qs.filter(aperto=True)
             # Filtra per gruppo del proprio figlio
-            try:
-                from apps.children.models import Famiglia
-                famiglia = Famiglia.objects.filter(
-                    Q(genitore1=self.request.user) | Q(genitore2=self.request.user)
-                ).first()
-                if famiglia:
-                    gruppi_figli = list(
-                        famiglia.bambini.filter(attivo=True)
-                        .values_list('gruppo_id', flat=True)
-                        .distinct()
-                    )
-                    if gruppi_figli:
-                        qs = qs.filter(
-                            Q(gruppi__isnull=True) | Q(gruppi__id__in=gruppi_figli)
-                        ).distinct()
-            except Exception:
-                pass
+            # Nota: Famiglia ha OneToOne su Bambino → query diretta su Bambino
+            from apps.children.models import Bambino
+            bambini_genitore = Bambino.objects.filter(
+                Q(famiglia__genitore1=self.request.user) | Q(famiglia__genitore2=self.request.user),
+                attivo=True,
+            )
+            gruppi_figli = list(
+                bambini_genitore
+                .exclude(gruppo__isnull=True)
+                .values_list('gruppo_id', flat=True)
+                .distinct()
+            )
+            # Mostra sempre le sessioni "per tutti i gruppi" (gruppi vuoti)
+            # + quelle specifiche per i gruppi dei propri figli
+            qs = qs.filter(
+                Q(gruppi__isnull=True) | Q(gruppi__id__in=gruppi_figli)
+            ).distinct()
         else:
             # Staff: filtri opzionali
             data_param = self.request.query_params.get('data')
