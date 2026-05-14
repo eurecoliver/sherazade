@@ -34,6 +34,7 @@ const NAV_ITEMS = [
   { icon: '📅', label: 'Calendario', sub: 'Eventi e chiusure del nido',  path: '/calendario', bg: '#EBF8FF', color: '#2B6CB0', border: '#90CDF4', risorsa: 'calendario' },
   { icon: '📢', label: 'Circolari',  sub: 'Comunicazioni dal nido',      path: '/circolari',  bg: '#FFF9E6', color: '#D35400', border: '#FAD7A0', risorsa: 'circolari' },
   { icon: '📸', label: 'Portfolio', sub: 'Foto e video del nido',       path: '/portfolio',  bg: '#FFF0F6', color: '#D63384', border: '#F5BFDF', risorsa: 'portfolio' },
+  { icon: '🗓️', label: 'Colloqui',  sub: 'Prenota appuntamento',         path: '/colloqui',   bg: '#F0FDFA', color: '#0D9488', border: '#99F6E4', risorsa: 'colloqui' },
 ]
 
 export default function GenitoreDashboard() {
