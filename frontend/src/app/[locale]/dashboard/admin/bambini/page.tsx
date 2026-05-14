@@ -194,6 +194,12 @@ export default function BambiniPage() {
   // Unlink family
   const [unlinkLoading, setUnlinkLoading] = useState(false)
 
+  // Report mensile
+  const [showReportPicker, setShowReportPicker] = useState(false)
+  const [reportAnno, setReportAnno] = useState(new Date().getFullYear())
+  const [reportMese, setReportMese] = useState(new Date().getMonth() + 1)
+  const [reportLoading, setReportLoading] = useState(false)
+
 
   // Add delega form
   const [showDelForm, setShowDelForm] = useState(false)
@@ -675,6 +681,25 @@ export default function BambiniPage() {
     if (res.ok || res.status === 204) {
       setSelected(null)
       await fetchBambini()
+    }
+  }
+
+  const downloadReport = async () => {
+    if (!selected) return
+    setReportLoading(true)
+    try {
+      const res = await fetch(`/api/bambini/${selected.id}/report-mensile?anno=${reportAnno}&mese=${reportMese}`)
+      if (!res.ok) return
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `report_${selected.cognome}_${selected.nome}_${reportAnno}_${String(reportMese).padStart(2, '0')}.pdf`
+      a.click()
+      URL.revokeObjectURL(url)
+      setShowReportPicker(false)
+    } finally {
+      setReportLoading(false)
     }
   }
 
@@ -1244,11 +1269,36 @@ export default function BambiniPage() {
               style={{ ...secondaryBtn, marginBottom: 0, color: selected.attivo ? '#E67E22' : '#27AE60', borderColor: selected.attivo ? '#FDEBD0' : '#D5F5E3' }}>
               {selected.attivo ? '⏸ Disattiva' : '▶ Riattiva'}
             </button>
+            <button onClick={() => { setShowReportPicker(v => !v); setReportAnno(new Date().getFullYear()); setReportMese(new Date().getMonth() + 1) }}
+              style={{ ...secondaryBtn, marginBottom: 0, color: '#0952A5', borderColor: '#BFDBFE' }}>
+              📄 Report mensile
+            </button>
             <button onClick={handleDelete}
               style={{ ...secondaryBtn, marginBottom: 0, marginLeft: 'auto', color: '#C0392B', borderColor: '#FADBD8' }}>
               🗑 Elimina
             </button>
           </div>
+          {showReportPicker && (
+            <div style={{ marginTop: '0.75rem', padding: '0.75rem 1rem', background: '#EFF6FF', borderRadius: '10px', border: '1px solid #BFDBFE', display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
+              <span style={{ fontWeight: 600, fontSize: '0.85rem', color: '#1D4ED8' }}>📅 Periodo:</span>
+              <select value={reportMese} onChange={e => setReportMese(Number(e.target.value))}
+                style={{ padding: '0.4rem 0.6rem', border: '1.5px solid #BFDBFE', borderRadius: '8px', fontSize: '0.85rem', fontFamily: 'inherit', background: 'white' }}>
+                {['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'].map((m, i) => (
+                  <option key={i+1} value={i+1}>{m}</option>
+                ))}
+              </select>
+              <select value={reportAnno} onChange={e => setReportAnno(Number(e.target.value))}
+                style={{ padding: '0.4rem 0.6rem', border: '1.5px solid #BFDBFE', borderRadius: '8px', fontSize: '0.85rem', fontFamily: 'inherit', background: 'white' }}>
+                {[new Date().getFullYear(), new Date().getFullYear() - 1, new Date().getFullYear() - 2].map(y => (
+                  <option key={y} value={y}>{y}</option>
+                ))}
+              </select>
+              <button onClick={downloadReport} disabled={reportLoading}
+                style={{ padding: '0.4rem 1rem', background: '#1D4ED8', color: 'white', border: 'none', borderRadius: '8px', fontSize: '0.85rem', fontWeight: 700, cursor: reportLoading ? 'wait' : 'pointer', fontFamily: 'inherit' }}>
+                {reportLoading ? '⏳ Generando...' : '⬇ Scarica PDF'}
+              </button>
+            </div>
+          )}
         </Overlay>
       )}
 

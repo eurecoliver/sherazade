@@ -45,6 +45,11 @@ export default function GenitoreDashboard() {
   const [bambini, setBambini] = useState<Bambino[]>([])
   const [nonLette, setNonLette] = useState(0)
   const [risorse, setRisorse] = useState<string[] | null>(null)
+  const [reportBambinoId, setReportBambinoId] = useState<number | ''>('')
+  const [reportAnno, setReportAnno] = useState(new Date().getFullYear())
+  const [reportMese, setReportMese] = useState(new Date().getMonth() + 1)
+  const [reportLoading, setReportLoading] = useState(false)
+  const [showReportSection, setShowReportSection] = useState(false)
 
   useEffect(() => {
     Promise.all([
@@ -57,6 +62,7 @@ export default function GenitoreDashboard() {
         setUser(meData)
         const list = Array.isArray(bambiniData) ? bambiniData : (bambiniData.results ?? [])
         setBambini(list)
+        if (list.length === 1) setReportBambinoId(list[0].id)
         const circ = Array.isArray(circolariData) ? circolariData : (circolariData.results ?? [])
         setNonLette(circ.filter((c: { letta: boolean }) => !c.letta).length)
         setRisorse(permData.risorse ?? null)
@@ -67,6 +73,25 @@ export default function GenitoreDashboard() {
   const handleLogout = async () => {
     await fetch('/api/auth/logout', { method: 'POST' })
     router.push(`/${locale}/login`)
+  }
+
+  const downloadReport = async () => {
+    if (!reportBambinoId) return
+    const b = bambini.find(x => x.id === reportBambinoId)
+    setReportLoading(true)
+    try {
+      const res = await fetch(`/api/bambini/${reportBambinoId}/report-mensile?anno=${reportAnno}&mese=${reportMese}`)
+      if (!res.ok) return
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `report_${b?.cognome ?? ''}_${b?.nome ?? ''}_${reportAnno}_${String(reportMese).padStart(2, '0')}.pdf`
+      a.click()
+      URL.revokeObjectURL(url)
+    } finally {
+      setReportLoading(false)
+    }
   }
 
   const base = `/${locale}/dashboard/genitore`
@@ -244,6 +269,64 @@ export default function GenitoreDashboard() {
             )
           })}
         </div>
+
+        {/* ── Report mensile PDF ─────────────────────────────────────────── */}
+        <button
+          onClick={() => setShowReportSection(v => !v)}
+          style={{
+            width: '100%', padding: '0.875rem 1.25rem',
+            background: showReportSection ? '#EFF6FF' : 'white',
+            border: `2px solid ${showReportSection ? '#93C5FD' : '#E5E7EB'}`,
+            borderRadius: '14px', cursor: 'pointer', fontFamily: 'inherit',
+            display: 'flex', alignItems: 'center', gap: '0.75rem', textAlign: 'left',
+          }}
+        >
+          <span style={{ fontSize: '1.3rem' }}>📄</span>
+          <div>
+            <p style={{ margin: 0, fontWeight: 700, fontSize: '0.9rem', color: '#1D4ED8' }}>Report mensile</p>
+            <p style={{ margin: 0, fontSize: '0.72rem', color: '#888' }}>Scarica il riepilogo PDF di presenze, pasti e diario</p>
+          </div>
+          <span style={{ marginLeft: 'auto', fontSize: '0.9rem', color: '#93C5FD' }}>{showReportSection ? '▲' : '▼'}</span>
+        </button>
+        {showReportSection && (
+          <div style={{ marginTop: '0.5rem', padding: '1rem', background: '#EFF6FF', borderRadius: '12px', border: '1px solid #BFDBFE', display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'flex-end' }}>
+            {bambini.length > 1 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                <label style={{ fontSize: '0.75rem', fontWeight: 600, color: '#1D4ED8' }}>Bambino</label>
+                <select value={reportBambinoId} onChange={e => setReportBambinoId(Number(e.target.value))}
+                  style={{ padding: '0.4rem 0.6rem', border: '1.5px solid #BFDBFE', borderRadius: '8px', fontSize: '0.85rem', fontFamily: 'inherit', background: 'white' }}>
+                  <option value="">— seleziona —</option>
+                  {bambini.map(b => {
+                    const nome = b.alias_attivo && b.alias_nome ? b.alias_nome : b.nome
+                    return <option key={b.id} value={b.id}>{nome} {b.cognome}</option>
+                  })}
+                </select>
+              </div>
+            )}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+              <label style={{ fontSize: '0.75rem', fontWeight: 600, color: '#1D4ED8' }}>Mese</label>
+              <select value={reportMese} onChange={e => setReportMese(Number(e.target.value))}
+                style={{ padding: '0.4rem 0.6rem', border: '1.5px solid #BFDBFE', borderRadius: '8px', fontSize: '0.85rem', fontFamily: 'inherit', background: 'white' }}>
+                {['Gennaio','Febbraio','Marzo','Aprile','Maggio','Giugno','Luglio','Agosto','Settembre','Ottobre','Novembre','Dicembre'].map((m, i) => (
+                  <option key={i+1} value={i+1}>{m}</option>
+                ))}
+              </select>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+              <label style={{ fontSize: '0.75rem', fontWeight: 600, color: '#1D4ED8' }}>Anno</label>
+              <select value={reportAnno} onChange={e => setReportAnno(Number(e.target.value))}
+                style={{ padding: '0.4rem 0.6rem', border: '1.5px solid #BFDBFE', borderRadius: '8px', fontSize: '0.85rem', fontFamily: 'inherit', background: 'white' }}>
+                {[new Date().getFullYear(), new Date().getFullYear() - 1].map(y => (
+                  <option key={y} value={y}>{y}</option>
+                ))}
+              </select>
+            </div>
+            <button onClick={downloadReport} disabled={!reportBambinoId || reportLoading}
+              style={{ padding: '0.5rem 1.25rem', background: reportBambinoId ? '#1D4ED8' : '#93C5FD', color: 'white', border: 'none', borderRadius: '8px', fontSize: '0.875rem', fontWeight: 700, cursor: reportBambinoId && !reportLoading ? 'pointer' : 'not-allowed', fontFamily: 'inherit' }}>
+              {reportLoading ? '⏳ Generando...' : '⬇ Scarica PDF'}
+            </button>
+          </div>
+        )}
 
       </div>
     </div>
