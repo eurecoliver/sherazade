@@ -108,7 +108,12 @@ export default function UtentiPage() {
     setShowModal(true)
   }
 
+  const fmtErrors = (data: Record<string, unknown>) =>
+    (data.detail as string) ?? Object.entries(data).map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(', ') : v}`).join(' — ')
+
   const handleSave = async () => {
+    if (!form.email.trim()) { setError('L\'email è obbligatoria'); return }
+    if (!editingId && !form.first_name.trim()) { setError('Il nome è obbligatorio'); return }
     setSaving(true)
     setError('')
     const payload: Record<string, unknown> = { ...form }
@@ -128,7 +133,7 @@ export default function UtentiPage() {
       fetchUtenti()
     } else {
       const data = await res.json()
-      setError(JSON.stringify(data))
+      setError(fmtErrors(data))
     }
     setSaving(false)
   }
@@ -284,8 +289,8 @@ export default function UtentiPage() {
 
               <div>
                 <label style={{ fontSize: '0.8rem', fontWeight: 600, color: '#555', display: 'block', marginBottom: '0.25rem' }}>Email</label>
-                <input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
-                  style={{ width: '100%', padding: '0.6rem', borderRadius: '8px', border: '1.5px solid #D6CCFF', fontSize: '0.9rem', fontFamily: 'inherit', boxSizing: 'border-box' }} />
+                <input type="email" value={form.email} onChange={e => { setForm(f => ({ ...f, email: e.target.value })); if (error) setError('') }}
+                  style={{ width: '100%', padding: '0.6rem', borderRadius: '8px', border: `1.5px solid ${error.includes('email') ? '#E53E3E' : '#D6CCFF'}`, fontSize: '0.9rem', fontFamily: 'inherit', boxSizing: 'border-box' }} />
               </div>
 
               <div>

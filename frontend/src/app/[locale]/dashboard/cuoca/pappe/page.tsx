@@ -141,7 +141,7 @@ export default function CuocaPappePage() {
   }, [fetchData, selectedGruppo])
 
   const creaPiatto = async () => {
-    if (!nuovoPiatto.descrizione.trim()) return
+    if (!nuovoPiatto.descrizione.trim()) { setMsgPiatto('La descrizione è obbligatoria'); return }
     setSavingPiatto(true); setMsgPiatto('')
     const res = await fetch('/api/pappe/piatti', {
       method: 'POST',
@@ -316,9 +316,9 @@ export default function CuocaPappePage() {
                       <input
                         type="text"
                         value={nuovoPiatto.descrizione}
-                        onChange={e => setNuovoPiatto(f => ({ ...f, descrizione: e.target.value }))}
+                        onChange={e => { setNuovoPiatto(f => ({ ...f, descrizione: e.target.value })); if (msgPiatto) setMsgPiatto('') }}
                         placeholder="es. Pasta al pomodoro"
-                        style={{ width: '100%', padding: '0.5rem 0.75rem', border: '2px solid #D5F5E3', borderRadius: '8px', fontSize: '0.875rem', fontFamily: 'inherit', background: '#FAFFFE', boxSizing: 'border-box' }}
+                        style={{ width: '100%', padding: '0.5rem 0.75rem', border: `2px solid ${msgPiatto && !nuovoPiatto.descrizione.trim() ? '#E53E3E' : '#D5F5E3'}`, borderRadius: '8px', fontSize: '0.875rem', fontFamily: 'inherit', background: '#FAFFFE', boxSizing: 'border-box' }}
                       />
                     </div>
                   </div>
@@ -337,7 +337,7 @@ export default function CuocaPappePage() {
                   )}
                   <button
                     onClick={creaPiatto}
-                    disabled={savingPiatto || !nuovoPiatto.descrizione.trim()}
+                    disabled={savingPiatto}
                     style={{ alignSelf: 'flex-start', padding: '0.5rem 1.25rem', background: '#00B894', color: 'white', border: 'none', borderRadius: '8px', fontFamily: 'inherit', fontWeight: 700, fontSize: '0.875rem', cursor: savingPiatto ? 'not-allowed' : 'pointer', opacity: savingPiatto ? 0.7 : 1 }}
                   >
                     {savingPiatto ? 'Salvataggio...' : 'Aggiungi piatto'}

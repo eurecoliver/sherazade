@@ -413,8 +413,8 @@ export default function CalendarioStaff() {
               <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#555', display: 'block', marginBottom: '0.3rem' }}>Titolo *</span>
               <input
                 value={form.titolo}
-                onChange={e => setForm(f => ({ ...f, titolo: e.target.value }))}
-                style={{ width: '100%', padding: '0.6rem 0.875rem', border: '2px solid #E8E4FF', borderRadius: '10px', fontSize: '0.95rem', fontFamily: 'inherit', boxSizing: 'border-box' }}
+                onChange={e => { setForm(f => ({ ...f, titolo: e.target.value })); if (errore) setErrore('') }}
+                style={{ width: '100%', padding: '0.6rem 0.875rem', border: `2px solid ${errore && !form.titolo.trim() ? '#E53E3E' : '#E8E4FF'}`, borderRadius: '10px', fontSize: '0.95rem', fontFamily: 'inherit', boxSizing: 'border-box' }}
                 placeholder="Es. Uscita al parco, Chiusura festiva..."
               />
             </label>
@@ -422,8 +422,8 @@ export default function CalendarioStaff() {
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '1rem' }}>
               <label>
                 <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#555', display: 'block', marginBottom: '0.3rem' }}>Data inizio *</span>
-                <input type="date" value={form.data_inizio} onChange={e => setForm(f => ({ ...f, data_inizio: e.target.value }))}
-                  style={{ width: '100%', padding: '0.6rem 0.875rem', border: '2px solid #E8E4FF', borderRadius: '10px', fontSize: '0.9rem', fontFamily: 'inherit', boxSizing: 'border-box' }} />
+                <input type="date" value={form.data_inizio} onChange={e => { setForm(f => ({ ...f, data_inizio: e.target.value })); if (errore) setErrore('') }}
+                  style={{ width: '100%', padding: '0.6rem 0.875rem', border: `2px solid ${errore && !form.data_inizio ? '#E53E3E' : '#E8E4FF'}`, borderRadius: '10px', fontSize: '0.9rem', fontFamily: 'inherit', boxSizing: 'border-box' }} />
               </label>
               <label>
                 <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#555', display: 'block', marginBottom: '0.3rem' }}>Data fine</span>

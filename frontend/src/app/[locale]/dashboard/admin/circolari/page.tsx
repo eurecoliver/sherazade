@@ -292,16 +292,16 @@ export default function CircolariAdmin() {
 
             <label style={{ display: 'block', marginBottom: '1rem' }}>
               <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#555', display: 'block', marginBottom: '0.3rem' }}>Titolo *</span>
-              <input value={form.titolo} onChange={e => setForm(f => ({ ...f, titolo: e.target.value }))}
-                style={{ width: '100%', padding: '0.6rem 0.875rem', border: '2px solid #E8E4FF', borderRadius: '10px', fontSize: '0.95rem', fontFamily: 'inherit', boxSizing: 'border-box' }}
+              <input value={form.titolo} onChange={e => { setForm(f => ({ ...f, titolo: e.target.value })); if (errore) setErrore('') }}
+                style={{ width: '100%', padding: '0.6rem 0.875rem', border: `2px solid ${errore && !form.titolo.trim() ? '#E53E3E' : '#E8E4FF'}`, borderRadius: '10px', fontSize: '0.95rem', fontFamily: 'inherit', boxSizing: 'border-box' }}
                 placeholder="Es. Uscita didattica 15 aprile..." />
             </label>
 
             <label style={{ display: 'block', marginBottom: '1rem' }}>
               <span style={{ fontSize: '0.8rem', fontWeight: 600, color: '#555', display: 'block', marginBottom: '0.3rem' }}>Testo *</span>
-              <textarea value={form.testo} onChange={e => setForm(f => ({ ...f, testo: e.target.value }))}
+              <textarea value={form.testo} onChange={e => { setForm(f => ({ ...f, testo: e.target.value })); if (errore) setErrore('') }}
                 rows={6}
-                style={{ width: '100%', padding: '0.6rem 0.875rem', border: '2px solid #E8E4FF', borderRadius: '10px', fontSize: '0.875rem', fontFamily: 'inherit', resize: 'vertical', boxSizing: 'border-box' }}
+                style={{ width: '100%', padding: '0.6rem 0.875rem', border: `2px solid ${errore && !form.testo.trim() ? '#E53E3E' : '#E8E4FF'}`, borderRadius: '10px', fontSize: '0.875rem', fontFamily: 'inherit', resize: 'vertical', boxSizing: 'border-box' }}
                 placeholder="Testo della comunicazione..." />
             </label>
 

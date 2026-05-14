@@ -256,7 +256,12 @@ export default function ImpostazioniPage() {
     setShowRuoloModal(true)
   }
 
+  const fmtErrors = (data: Record<string, unknown>) =>
+    (data.detail as string) ?? Object.entries(data).map(([k, v]) => `${k}: ${Array.isArray(v) ? v.join(', ') : v}`).join(' — ')
+
   const saveRuolo = async () => {
+    if (!editingRuolo && !ruoloForm.codice.trim()) { setRuoloError('Il codice è obbligatorio'); return }
+    if (!ruoloForm.nome.trim()) { setRuoloError('Il nome è obbligatorio'); return }
     setSavingRuolo(true)
     setRuoloError('')
     const url = editingRuolo ? `/api/config/ruoli/${editingRuolo.id}` : '/api/config/ruoli'
@@ -274,7 +279,7 @@ export default function ImpostazioniPage() {
       fetchRuoli()
     } else {
       const data = await res.json()
-      setRuoloError(data.detail ?? JSON.stringify(data))
+      setRuoloError(fmtErrors(data))
     }
     setSavingRuolo(false)
   }
@@ -350,6 +355,7 @@ export default function ImpostazioniPage() {
   }
 
   const saveGruppo = async () => {
+    if (!gruppoForm.nome.trim()) { setGruppoError('Il nome del gruppo è obbligatorio'); return }
     setSavingGruppo(true)
     setGruppoError('')
     const url = editingGruppoId ? `/api/config/gruppi/${editingGruppoId}` : '/api/config/gruppi'
@@ -364,7 +370,7 @@ export default function ImpostazioniPage() {
       fetchGruppi()
     } else {
       const data = await res.json()
-      setGruppoError(JSON.stringify(data))
+      setGruppoError(fmtErrors(data))
     }
     setSavingGruppo(false)
   }
@@ -392,6 +398,7 @@ export default function ImpostazioniPage() {
   }
 
   const saveOrario = async () => {
+    if (!orarioForm.etichetta.trim()) { setOrarioError("L'etichetta è obbligatoria"); return }
     setSavingOrario(true)
     setOrarioError('')
     const url = editingOrarioId ? `/api/config/orari/${editingOrarioId}` : '/api/config/orari'
@@ -406,7 +413,7 @@ export default function ImpostazioniPage() {
       fetchOrari()
     } else {
       const data = await res.json()
-      setOrarioError(JSON.stringify(data))
+      setOrarioError(fmtErrors(data))
     }
     setSavingOrario(false)
   }
@@ -774,9 +781,9 @@ export default function ImpostazioniPage() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
               <div>
                 <label style={{ fontSize: '0.8rem', fontWeight: 600, color: '#555', display: 'block', marginBottom: '0.25rem' }}>Nome *</label>
-                <input value={gruppoForm.nome} onChange={e => setGruppoForm(f => ({ ...f, nome: e.target.value }))}
+                <input value={gruppoForm.nome} onChange={e => { setGruppoForm(f => ({ ...f, nome: e.target.value })); if (gruppoError) setGruppoError('') }}
                   placeholder="es. Gialli, Rossi, Nido A..."
-                  style={{ width: '100%', padding: '0.6rem', borderRadius: '8px', border: '1.5px solid #D6CCFF', fontSize: '0.9rem', fontFamily: 'inherit', boxSizing: 'border-box' }} />
+                  style={{ width: '100%', padding: '0.6rem', borderRadius: '8px', border: `1.5px solid ${gruppoError ? '#E53E3E' : '#D6CCFF'}`, fontSize: '0.9rem', fontFamily: 'inherit', boxSizing: 'border-box' }} />
               </div>
 
               <div>
@@ -833,9 +840,9 @@ export default function ImpostazioniPage() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
               <div>
                 <label style={{ fontSize: '0.8rem', fontWeight: 600, color: '#555', display: 'block', marginBottom: '0.25rem' }}>Etichetta *</label>
-                <input value={orarioForm.etichetta} onChange={e => setOrarioForm(f => ({ ...f, etichetta: e.target.value }))}
+                <input value={orarioForm.etichetta} onChange={e => { setOrarioForm(f => ({ ...f, etichetta: e.target.value })); if (orarioError) setOrarioError('') }}
                   placeholder="es. Standard, Anticipo, Posticipo..."
-                  style={{ width: '100%', padding: '0.6rem', borderRadius: '8px', border: '1.5px solid #D6CCFF', fontSize: '0.9rem', fontFamily: 'inherit', boxSizing: 'border-box' }} />
+                  style={{ width: '100%', padding: '0.6rem', borderRadius: '8px', border: `1.5px solid ${orarioError ? '#E53E3E' : '#D6CCFF'}`, fontSize: '0.9rem', fontFamily: 'inherit', boxSizing: 'border-box' }} />
               </div>
 
               <div>

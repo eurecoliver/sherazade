@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useLocale } from 'next-intl'
 import { useRouter } from 'next/navigation'
 import UserChip from '@/components/UserChip'
@@ -119,6 +119,10 @@ export default function ColloquiStaffPage() {
   })
   const [saving, setSaving] = useState(false)
   const [savingToggle, setSavingToggle] = useState<number | null>(null)
+  const [openDropdownId, setOpenDropdownId] = useState<number | null>(null)
+  const [formErrors, setFormErrors] = useState<Record<string, string>>({})
+  const titleRef = useRef<HTMLInputElement>(null)
+  const dataRef = useRef<HTMLInputElement>(null)
 
   // ── Data fetching ──────────────────────────────────────────────────────────
 
@@ -149,6 +153,14 @@ export default function ColloquiStaffPage() {
   }, [])
 
   useEffect(() => { fetchSessioni() }, [fetchSessioni])
+
+  // Chiude il dropdown su click esterno
+  useEffect(() => {
+    if (openDropdownId === null) return
+    const close = () => setOpenDropdownId(null)
+    document.addEventListener('click', close)
+    return () => document.removeEventListener('click', close)
+  }, [openDropdownId])
 
   const apriSlots = async (sessione: Sessione) => {
     setSessioneAperta(sessione)
@@ -190,6 +202,7 @@ export default function ColloquiStaffPage() {
       aperto: true,
       gruppi_ids: [],
     })
+    setFormErrors({})
     setShowForm(true)
   }
 
@@ -208,12 +221,22 @@ export default function ColloquiStaffPage() {
       aperto: s.aperto,
       gruppi_ids: s.gruppi.map(g => g.id),
     })
+    setFormErrors({})
     setShowForm(true)
   }
 
   const handleSave = async () => {
-    if (!formData.titolo.trim() || !formData.data) return
-    if (formData.numero_slot < 1) return
+    const errors: Record<string, string> = {}
+    if (!formData.titolo.trim()) errors.titolo = 'Il titolo è obbligatorio'
+    if (!formData.data) errors.data = 'La data è obbligatoria'
+    if (formData.numero_slot < 1) errors.numero_slot = 'Inserisci almeno 1 slot'
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors)
+      if (errors.titolo) titleRef.current?.focus()
+      else if (errors.data) dataRef.current?.focus()
+      return
+    }
+    setFormErrors({})
     const oraFineCalcolata = addMinutes(formData.ora_inizio, formData.numero_slot * formData.durata_slot)
     setSaving(true)
     try {
@@ -343,7 +366,7 @@ export default function ColloquiStaffPage() {
                     disabled={savingToggle === sessioneAperta.id}
                     style={{ padding: '0.3rem 0.75rem', borderRadius: '12px', border: '1.5px solid #CBD5E0', background: 'white', cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.8rem', fontWeight: 600, color: '#4A5568' }}
                   >
-                    {savingToggle === sessioneAperta.id ? '…' : sessioneAperta.aperto ? 'Chiudi' : 'Apri'}
+                    {savingToggle === sessioneAperta.id ? '…' : sessioneAperta.aperto ? '🔒 Blocca' : '🔓 Sblocca'}
                   </button>
                 )}
                 {canManage && (
@@ -358,7 +381,7 @@ export default function ColloquiStaffPage() {
                   onClick={() => setSessioneAperta(null)}
                   style={{ padding: '0.3rem 0.75rem', borderRadius: '12px', border: '1.5px solid #E2E8F0', background: 'white', cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.8rem', fontWeight: 600, color: '#666' }}
                 >
-                  ✕ Chiudi
+                  ↑ Nascondi
                 </button>
               </div>
             </div>
@@ -492,35 +515,49 @@ export default function ColloquiStaffPage() {
                         {s.gruppi.length > 0 && ` · ${s.gruppi.map(g => g.nome).join(', ')}`}
                       </p>
                     </div>
-                    <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', alignItems: 'center' }}>
                       <button
                         onClick={() => sessioneAperta?.id === s.id ? setSessioneAperta(null) : apriSlots(s)}
                         style={{ padding: '0.4rem 0.875rem', borderRadius: '12px', border: '1.5px solid #BDE0FF', background: sessioneAperta?.id === s.id ? '#0984E3' : '#EAF4FF', color: sessioneAperta?.id === s.id ? 'white' : '#0984E3', cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.82rem', fontWeight: 600 }}
                       >
-                        {sessioneAperta?.id === s.id ? '✕ Chiudi' : '👁️ Slot'}
+                        {sessioneAperta?.id === s.id ? '✖ Slot' : '👁️ Slot'}
                       </button>
                       {canManage && (
-                        <>
+                        <div style={{ position: 'relative' }}>
                           <button
-                            onClick={() => handleToggleAperto(s)}
-                            disabled={savingToggle === s.id}
-                            style={{ padding: '0.4rem 0.875rem', borderRadius: '12px', border: '1.5px solid #CBD5E0', background: 'white', cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.82rem', fontWeight: 600, color: '#4A5568' }}
+                            onClick={e => { e.stopPropagation(); setOpenDropdownId(prev => prev === s.id ? null : s.id) }}
+                            style={{ padding: '0.4rem 0.6rem', borderRadius: '12px', border: '1.5px solid #CBD5E0', background: 'white', cursor: 'pointer', fontFamily: 'inherit', fontSize: '1rem', fontWeight: 700, color: '#4A5568', lineHeight: 1 }}
+                            title="Azioni"
                           >
-                            {savingToggle === s.id ? '…' : s.aperto ? '🔒 Chiudi' : '🔓 Apri'}
+                            ⋮
                           </button>
-                          <button
-                            onClick={() => openEdit(s)}
-                            style={{ padding: '0.4rem 0.875rem', borderRadius: '12px', border: '1.5px solid #FED7AA', background: '#FFF7ED', cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.82rem', fontWeight: 600, color: '#C05621' }}
-                          >
-                            ✏️
-                          </button>
-                          <button
-                            onClick={() => handleDelete(s)}
-                            style={{ padding: '0.4rem 0.875rem', borderRadius: '12px', border: '1.5px solid #FED7D7', background: '#FFF5F5', cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.82rem', fontWeight: 600, color: '#E53E3E' }}
-                          >
-                            🗑️
-                          </button>
-                        </>
+                          {openDropdownId === s.id && (
+                            <div
+                              onClick={e => e.stopPropagation()}
+                              style={{ position: 'absolute', right: 0, top: 'calc(100% + 6px)', zIndex: 200, background: 'white', borderRadius: '12px', boxShadow: '0 8px 24px rgba(0,0,0,0.13)', border: '1.5px solid #E2E8F0', minWidth: '220px', overflow: 'hidden' }}
+                            >
+                              <button
+                                onClick={() => { handleToggleAperto(s); setOpenDropdownId(null) }}
+                                disabled={savingToggle === s.id}
+                                style={{ display: 'block', width: '100%', padding: '0.75rem 1rem', background: 'none', border: 'none', borderBottom: '1px solid #EDF2F7', textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.88rem', fontWeight: 600, color: '#4A5568' }}
+                              >
+                                {savingToggle === s.id ? '…' : s.aperto ? '🔒 Blocca prenotazioni' : '🔓 Apri prenotazioni'}
+                              </button>
+                              <button
+                                onClick={() => { openEdit(s); setOpenDropdownId(null) }}
+                                style={{ display: 'block', width: '100%', padding: '0.75rem 1rem', background: 'none', border: 'none', borderBottom: '1px solid #EDF2F7', textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.88rem', fontWeight: 600, color: '#C05621' }}
+                              >
+                                ✏️ Modifica
+                              </button>
+                              <button
+                                onClick={() => { handleDelete(s); setOpenDropdownId(null) }}
+                                style={{ display: 'block', width: '100%', padding: '0.75rem 1rem', background: 'none', border: 'none', textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit', fontSize: '0.88rem', fontWeight: 600, color: '#E53E3E' }}
+                              >
+                                🗑️ Elimina
+                              </button>
+                            </div>
+                          )}
+                        </div>
                       )}
                     </div>
                   </div>
@@ -544,11 +581,13 @@ export default function ColloquiStaffPage() {
 
             <label style={labelStyle}>Titolo *</label>
             <input
+              ref={titleRef}
               value={formData.titolo}
-              onChange={e => setFormData(p => ({ ...p, titolo: e.target.value }))}
+              onChange={e => { setFormData(p => ({ ...p, titolo: e.target.value })); if (formErrors.titolo) setFormErrors(p => ({ ...p, titolo: '' })) }}
               placeholder="Es. Colloqui novembre 2026"
-              style={inputStyle}
+              style={{ ...inputStyle, ...(formErrors.titolo ? { borderColor: '#E53E3E', marginBottom: '0.2rem' } : {}) }}
             />
+            {formErrors.titolo && <p style={{ color: '#E53E3E', fontSize: '0.78rem', margin: '0 0 0.6rem', fontWeight: 600 }}>⚠ {formErrors.titolo}</p>}
 
             <label style={labelStyle}>Descrizione (opzionale)</label>
             <textarea
@@ -563,11 +602,13 @@ export default function ColloquiStaffPage() {
               <div>
                 <label style={labelStyle}>Data *</label>
                 <input
+                  ref={dataRef}
                   type="date"
                   value={formData.data}
-                  onChange={e => setFormData(p => ({ ...p, data: e.target.value }))}
-                  style={inputStyle}
+                  onChange={e => { setFormData(p => ({ ...p, data: e.target.value })); if (formErrors.data) setFormErrors(p => ({ ...p, data: '' })) }}
+                  style={{ ...inputStyle, ...(formErrors.data ? { borderColor: '#E53E3E', marginBottom: '0.2rem' } : {}) }}
                 />
+                {formErrors.data && <p style={{ color: '#E53E3E', fontSize: '0.78rem', margin: '0 0 0.6rem', fontWeight: 600 }}>⚠ {formErrors.data}</p>}
               </div>
               <div>
                 <label style={labelStyle}>Durata slot (minuti)</label>
@@ -597,9 +638,10 @@ export default function ColloquiStaffPage() {
                   value={formData.numero_slot}
                   min={1}
                   max={50}
-                  onChange={e => setFormData(p => ({ ...p, numero_slot: parseInt(e.target.value) || 1 }))}
-                  style={inputStyle}
+                  onChange={e => { setFormData(p => ({ ...p, numero_slot: parseInt(e.target.value) || 1 })); if (formErrors.numero_slot) setFormErrors(p => ({ ...p, numero_slot: '' })) }}
+                  style={{ ...inputStyle, ...(formErrors.numero_slot ? { borderColor: '#E53E3E', marginBottom: '0.2rem' } : {}) }}
                 />
+                {formErrors.numero_slot && <p style={{ color: '#E53E3E', fontSize: '0.78rem', margin: '0 0 0.6rem', fontWeight: 600 }}>⚠ {formErrors.numero_slot}</p>}
               </div>
             </div>
 
@@ -660,7 +702,7 @@ export default function ColloquiStaffPage() {
               </button>
               <button
                 onClick={handleSave}
-                disabled={saving || !formData.titolo.trim() || !formData.data}
+                disabled={saving}
                 style={{ padding: '0.6rem 1.5rem', borderRadius: '12px', border: 'none', background: saving ? '#93C5FD' : '#0984E3', color: 'white', cursor: saving ? 'default' : 'pointer', fontFamily: 'inherit', fontWeight: 700, fontSize: '0.9rem' }}
               >
                 {saving ? 'Salvataggio…' : editingSessione ? 'Salva modifiche' : 'Crea sessione'}

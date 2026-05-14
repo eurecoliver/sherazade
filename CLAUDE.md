@@ -1086,3 +1086,19 @@ Prossimo task: feature/export-gdpr — export dati GDPR per bambino/genitore
 - `backend/sherazade/urls.py`: aggiunto `include('apps.iscrizioni.urls')`
 - `frontend/src/app/[locale]/dashboard/admin/page.tsx`: tile Iscrizioni + fix emoji COLLOQUI_ITEM
 - `frontend/src/app/[locale]/dashboard/staff/page.tsx`: fix emoji Colloqui + Bacheca Live
+
+### Validazione form globale + UX colloqui (corrente)
+- **Colloqui staff**: form validation con errori per-campo (titolo, data, numero_slot) + focus automatico sul primo campo invalido; menu ⋮ kebab dropdown per Blocca/Apri/Modifica/Elimina sessione; pannello slot: pulsanti rinominati "🔒 Blocca"/"🔓 Sblocca" e "↑ Nascondi"
+- **Impostazioni admin**: validazione frontend su saveGruppo (nome), saveOrario (etichetta), saveRuolo (nome+codice); helper `fmtErrors()` per messaggi DRF leggibili; border rosso su campo obbligatorio vuoto
+- **Utenti admin**: validazione frontend email + nome; helper `fmtErrors()`; border rosso su email
+- **Calendario staff**: border rosso dinamico su titolo e data_inizio; errore si cancella all'input
+- **Circolari admin**: border rosso dinamico su titolo e testo; errore si cancella all'input
+- **Pappe cuoca**: messaggio errore esplicito "La descrizione è obbligatoria" invece di `return` silenzioso
+
+**File modificati:**
+- `frontend/src/app/[locale]/dashboard/staff/colloqui/page.tsx`
+- `frontend/src/app/[locale]/dashboard/admin/impostazioni/page.tsx`
+- `frontend/src/app/[locale]/dashboard/admin/utenti/page.tsx`
+- `frontend/src/app/[locale]/dashboard/staff/calendario/page.tsx`
+- `frontend/src/app/[locale]/dashboard/admin/circolari/page.tsx`
+- `frontend/src/app/[locale]/dashboard/cuoca/pappe/page.tsx`
