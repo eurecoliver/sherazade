@@ -1043,4 +1043,46 @@ Prossimo task: backup offsite (Hetzner Storage Box o Backblaze B2 — da decider
 - `frontend/src/app/[locale]/dashboard/admin/bambini/page.tsx`: state + downloadReport + UI picker
 - `frontend/src/app/[locale]/dashboard/genitore/page.tsx`: state + downloadReport + card collassabile
 
-Prossimo task: feature/iscrizioni — moduli iscrizione digitali anno scolastico
+Prossimo task: feature/export-gdpr — export dati GDPR per bambino/genitore
+
+---
+
+### Iscrizioni digitali — branch feature/iscrizioni — COMPLETATO 14 maggio 2026
+
+**Backend (`apps.iscrizioni`):**
+- `ConfigurazioneIscrizioni`: singleton (get_or_create pk=1) con flag `aperto`, `anno_scolastico`, messaggi benvenuto/chiuso, `invia_email_conferma`, date apertura/chiusura
+- `RichiestaIscrizione`: dati bambino + genitore1 + genitore2 (opzionale) + gestione (stato, note_admin, assegnato_a, bambino OneToOne)
+- `Stato` choices: `in_attesa`, `approvata`, `rifiutata`, `lista_attesa`
+- Action `POST /richieste/` (AllowAny): check `aperto`, salva ip_address, anno da config, email conferma in background thread
+- Action `GET /richieste/config-pubblica/` (AllowAny): restituisce config ridotta per il form pubblico
+- Action `POST /richieste/{id}/approva/`: crea `User` + `Bambino` + `Famiglia` in automatico; gestisce `IntegrityError` su CF duplicato (409); `telefono_emergenza` preso da `g1_telefono`
+- Permessi: `ConfigPermission` (GET: MANAGER_ROLES, PATCH: ADMIN/DIRETTRICE); richieste gestione solo MANAGER_ROLES
+- `config/migrations/0010_add_iscrizioni_risorsa.py`: seed permessi (direttrice: leggi+scrivi+elimina, coordinatrice: leggi+scrivi)
+
+**Frontend:**
+- `/[locale]/iscrizioni`: form pubblico 4-step con stepper (bambino → g1 → g2+note → riepilogo); design viola/arancione; mostra messaggio chiuse se `aperto=False`; conferma verde dopo invio
+- `/dashboard/admin/iscrizioni`: tabella richieste, filtri pill per stato, KPI box ×4, drawer dettaglio con tutte le info, azioni (approva/lista attesa/rifiuta), modal impostazioni config, link pubblico copiabile
+- Tile "📋 Iscrizioni" nella dashboard admin (visibile con `canSee('iscrizioni')`)
+- API routes: `/api/iscrizioni/config` (GET smart: staff→full, pubblico→ridotta; PATCH admin), `/api/iscrizioni/richieste` (GET staff, POST pubblico senza auth), `/api/iscrizioni/richieste/[id]` (GET/PATCH), `/api/iscrizioni/richieste/[id]/approva` (POST)
+
+**Fix emoji dashboard (incluso in questo commit):**
+- Staff + Admin: icona Colloqui `🗓️` (U+1F5D3, rendering `?` su alcuni OS) → `🤝`
+- Staff: icona Bacheca Live `🗓📺` (stray char, artefatto copia) → `📺`
+
+**File creati:**
+- `backend/apps/iscrizioni/__init__.py`, `apps.py`, `admin.py`, `models.py`, `permissions.py`, `serializers.py`, `views.py`, `urls.py`
+- `backend/apps/iscrizioni/migrations/0001_initial.py`, `migrations/__init__.py`
+- `backend/apps/config/migrations/0010_add_iscrizioni_risorsa.py`
+- `frontend/src/app/[locale]/iscrizioni/page.tsx`
+- `frontend/src/app/[locale]/dashboard/admin/iscrizioni/page.tsx`
+- `frontend/src/app/api/iscrizioni/config/route.ts`
+- `frontend/src/app/api/iscrizioni/richieste/route.ts`
+- `frontend/src/app/api/iscrizioni/richieste/[id]/route.ts`
+- `frontend/src/app/api/iscrizioni/richieste/[id]/approva/route.ts`
+
+**File modificati:**
+- `backend/apps/config/models.py`: aggiunta risorsa `iscrizioni` in RISORSE
+- `backend/sherazade/settings/base.py`: aggiunto `apps.iscrizioni` in LOCAL_APPS
+- `backend/sherazade/urls.py`: aggiunto `include('apps.iscrizioni.urls')`
+- `frontend/src/app/[locale]/dashboard/admin/page.tsx`: tile Iscrizioni + fix emoji COLLOQUI_ITEM
+- `frontend/src/app/[locale]/dashboard/staff/page.tsx`: fix emoji Colloqui + Bacheca Live
