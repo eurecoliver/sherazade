@@ -896,6 +896,11 @@ Completato: Security review + fix critici
 - Cookie JWT: `secure: false` hardcoded → `secure: process.env.NODE_ENV === 'production'` in `fetchBackend.ts` e `login/route.ts` (pronto per HTTPS)
 - Open redirect: `callbackUrl` ora blocca anche protocol-relative URLs (`//attacker.com`) con check aggiuntivo `!startsWith('//')`
 
+### Security fix M1/M2/M3 (19 maggio 2026)
+- **M1 MIME validation**: `_valida_mime_media()` in `diary/views.py` e check inline in `portfolio/views.py` — blocca upload non-immagine/video con 400; tipi ammessi: jpeg/png/gif/webp/mp4/mov/avi/webm
+- **M2 MinIO private ACL**: `AWS_DEFAULT_ACL = 'private'`, `AWS_QUERYSTRING_AUTH = True`, `AWS_QUERYSTRING_EXPIRE = 3600`, `AWS_S3_SIGNATURE_VERSION = 's3v4'` in `settings/base.py` — media accessibili solo tramite presigned URL con scadenza 1h; nota: quando USE_S3=True, `AWS_S3_ENDPOINT_URL` deve essere l'URL esterno raggiungibile dal browser
+- **M3 SSH hardening**: `PasswordAuthentication no` in `/etc/ssh/sshd_config.d/50-cloud-init.conf` sul server; ricaricato con `systemctl reload ssh` (Ubuntu 24.04 usa `ssh.service`, non `sshd.service`)
+
 Prossimo task: HTTPS + Nginx (in attesa dominio)
 
 ### Export GDPR per bambino (14 maggio 2026) — branch feature/iscrizioni
