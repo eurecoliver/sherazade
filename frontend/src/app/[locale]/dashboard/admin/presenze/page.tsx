@@ -386,7 +386,7 @@ export default function AdminPresenzePage() {
     <div style={{ minHeight: '100vh', background: '#F8F9FA' }}>
 
       {/* Header */}
-      <div style={{ background: 'linear-gradient(135deg, #2D3436 0%, #636E72 100%)', padding: '1.25rem 1.5rem 1.75rem', color: 'white' }}>
+      <div style={{ background: 'linear-gradient(135deg, #6C5CE7 0%, #4834D4 100%)', padding: '1.25rem 1.5rem 1.75rem', color: 'white' }}>
         <div style={{ maxWidth: 'min(1080px, 96vw)', margin: '0 auto' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.875rem' }}>
             <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
@@ -432,9 +432,9 @@ export default function AdminPresenzePage() {
               onClick={() => setTab(t)}
               style={{
                 padding: '0.5rem 1.25rem',
-                background: tab === t ? '#2D3436' : 'white',
+                background: tab === t ? '#6C5CE7' : 'white',
                 color: tab === t ? 'white' : '#555',
-                border: `2px solid ${tab === t ? '#2D3436' : '#E2E8F0'}`,
+                border: `2px solid ${tab === t ? '#6C5CE7' : '#E2E8F0'}`,
                 borderRadius: '10px',
                 fontWeight: 700,
                 fontSize: '0.875rem',
@@ -509,7 +509,7 @@ export default function AdminPresenzePage() {
                   const nr = lista.filter(r => !r.presenza).length
                   return (
                     <div key={sez} style={{ background: 'white', borderRadius: '14px', marginBottom: '1rem', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
-                      <div style={{ background: '#2D3436', color: 'white', padding: '0.75rem 1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{ background: '#6C5CE7', color: 'white', padding: '0.75rem 1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <span style={{ fontWeight: 700 }}>Sezione {sez}</span>
                         <span style={{ fontSize: '0.8rem', opacity: 0.8 }}>
                           {presenti}✓ {assenti}✗ {nr > 0 ? `${nr}?` : ''}
@@ -619,7 +619,7 @@ export default function AdminPresenzePage() {
                 <button
                   onClick={salvaReg}
                   disabled={savingReg}
-                  style={{ padding: '0.875rem 2.5rem', background: savingReg ? '#A0AEC0' : '#2D3436', color: 'white', border: 'none', borderRadius: '12px', fontSize: '1rem', fontWeight: 700, cursor: savingReg ? 'not-allowed' : 'pointer', fontFamily: 'inherit', maxWidth: '400px', width: '100%' }}
+                  style={{ padding: '0.875rem 2.5rem', background: savingReg ? '#A0AEC0' : '#6C5CE7', color: 'white', border: 'none', borderRadius: '12px', fontSize: '1rem', fontWeight: 700, cursor: savingReg ? 'not-allowed' : 'pointer', fontFamily: 'inherit', maxWidth: '400px', width: '100%' }}
                 >
                   {savingReg ? 'Salvataggio...' : `Salva presenze (${Object.values(statiReg).filter(s => s.presente !== null).length} di ${righeReg.length})`}
                 </button>
@@ -650,7 +650,7 @@ export default function AdminPresenzePage() {
               <button
                 onClick={caricaReport}
                 disabled={loadingReport}
-                style={{ padding: '0.5rem 1.25rem', background: '#2D3436', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 700, fontSize: '0.875rem', cursor: 'pointer', fontFamily: 'inherit' }}
+                style={{ padding: '0.5rem 1.25rem', background: '#6C5CE7', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 700, fontSize: '0.875rem', cursor: 'pointer', fontFamily: 'inherit' }}
               >
                 {loadingReport ? 'Caricamento...' : 'Carica report'}
               </button>
@@ -669,7 +669,7 @@ export default function AdminPresenzePage() {
 
             {report && (
               <div style={{ background: 'white', borderRadius: '14px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
-                <div style={{ background: '#2D3436', color: 'white', padding: '0.875rem 1.25rem' }}>
+                <div style={{ background: '#6C5CE7', color: 'white', padding: '0.875rem 1.25rem' }}>
                   <span style={{ fontWeight: 700 }}>
                     {MESI[report.mese - 1]} {report.anno} — {report.giorni_nel_mese} giorni
                   </span>

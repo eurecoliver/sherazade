@@ -442,7 +442,7 @@ export default function GenitoriPage() {
     <div style={{ minHeight: '100vh', background: '#F8F9FA' }}>
 
       {/* Header */}
-      <div style={{ background: 'linear-gradient(135deg, #6C63FF 0%, #3F3D99 100%)', padding: '1.25rem 1.5rem 1.75rem', color: 'white' }}>
+      <div style={{ background: 'linear-gradient(135deg, #6C5CE7 0%, #4834D4 100%)', padding: '1.25rem 1.5rem 1.75rem', color: 'white' }}>
         <div style={{ maxWidth: 'min(1100px, 96vw)', margin: '0 auto' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.875rem' }}>
             <button onClick={() => router.push(`/${locale}/dashboard/admin`)} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.375rem', background: 'rgba(255,255,255,0.15)', color: 'white', border: '1.5px solid rgba(255,255,255,0.3)', borderRadius: '20px', padding: '0.35rem 0.875rem 0.35rem 0.625rem', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 600, fontFamily: 'inherit' }}>
@@ -467,12 +467,12 @@ export default function GenitoriPage() {
           </select>
           <div style={{ display: 'flex', gap: '0.25rem' }}>
             {(['cards', 'table'] as const).map(m => (
-              <button key={m} onClick={() => setViewMode(m)} style={{ padding: '0.5rem 0.75rem', background: viewMode === m ? '#6C63FF' : '#F7FAFC', color: viewMode === m ? 'white' : '#555', border: `1px solid ${viewMode === m ? '#6C63FF' : '#E2E8F0'}`, borderRadius: '8px', cursor: 'pointer', fontSize: '1rem', fontFamily: 'inherit' }}>
+              <button key={m} onClick={() => setViewMode(m)} style={{ padding: '0.5rem 0.75rem', background: viewMode === m ? '#6C5CE7' : '#F7FAFC', color: viewMode === m ? 'white' : '#555', border: `1px solid ${viewMode === m ? '#6C5CE7' : '#E2E8F0'}`, borderRadius: '8px', cursor: 'pointer', fontSize: '1rem', fontFamily: 'inherit' }}>
                 {m === 'cards' ? '▦' : '☰'}
               </button>
             ))}
           </div>
-          <button onClick={() => { setSelected(null); setShowEdit(false); setNewForm({ ...EMPTY_EDIT, password: '' }); setNewError(''); setShowNew(true) }} style={{ padding: '0.5rem 1.25rem', background: '#6C63FF', color: 'white', border: 'none', borderRadius: '10px', fontWeight: 700, fontSize: '0.875rem', cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' }}>
+          <button onClick={() => { setSelected(null); setShowEdit(false); setNewForm({ ...EMPTY_EDIT, password: '' }); setNewError(''); setShowNew(true) }} style={{ padding: '0.5rem 1.25rem', background: '#6C5CE7', color: 'white', border: 'none', borderRadius: '10px', fontWeight: 700, fontSize: '0.875rem', cursor: 'pointer', fontFamily: 'inherit', whiteSpace: 'nowrap' }}>
             + Nuovo genitore
           </button>
         </div>
@@ -480,7 +480,7 @@ export default function GenitoriPage() {
         {error && <div style={{ background: '#FADBD8', color: '#C0392B', padding: '0.75rem 1rem', borderRadius: '10px', marginBottom: '1rem', fontSize: '0.875rem' }}>{error}</div>}
 
         {loading ? (
-          <div style={{ textAlign: 'center', padding: '3rem', color: '#6C63FF', fontWeight: 600 }}>Caricamento...</div>
+          <div style={{ textAlign: 'center', padding: '3rem', color: '#6C5CE7', fontWeight: 600 }}>Caricamento...</div>
         ) : filtered.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '3rem', background: 'white', borderRadius: '16px', color: '#aaa' }}>Nessun genitore trovato.</div>
         ) : viewMode === 'cards' ? (
@@ -488,7 +488,7 @@ export default function GenitoriPage() {
             {filtered.map(g => {
               const figli = figlidiGenitore(g.id)
               return (
-                <div key={g.id} onClick={() => setSelected(g)} style={{ background: 'white', borderRadius: '16px', padding: '1.25rem', cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', border: '2px solid transparent', transition: 'all 0.15s', opacity: g.is_active ? 1 : 0.6 }} onMouseEnter={e => (e.currentTarget.style.borderColor = '#6C63FF')} onMouseLeave={e => (e.currentTarget.style.borderColor = 'transparent')}>
+                <div key={g.id} onClick={() => setSelected(g)} style={{ background: 'white', borderRadius: '16px', padding: '1.25rem', cursor: 'pointer', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', border: '2px solid transparent', transition: 'all 0.15s', opacity: g.is_active ? 1 : 0.6 }} onMouseEnter={e => (e.currentTarget.style.borderColor = '#6C5CE7')} onMouseLeave={e => (e.currentTarget.style.borderColor = 'transparent')}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.875rem', marginBottom: '0.625rem' }}>
                     <div style={{ width: 44, height: 44, borderRadius: '12px', background: '#EDE9FE', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.25rem', flexShrink: 0 }}>👤</div>
                     <div style={{ flex: 1, minWidth: 0 }}>
@@ -601,7 +601,7 @@ export default function GenitoriPage() {
 
           {/* Azioni */}
           <div style={{ display: 'flex', gap: '0.625rem', flexWrap: 'wrap', borderTop: '1px solid #F0F0F0', paddingTop: '1rem' }}>
-            <button onClick={() => openEdit(selected)} style={{ padding: '0.625rem 1.25rem', background: '#6C63FF', color: 'white', border: 'none', borderRadius: '10px', fontWeight: 700, fontSize: '0.875rem', cursor: 'pointer', fontFamily: 'inherit' }}>
+            <button onClick={() => openEdit(selected)} style={{ padding: '0.625rem 1.25rem', background: '#6C5CE7', color: 'white', border: 'none', borderRadius: '10px', fontWeight: 700, fontSize: '0.875rem', cursor: 'pointer', fontFamily: 'inherit' }}>
               ✏️ Modifica
             </button>
             <button onClick={() => {
@@ -657,7 +657,7 @@ export default function GenitoriPage() {
           </label>
           <ErrorAlert message={editError} />
           <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1.25rem' }}>
-            <button onClick={handleEditSubmit} disabled={editLoading} style={{ flex: 1, padding: '0.75rem', background: editLoading ? '#A0AEC0' : '#6C63FF', color: 'white', border: 'none', borderRadius: '10px', fontWeight: 700, fontSize: '0.9rem', cursor: editLoading ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
+            <button onClick={handleEditSubmit} disabled={editLoading} style={{ flex: 1, padding: '0.75rem', background: editLoading ? '#A0AEC0' : '#6C5CE7', color: 'white', border: 'none', borderRadius: '10px', fontWeight: 700, fontSize: '0.9rem', cursor: editLoading ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
               {editLoading ? 'Salvataggio...' : 'Salva modifiche'}
             </button>
             <button onClick={() => setShowEdit(false)} style={{ padding: '0.75rem 1.25rem', background: '#F7FAFC', color: '#555', border: '1px solid #E2E8F0', borderRadius: '10px', fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer', fontFamily: 'inherit' }}>
@@ -696,7 +696,7 @@ export default function GenitoriPage() {
           </div>
           <ErrorAlert message={newError} />
           <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1.25rem' }}>
-            <button onClick={handleNewSubmit} disabled={newLoading || !newForm.email} style={{ flex: 1, padding: '0.75rem', background: newLoading || !newForm.email ? '#A0AEC0' : '#6C63FF', color: 'white', border: 'none', borderRadius: '10px', fontWeight: 700, fontSize: '0.9rem', cursor: newLoading || !newForm.email ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
+            <button onClick={handleNewSubmit} disabled={newLoading || !newForm.email} style={{ flex: 1, padding: '0.75rem', background: newLoading || !newForm.email ? '#A0AEC0' : '#6C5CE7', color: 'white', border: 'none', borderRadius: '10px', fontWeight: 700, fontSize: '0.9rem', cursor: newLoading || !newForm.email ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
               {newLoading ? 'Creazione...' : 'Crea genitore'}
             </button>
             <button onClick={() => setShowNew(false)} style={{ padding: '0.75rem 1.25rem', background: '#F7FAFC', color: '#555', border: '1px solid #E2E8F0', borderRadius: '10px', fontWeight: 600, fontSize: '0.875rem', cursor: 'pointer', fontFamily: 'inherit' }}>
@@ -720,7 +720,7 @@ export default function GenitoriPage() {
           {/* Tabs */}
           <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
             {[{ k: 'cerca' as const, l: '🔍 Bambino esistente' }, { k: 'crea' as const, l: '➕ Crea nuovo bambino' }].map(({ k, l }) => (
-              <button key={k} onClick={() => { setCollegaTab(k); setCollegaError('') }} style={{ padding: '0.5rem 1rem', background: collegaTab === k ? '#6C63FF' : '#F7FAFC', color: collegaTab === k ? 'white' : '#555', border: `1px solid ${collegaTab === k ? '#6C63FF' : '#E2E8F0'}`, borderRadius: '8px', fontWeight: 600, fontSize: '0.82rem', cursor: 'pointer', fontFamily: 'inherit' }}>
+              <button key={k} onClick={() => { setCollegaTab(k); setCollegaError('') }} style={{ padding: '0.5rem 1rem', background: collegaTab === k ? '#6C5CE7' : '#F7FAFC', color: collegaTab === k ? 'white' : '#555', border: `1px solid ${collegaTab === k ? '#6C5CE7' : '#E2E8F0'}`, borderRadius: '8px', fontWeight: 600, fontSize: '0.82rem', cursor: 'pointer', fontFamily: 'inherit' }}>
                 {l}
               </button>
             ))}
@@ -762,7 +762,7 @@ export default function GenitoriPage() {
                         )}
                       </div>
                       {canAdd && (
-                        <button onClick={() => collegaBambino(b)} disabled={collegaLoading} style={{ padding: '0.4rem 0.875rem', background: '#6C63FF', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 700, fontSize: '0.78rem', cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
+                        <button onClick={() => collegaBambino(b)} disabled={collegaLoading} style={{ padding: '0.4rem 0.875rem', background: '#6C5CE7', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 700, fontSize: '0.78rem', cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0 }}>
                           {collegaLoading ? '...' : 'Collega'}
                         </button>
                       )}
@@ -789,7 +789,7 @@ export default function GenitoriPage() {
                 ))}
               </div>
               <ErrorAlert message={nuovoBError} />
-              <button onClick={creaNuovoBambino} disabled={nuovoBLoading} style={{ marginTop: '1rem', width: '100%', padding: '0.75rem', background: nuovoBLoading ? '#A0AEC0' : '#6C63FF', color: 'white', border: 'none', borderRadius: '10px', fontWeight: 700, fontSize: '0.9rem', cursor: nuovoBLoading ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
+              <button onClick={creaNuovoBambino} disabled={nuovoBLoading} style={{ marginTop: '1rem', width: '100%', padding: '0.75rem', background: nuovoBLoading ? '#A0AEC0' : '#6C5CE7', color: 'white', border: 'none', borderRadius: '10px', fontWeight: 700, fontSize: '0.9rem', cursor: nuovoBLoading ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
                 {nuovoBLoading ? 'Creazione...' : 'Crea bambino e collega'}
               </button>
             </>

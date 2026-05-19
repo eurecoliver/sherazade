@@ -101,7 +101,7 @@ function PercBar({ value, color = '#27AE60', label }: { value: number; color?: s
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div style={{ background: 'white', borderRadius: '16px', padding: '1.25rem', boxShadow: '0 2px 10px rgba(0,0,0,0.06)' }}>
-      <h2 style={{ margin: '0 0 1rem', fontSize: '0.95rem', fontWeight: 800, color: '#2D3436' }}>{title}</h2>
+      <h2 style={{ margin: '0 0 1rem', fontSize: '0.95rem', fontWeight: 800, color: '#6C5CE7' }}>{title}</h2>
       {children}
     </div>
   )
@@ -165,7 +165,7 @@ export default function StatistichePage() {
     <div style={{ minHeight: '100vh', background: '#F8F9FA' }}>
 
       {/* Header */}
-      <div style={{ background: 'linear-gradient(135deg, #2D3436 0%, #636E72 100%)', padding: '1.25rem 1.5rem 1.75rem', color: 'white' }}>
+      <div style={{ background: 'linear-gradient(135deg, #6C5CE7 0%, #4834D4 100%)', padding: '1.25rem 1.5rem 1.75rem', color: 'white' }}>
         <div style={{ maxWidth: 'min(1200px, 96vw)', margin: '0 auto' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.875rem' }}>
             <button
@@ -204,7 +204,7 @@ export default function StatistichePage() {
       </div>
 
       {loading ? (
-        <div style={{ textAlign: 'center', padding: '4rem', color: '#636E72', fontWeight: 600 }}>Caricamento statistiche...</div>
+        <div style={{ textAlign: 'center', padding: '4rem', color: '#4834D4', fontWeight: 600 }}>Caricamento statistiche...</div>
       ) : !data ? (
         <div style={{ textAlign: 'center', padding: '4rem', color: '#aaa' }}>Nessun dato disponibile.</div>
       ) : (
@@ -336,7 +336,7 @@ export default function StatistichePage() {
                       {b.cognome} {b.nome}
                     </span>
                     <span style={{ fontSize: '0.75rem', color: '#888', marginRight: '0.5rem' }}>{b.gruppo}</span>
-                    <span style={{ background: i < 3 ? '#FADBD8' : '#F0F4F8', color: i < 3 ? '#E74C3C' : '#636E72', borderRadius: '10px', padding: '0.2rem 0.625rem', fontWeight: 800, fontSize: '0.8rem' }}>
+                    <span style={{ background: i < 3 ? '#FADBD8' : '#F0F4F8', color: i < 3 ? '#E74C3C' : '#4834D4', borderRadius: '10px', padding: '0.2rem 0.625rem', fontWeight: 800, fontSize: '0.8rem' }}>
                       {b.giorni_assenti} gg
                     </span>
                   </div>

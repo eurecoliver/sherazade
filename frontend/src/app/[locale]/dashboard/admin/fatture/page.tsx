@@ -133,7 +133,7 @@ function UploadModal({ genitoreId, genitoreName, bambinoId, bambinoNome, anno, m
       <div onClick={e => e.stopPropagation()} style={{ background: 'white', borderRadius: '20px', padding: '1.5rem', width: '100%', maxWidth: '440px', boxShadow: '0 20px 60px rgba(0,0,0,0.25)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
           <div>
-            <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: '#6C63FF' }}>
+            <h3 style={{ margin: 0, fontSize: '1rem', fontWeight: 800, color: '#6C5CE7' }}>
               🧾 {MESI_LABEL[mese - 1]} {anno}
             </h3>
             <p style={{ margin: '0.15rem 0 0', fontSize: '0.8rem', color: '#888' }}>
@@ -155,7 +155,7 @@ function UploadModal({ genitoreId, genitoreName, bambinoId, bambinoNome, anno, m
               {file && <span style={{ fontSize: '0.82rem', color: '#27AE60', fontWeight: 600 }}>✓ {file.name}</span>}
               {!file && existing?.file_url && (
                 <a href={existing.file_url} target="_blank" rel="noopener noreferrer"
-                  style={{ fontSize: '0.82rem', color: '#6C63FF', fontWeight: 600, textDecoration: 'none' }}>
+                  style={{ fontSize: '0.82rem', color: '#6C5CE7', fontWeight: 600, textDecoration: 'none' }}>
                   📄 Vedi file
                 </a>
               )}
@@ -188,7 +188,7 @@ function UploadModal({ genitoreId, genitoreName, bambinoId, bambinoNome, anno, m
               Annulla
             </button>
             <button type="submit" disabled={loading}
-              style={{ flex: 2, padding: '0.75rem', background: loading ? '#A0AEC0' : '#6C63FF', color: 'white', border: 'none', borderRadius: '10px', fontWeight: 700, fontSize: '0.875rem', cursor: loading ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
+              style={{ flex: 2, padding: '0.75rem', background: loading ? '#A0AEC0' : '#6C5CE7', color: 'white', border: 'none', borderRadius: '10px', fontWeight: 700, fontSize: '0.875rem', cursor: loading ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
               {loading ? 'Salvataggio...' : (existing ? 'Aggiorna' : 'Salva')}
             </button>
           </div>
@@ -267,7 +267,7 @@ function FamilyModal({ genitoreId, genitoreName, genitoreEmail, figliFull, anno,
               <>
                 <div style={{ fontSize: '1rem' }}>✅</div>
                 {fattura.importo && <div style={{ fontSize: '0.68rem', fontWeight: 800, color: '#27AE60', marginTop: 1 }}>€{parseFloat(fattura.importo).toFixed(0)}</div>}
-                {fattura.file_url && <div style={{ fontSize: '0.6rem', color: '#6C63FF', marginTop: 1 }}>📄</div>}
+                {fattura.file_url && <div style={{ fontSize: '0.6rem', color: '#6C5CE7', marginTop: 1 }}>📄</div>}
               </>
             ) : (
               <div style={{ fontSize: '0.68rem', fontWeight: 600, color: hasProblem || isCurrent ? '#FC8181' : '#CBD5E0' }}>
@@ -288,7 +288,7 @@ function FamilyModal({ genitoreId, genitoreName, genitoreEmail, figliFull, anno,
       <div onClick={e => e.stopPropagation()} style={{ background: 'white', borderRadius: '24px', width: '100%', maxWidth: '560px', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 24px 64px rgba(0,0,0,0.2)', overflow: 'hidden' }}>
 
         {/* Header */}
-        <div style={{ background: 'linear-gradient(135deg, #6C63FF 0%, #3F3D99 100%)', padding: '1.25rem 1.5rem', color: 'white' }}>
+        <div style={{ background: 'linear-gradient(135deg, #6C5CE7 0%, #4834D4 100%)', padding: '1.25rem 1.5rem', color: 'white' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
@@ -319,7 +319,7 @@ function FamilyModal({ genitoreId, genitoreName, genitoreEmail, figliFull, anno,
             {slotAttesi - slotPagati > 0 && (
               <span style={{ color: '#E53E3E', fontWeight: 700 }}>⚠ {slotAttesi - slotPagati} mancanti</span>
             )}
-            {totale > 0 && <span style={{ color: '#6C63FF', fontWeight: 800 }}>€ {totale.toFixed(2).replace('.', ',')}</span>}
+            {totale > 0 && <span style={{ color: '#6C5CE7', fontWeight: 800 }}>€ {totale.toFixed(2).replace('.', ',')}</span>}
           </div>
         </div>
 
@@ -331,7 +331,7 @@ function FamilyModal({ genitoreId, genitoreName, genitoreEmail, figliFull, anno,
               return (
                 <div key={figlio.id} style={{ marginBottom: idx < figliFull.length - 1 ? '1.25rem' : 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: '0.625rem' }}>
-                    <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#6C63FF' }}>👶 {figlio.nome}</span>
+                    <span style={{ fontSize: '0.8rem', fontWeight: 700, color: '#6C5CE7' }}>👶 {figlio.nome}</span>
                     <span style={{ fontSize: '0.72rem', color: pFiglio === 12 ? '#27AE60' : '#E53E3E', fontWeight: 600, background: pFiglio === 12 ? '#F0FFF4' : '#FFF5F5', border: `1px solid ${pFiglio === 12 ? '#C6F6D5' : '#FEB2B2'}`, borderRadius: 10, padding: '1px 8px' }}>
                       {pFiglio}/12
                     </span>
@@ -477,7 +477,7 @@ export default function FatturePage() {
   if (loading) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', background: '#F7FAFC' }}>
-        <p style={{ color: '#6C63FF', fontWeight: 600 }}>Caricamento...</p>
+        <p style={{ color: '#6C5CE7', fontWeight: 600 }}>Caricamento...</p>
       </div>
     )
   }
@@ -486,7 +486,7 @@ export default function FatturePage() {
     <div style={{ minHeight: '100vh', background: '#F7FAFC' }}>
 
       {/* Header */}
-      <div style={{ background: 'linear-gradient(135deg, #6C63FF 0%, #3F3D99 100%)', padding: '1.25rem 1.5rem 1.75rem', color: 'white' }}>
+      <div style={{ background: 'linear-gradient(135deg, #6C5CE7 0%, #4834D4 100%)', padding: '1.25rem 1.5rem 1.75rem', color: 'white' }}>
         <div style={{ maxWidth: 'min(1200px, 96vw)', margin: '0 auto' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.875rem' }}>
             <button onClick={() => router.push(`/${locale}/dashboard/admin`)}
@@ -511,7 +511,7 @@ export default function FatturePage() {
           <div style={{ display: 'flex', gap: '0.375rem' }}>
             {[...new Set(mesi.map(m => m.anno))].sort((a, b) => b - a).map(a => (
               <button key={a} onClick={() => setAnno(a)}
-                style={{ padding: '0.5rem 0.875rem', background: anno === a ? '#6C63FF' : '#F7FAFC', color: anno === a ? 'white' : '#555', border: `1px solid ${anno === a ? '#6C63FF' : '#E2E8F0'}`, borderRadius: '8px', fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer', fontFamily: 'inherit' }}>
+                style={{ padding: '0.5rem 0.875rem', background: anno === a ? '#6C5CE7' : '#F7FAFC', color: anno === a ? 'white' : '#555', border: `1px solid ${anno === a ? '#6C5CE7' : '#E2E8F0'}`, borderRadius: '8px', fontWeight: 700, fontSize: '0.82rem', cursor: 'pointer', fontFamily: 'inherit' }}>
                 {a}
               </button>
             ))}
@@ -567,7 +567,7 @@ export default function FatturePage() {
                             {fam.genitore1_nome || fam.genitore1_email}
                           </p>
                           {figliFull.length > 0 && (
-                            <p style={{ margin: '0.1rem 0 0', fontSize: '0.72rem', color: '#6C63FF', fontWeight: 600 }}>
+                            <p style={{ margin: '0.1rem 0 0', fontSize: '0.72rem', color: '#6C5CE7', fontWeight: 600 }}>
                               👶 {figliFull.map(b => b.nome).join(' · ')}
                             </p>
                           )}
@@ -658,7 +658,7 @@ export default function FatturePage() {
                     )
                   })}
                   <td style={{ padding: '0.75rem', textAlign: 'right' }}>
-                    <span style={{ fontWeight: 800, color: '#6C63FF', fontSize: '1rem' }}>
+                    <span style={{ fontWeight: 800, color: '#6C5CE7', fontSize: '1rem' }}>
                       € {totaleComplessivo.toFixed(2).replace('.', ',')}
                     </span>
                   </td>

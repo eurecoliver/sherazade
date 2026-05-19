@@ -88,7 +88,7 @@ function initials(nome: string, cognome: string) {
 
 const inputSt: React.CSSProperties = {
   width: '100%', padding: '0.625rem 0.875rem',
-  border: '2px solid #FFD4B3', borderRadius: '10px',
+  border: '2px solid #DDD6FE', borderRadius: '10px',
   fontSize: '0.875rem', outline: 'none',
   boxSizing: 'border-box', fontFamily: 'inherit',
 }
@@ -97,7 +97,7 @@ function Field({ label, required, children }: { label: string; required?: boolea
   return (
     <div style={{ marginBottom: '0.75rem' }}>
       <label style={{ display: 'block', marginBottom: '0.3rem', fontWeight: 600, color: '#444', fontSize: '0.8rem' }}>
-        {label}{required && <span style={{ color: '#E8562A', marginLeft: '0.2rem' }}>*</span>}
+        {label}{required && <span style={{ color: '#4834D4', marginLeft: '0.2rem' }}>*</span>}
       </label>
       {children}
     </div>
@@ -727,7 +727,7 @@ export default function BambiniPage() {
   if (loading) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', background: '#FFF8F4' }}>
-        <p style={{ color: '#E8562A', fontWeight: 600 }}>Caricamento...</p>
+        <p style={{ color: '#4834D4', fontWeight: 600 }}>Caricamento...</p>
       </div>
     )
   }
@@ -742,7 +742,7 @@ export default function BambiniPage() {
 
       {/* ── Header ──────────────────────────────────────────────────────────── */}
       <div style={{
-        background: 'linear-gradient(135deg, #FF9A3C 0%, #E8562A 100%)',
+        background: 'linear-gradient(135deg, #6C5CE7 0%, #4834D4 100%)',
         padding: '1.5rem 1.5rem 2rem', color: 'white',
       }}>
         <div style={{ maxWidth: 'min(1080px, 96vw)', margin: '0 auto' }}>
@@ -765,7 +765,7 @@ export default function BambiniPage() {
             <button
               onClick={() => { setShowAdd(true); setAddError(''); clearPhoto(); setSelected(null); setShowEdit(false) }}
               style={{
-                background: 'white', color: '#E8562A', border: 'none',
+                background: 'white', color: '#4834D4', border: 'none',
                 borderRadius: '12px', padding: '0.75rem 1.25rem',
                 fontWeight: 700, cursor: 'pointer', fontSize: '0.875rem', fontFamily: 'inherit',
               }}
@@ -787,18 +787,18 @@ export default function BambiniPage() {
           <input
             type="search" placeholder="🔍 Cerca per nome o cognome..."
             value={search} onChange={e => setSearch(e.target.value)}
-            style={{ flex: '1 1 200px', padding: '0.625rem 0.875rem', border: '2px solid #FFD4B3', borderRadius: '10px', fontSize: '0.875rem', outline: 'none', fontFamily: 'inherit' }}
+            style={{ flex: '1 1 200px', padding: '0.625rem 0.875rem', border: '2px solid #DDD6FE', borderRadius: '10px', fontSize: '0.875rem', outline: 'none', fontFamily: 'inherit' }}
           />
           <select
             value={filterGruppo} onChange={e => setFilterGruppo(e.target.value)}
-            style={{ padding: '0.625rem 0.875rem', border: '2px solid #FFD4B3', borderRadius: '10px', fontSize: '0.875rem', outline: 'none', fontFamily: 'inherit', background: 'white', cursor: 'pointer' }}
+            style={{ padding: '0.625rem 0.875rem', border: '2px solid #DDD6FE', borderRadius: '10px', fontSize: '0.875rem', outline: 'none', fontFamily: 'inherit', background: 'white', cursor: 'pointer' }}
           >
             <option value="">Tutti i gruppi</option>
             {gruppi.map(g => <option key={g.id} value={String(g.id)}>{g.nome}</option>)}
           </select>
           <select
             value={filterAttivo} onChange={e => setFilterAttivo(e.target.value as typeof filterAttivo)}
-            style={{ padding: '0.625rem 0.875rem', border: '2px solid #FFD4B3', borderRadius: '10px', fontSize: '0.875rem', outline: 'none', fontFamily: 'inherit', background: 'white', cursor: 'pointer' }}
+            style={{ padding: '0.625rem 0.875rem', border: '2px solid #DDD6FE', borderRadius: '10px', fontSize: '0.875rem', outline: 'none', fontFamily: 'inherit', background: 'white', cursor: 'pointer' }}
           >
             <option value="all">Tutti</option>
             <option value="true">Attivi</option>
@@ -807,7 +807,7 @@ export default function BambiniPage() {
           <div style={{ display: 'flex', gap: '0.25rem', marginLeft: 'auto' }}>
             {(['cards', 'table'] as const).map(m => (
               <button key={m} onClick={() => setViewMode(m)}
-                style={{ padding: '0.5rem 0.75rem', border: `2px solid ${viewMode === m ? '#E8562A' : '#FFD4B3'}`, borderRadius: '8px', background: viewMode === m ? '#E8562A' : 'white', color: viewMode === m ? 'white' : '#888', cursor: 'pointer', fontSize: '1rem', fontFamily: 'inherit' }}>
+                style={{ padding: '0.5rem 0.75rem', border: `2px solid ${viewMode === m ? '#4834D4' : '#DDD6FE'}`, borderRadius: '8px', background: viewMode === m ? '#4834D4' : 'white', color: viewMode === m ? 'white' : '#888', cursor: 'pointer', fontSize: '1rem', fontFamily: 'inherit' }}>
                 {m === 'cards' ? '▦' : '☰'}
               </button>
             ))}
@@ -842,7 +842,7 @@ export default function BambiniPage() {
               <thead>
                 <tr style={{ background: '#FFF0E8' }}>
                   {['', 'Nome', 'Cognome', 'Gruppo', 'Orario uscita', 'Età', 'Data nascita', 'Genitore 1', 'CF', 'Stato'].map(h => (
-                    <th key={h} style={{ padding: '0.75rem 0.875rem', textAlign: 'left', fontWeight: 700, color: '#555', whiteSpace: 'nowrap', borderBottom: '2px solid #FFD4B3' }}>{h}</th>
+                    <th key={h} style={{ padding: '0.75rem 0.875rem', textAlign: 'left', fontWeight: 700, color: '#555', whiteSpace: 'nowrap', borderBottom: '2px solid #DDD6FE' }}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -898,9 +898,9 @@ export default function BambiniPage() {
               <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                 <div style={{
                   width: 64, height: 64, borderRadius: '50%',
-                  background: '#FFD4B3', overflow: 'hidden', flexShrink: 0,
+                  background: '#DDD6FE', overflow: 'hidden', flexShrink: 0,
                   display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  color: '#E8562A', fontWeight: 700, fontSize: '1.25rem',
+                  color: '#4834D4', fontWeight: 700, fontSize: '1.25rem',
                 }}>
                   {photoPreview
                     ? <img src={photoPreview} alt="preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
@@ -931,7 +931,7 @@ export default function BambiniPage() {
             </div>
 
             {/* Alias */}
-            <div style={{ background: '#FFF8F4', borderRadius: '10px', padding: '0.75rem', marginBottom: '0.75rem', border: '1px solid #FFD4B3' }}>
+            <div style={{ background: '#FFF8F4', borderRadius: '10px', padding: '0.75rem', marginBottom: '0.75rem', border: '1px solid #DDD6FE' }}>
               <Field label="Nome alias / soprannome">
                 <input type="text" value={addForm.alias_nome}
                   onChange={e => setAddForm(p => ({ ...p, alias_nome: e.target.value }))}
@@ -986,7 +986,7 @@ export default function BambiniPage() {
             {/* Foto profilo */}
             <Field label="Foto profilo">
               <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                <div style={{ width: 64, height: 64, borderRadius: '50%', background: '#FFD4B3', overflow: 'hidden', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#E8562A', fontWeight: 700, fontSize: '1.25rem' }}>
+                <div style={{ width: 64, height: 64, borderRadius: '50%', background: '#DDD6FE', overflow: 'hidden', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#4834D4', fontWeight: 700, fontSize: '1.25rem' }}>
                   {editPhotoPreview ? <img src={editPhotoPreview} alt="preview" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : '📷'}
                 </div>
                 <div style={{ flex: 1 }}>
@@ -1006,7 +1006,7 @@ export default function BambiniPage() {
                 <input type="text" required value={editForm.cognome} onChange={e => setEditForm(p => ({ ...p, cognome: e.target.value }))} style={inputSt} />
               </Field>
             </div>
-            <div style={{ background: '#FFF8F4', borderRadius: '10px', padding: '0.75rem', marginBottom: '0.75rem', border: '1px solid #FFD4B3' }}>
+            <div style={{ background: '#FFF8F4', borderRadius: '10px', padding: '0.75rem', marginBottom: '0.75rem', border: '1px solid #DDD6FE' }}>
               <Field label="Nome alias / soprannome">
                 <input type="text" value={editForm.alias_nome} onChange={e => setEditForm(p => ({ ...p, alias_nome: e.target.value }))} style={inputSt} placeholder="Es. Lilli, Teo..." />
               </Field>
@@ -1106,7 +1106,7 @@ export default function BambiniPage() {
                     ? [{ k: 'genitore2' as const, l: `👤 ${selected.famiglia.genitore2_nome || 'Genitore 2'}` }]
                     : []),
                 ].map(({ k, l }) => (
-                  <button key={k} onClick={() => setDetailTab(k)} style={{ flex: 1, padding: '0.625rem 0.5rem', background: detailTab === k ? 'white' : 'transparent', border: 'none', borderBottom: detailTab === k ? '2px solid #E8562A' : '2px solid transparent', fontWeight: detailTab === k ? 700 : 400, fontSize: '0.8rem', color: detailTab === k ? '#E8562A' : '#666', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'center', transition: 'all 0.15s', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <button key={k} onClick={() => setDetailTab(k)} style={{ flex: 1, padding: '0.625rem 0.5rem', background: detailTab === k ? 'white' : 'transparent', border: 'none', borderBottom: detailTab === k ? '2px solid #4834D4' : '2px solid transparent', fontWeight: detailTab === k ? 700 : 400, fontSize: '0.8rem', color: detailTab === k ? '#4834D4' : '#666', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'center', transition: 'all 0.15s', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {l}
                   </button>
                 ))}
@@ -1116,7 +1116,7 @@ export default function BambiniPage() {
                 {detailTab === 'genitore1' && (
                   <div style={{ display: 'grid', gap: '0.375rem' }}>
                     {selected.famiglia.genitore1_email && (
-                      <p style={{ margin: 0 }}>✉️ <a href={`mailto:${selected.famiglia.genitore1_email}`} style={{ color: '#E8562A', textDecoration: 'none' }}>{selected.famiglia.genitore1_email}</a></p>
+                      <p style={{ margin: 0 }}>✉️ <a href={`mailto:${selected.famiglia.genitore1_email}`} style={{ color: '#4834D4', textDecoration: 'none' }}>{selected.famiglia.genitore1_email}</a></p>
                     )}
                     {selected.famiglia.genitore1_telefono && <p style={{ margin: 0 }}>📱 {selected.famiglia.genitore1_telefono}</p>}
                     {selected.famiglia.genitore1_codice_fiscale && <p style={{ margin: 0, fontFamily: 'monospace', color: '#555' }}>CF: {selected.famiglia.genitore1_codice_fiscale}</p>}
@@ -1126,7 +1126,7 @@ export default function BambiniPage() {
                     </div>
                     <div style={{ marginTop: '0.5rem', display: 'flex', gap: '0.5rem' }}>
                       <button onClick={() => openEditG('genitore1')}
-                        style={{ padding: '0.375rem 0.75rem', background: 'none', border: '1px solid #FFD4B3', borderRadius: '6px', color: '#E8562A', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                        style={{ padding: '0.375rem 0.75rem', background: 'none', border: '1px solid #DDD6FE', borderRadius: '6px', color: '#4834D4', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
                         ✏️ Modifica dati Genitore 1
                       </button>
                       <button onClick={handleRemoveG1} disabled={unlinkLoading}
@@ -1139,7 +1139,7 @@ export default function BambiniPage() {
                 {detailTab === 'genitore2' && selected.famiglia.genitore2_email && (
                   <div style={{ display: 'grid', gap: '0.375rem' }}>
                     {selected.famiglia.genitore2_email && (
-                      <p style={{ margin: 0 }}>✉️ <a href={`mailto:${selected.famiglia.genitore2_email}`} style={{ color: '#E8562A', textDecoration: 'none' }}>{selected.famiglia.genitore2_email}</a></p>
+                      <p style={{ margin: 0 }}>✉️ <a href={`mailto:${selected.famiglia.genitore2_email}`} style={{ color: '#4834D4', textDecoration: 'none' }}>{selected.famiglia.genitore2_email}</a></p>
                     )}
                     {selected.famiglia.genitore2_telefono && <p style={{ margin: 0 }}>📱 {selected.famiglia.genitore2_telefono}</p>}
                     {selected.famiglia.genitore2_codice_fiscale && <p style={{ margin: 0, fontFamily: 'monospace', color: '#555' }}>CF: {selected.famiglia.genitore2_codice_fiscale}</p>}
@@ -1149,7 +1149,7 @@ export default function BambiniPage() {
                     </div>
                     <div style={{ marginTop: '0.5rem', display: 'flex', gap: '0.5rem' }}>
                       <button onClick={() => openEditG('genitore2')}
-                        style={{ padding: '0.375rem 0.75rem', background: 'none', border: '1px solid #FFD4B3', borderRadius: '6px', color: '#E8562A', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                        style={{ padding: '0.375rem 0.75rem', background: 'none', border: '1px solid #DDD6FE', borderRadius: '6px', color: '#4834D4', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
                         ✏️ Modifica dati Genitore 2
                       </button>
                       <button onClick={handleRemoveG2} disabled={unlinkLoading}
@@ -1187,7 +1187,7 @@ export default function BambiniPage() {
           {/* Edit famiglia (telefono emergenza + medico base) */}
           {editFam && selected.famiglia && (
             <form onSubmit={handleEditFamSubmit} style={{ background: '#FFF8F4', borderRadius: '12px', padding: '1rem', marginBottom: '1rem' }}>
-              <p style={{ margin: '0 0 0.75rem', fontWeight: 700, fontSize: '0.85rem', color: '#E8562A' }}>Modifica dati famiglia</p>
+              <p style={{ margin: '0 0 0.75rem', fontWeight: 700, fontSize: '0.85rem', color: '#4834D4' }}>Modifica dati famiglia</p>
               <Field label="Telefono emergenza" required>
                 <input type="tel" required value={editFamForm.telefono_emergenza}
                   onChange={e => setEditFamForm(p => ({ ...p, telefono_emergenza: e.target.value }))}
@@ -1206,7 +1206,7 @@ export default function BambiniPage() {
           {/* Edit genitore User data */}
           {editGTab && selected.famiglia && (
             <form onSubmit={handleEditGSubmit} style={{ background: '#FFF8F4', borderRadius: '12px', padding: '1rem', marginBottom: '1rem' }}>
-              <p style={{ margin: '0 0 0.75rem', fontWeight: 700, fontSize: '0.85rem', color: '#E8562A' }}>
+              <p style={{ margin: '0 0 0.75rem', fontWeight: 700, fontSize: '0.85rem', color: '#4834D4' }}>
                 Modifica {editGTab === 'genitore1' ? 'Genitore 1' : 'Genitore 2'} — {editGTab === 'genitore1' ? selected.famiglia.genitore1_email : selected.famiglia.genitore2_email}
               </p>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
@@ -1283,7 +1283,7 @@ export default function BambiniPage() {
 
           {/* Azioni — in fondo al modal */}
           <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1.5rem', paddingTop: '1rem', borderTop: '1px solid #F0F0F0', flexWrap: 'wrap' }}>
-            <button onClick={() => openEdit(selected)} style={{ ...secondaryBtn, marginBottom: 0, background: '#E8562A', color: 'white', border: 'none' }}>✏️ Modifica</button>
+            <button onClick={() => openEdit(selected)} style={{ ...secondaryBtn, marginBottom: 0, background: '#4834D4', color: 'white', border: 'none' }}>✏️ Modifica</button>
             <button onClick={handleToggleAttivo}
               style={{ ...secondaryBtn, marginBottom: 0, color: selected.attivo ? '#E67E22' : '#27AE60', borderColor: selected.attivo ? '#FDEBD0' : '#D5F5E3' }}>
               {selected.attivo ? '⏸ Disattiva' : '▶ Riattiva'}
@@ -1337,7 +1337,7 @@ export default function BambiniPage() {
           <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem' }}>
             {(['cerca', 'crea'] as const).map(t => (
               <button key={t} onClick={() => { setCollegaGTab(t); setCollegaGError(''); setNuovoGError('') }}
-                style={{ flex: 1, padding: '0.5rem', border: `2px solid ${collegaGTab === t ? '#E8562A' : '#FFD4B3'}`, borderRadius: '8px', background: collegaGTab === t ? '#E8562A' : 'white', color: collegaGTab === t ? 'white' : '#888', fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer', fontFamily: 'inherit' }}>
+                style={{ flex: 1, padding: '0.5rem', border: `2px solid ${collegaGTab === t ? '#4834D4' : '#DDD6FE'}`, borderRadius: '8px', background: collegaGTab === t ? '#4834D4' : 'white', color: collegaGTab === t ? 'white' : '#888', fontWeight: 700, fontSize: '0.8rem', cursor: 'pointer', fontFamily: 'inherit' }}>
                 {t === 'cerca' ? '🔍 Cerca esistente' : '➕ Crea nuovo'}
               </button>
             ))}
@@ -1351,7 +1351,7 @@ export default function BambiniPage() {
                 value={collegaGSearch} onChange={e => setCollegaGSearch(e.target.value)}
                 style={{ ...inputSt, marginBottom: '0.5rem' }}
               />
-              <div style={{ maxHeight: '220px', overflowY: 'auto', border: '1px solid #FFD4B3', borderRadius: '10px', marginBottom: '0.75rem' }}>
+              <div style={{ maxHeight: '220px', overflowY: 'auto', border: '1px solid #DDD6FE', borderRadius: '10px', marginBottom: '0.75rem' }}>
                 {genitori
                   .filter(g => {
                     if (!collegaGSearch) return true
@@ -1363,21 +1363,21 @@ export default function BambiniPage() {
                       style={{
                         padding: '0.625rem 0.875rem', cursor: 'pointer',
                         background: collegaGSelected?.id === g.id ? '#FFF0E8' : 'white',
-                        borderLeft: collegaGSelected?.id === g.id ? '3px solid #E8562A' : '3px solid transparent',
+                        borderLeft: collegaGSelected?.id === g.id ? '3px solid #4834D4' : '3px solid transparent',
                         borderBottom: '1px solid #F5F5F5',
                         display: 'flex', alignItems: 'center', gap: '0.75rem',
                       }}
                       onMouseEnter={e => { if (collegaGSelected?.id !== g.id) e.currentTarget.style.background = '#FFF8F4' }}
                       onMouseLeave={e => { if (collegaGSelected?.id !== g.id) e.currentTarget.style.background = 'white' }}
                     >
-                      <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#FFD4B3', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.875rem', flexShrink: 0 }}>👤</div>
+                      <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#DDD6FE', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.875rem', flexShrink: 0 }}>👤</div>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <p style={{ margin: 0, fontWeight: 600, fontSize: '0.875rem', color: '#333' }}>
                           {g.first_name} {g.last_name}
                         </p>
                         <p style={{ margin: 0, fontSize: '0.775rem', color: '#888', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{g.email}</p>
                       </div>
-                      {collegaGSelected?.id === g.id && <span style={{ color: '#E8562A', fontWeight: 700 }}>✓</span>}
+                      {collegaGSelected?.id === g.id && <span style={{ color: '#4834D4', fontWeight: 700 }}>✓</span>}
                     </div>
                   ))}
                 {genitori.filter(g => {
@@ -1389,7 +1389,7 @@ export default function BambiniPage() {
                 )}
               </div>
               {collegaGSlot === 'genitore1' && (
-                <div style={{ borderTop: '1px solid #FFD4B3', paddingTop: '0.75rem', marginTop: '0.25rem' }}>
+                <div style={{ borderTop: '1px solid #DDD6FE', paddingTop: '0.75rem', marginTop: '0.25rem' }}>
                   <Field label="Telefono emergenza" required>
                     <input type="tel" value={collegaGTelEmerg} onChange={e => setCollegaGTelEmerg(e.target.value)}
                       style={inputSt} placeholder="+39 333..." />
@@ -1402,12 +1402,12 @@ export default function BambiniPage() {
               {collegaGError && <ErrorBox>{collegaGError}</ErrorBox>}
               <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem' }}>
                 <button type="button" onClick={closeCollegaG}
-                  style={{ flex: 1, padding: '0.75rem', border: '2px solid #FFD4B3', borderRadius: '10px', background: 'white', color: '#666', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+                  style={{ flex: 1, padding: '0.75rem', border: '2px solid #DDD6FE', borderRadius: '10px', background: 'white', color: '#666', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
                   Annulla
                 </button>
                 <button type="button" onClick={handleCollegaCercaConfirma}
                   disabled={!collegaGSelected || collegaGLoading}
-                  style={{ flex: 2, padding: '0.75rem', background: !collegaGSelected || collegaGLoading ? '#FFB8A0' : '#E8562A', border: 'none', borderRadius: '10px', color: 'white', fontSize: '0.875rem', fontWeight: 700, cursor: !collegaGSelected || collegaGLoading ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
+                  style={{ flex: 2, padding: '0.75rem', background: !collegaGSelected || collegaGLoading ? '#C4B5FD' : '#4834D4', border: 'none', borderRadius: '10px', color: 'white', fontSize: '0.875rem', fontWeight: 700, cursor: !collegaGSelected || collegaGLoading ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
                   {collegaGLoading ? 'Salvataggio...' : 'Conferma'}
                 </button>
               </div>
@@ -1438,7 +1438,7 @@ export default function BambiniPage() {
                 </Field>
               </div>
               {collegaGSlot === 'genitore1' && (
-                <div style={{ borderTop: '1px solid #FFD4B3', paddingTop: '0.75rem', marginTop: '0.25rem' }}>
+                <div style={{ borderTop: '1px solid #DDD6FE', paddingTop: '0.75rem', marginTop: '0.25rem' }}>
                   <Field label="Telefono emergenza" required>
                     <input type="tel" required value={collegaGTelEmerg} onChange={e => setCollegaGTelEmerg(e.target.value)}
                       style={inputSt} placeholder="+39 333..." />
@@ -1466,7 +1466,7 @@ function GenitoreInfo({ label, nome, email, telefono, cf, indirizzo }: {
   return (
     <div style={{ marginBottom: '0.75rem', paddingBottom: '0.75rem', borderBottom: '1px solid #E9ECEF' }}>
       <p style={{ margin: '0 0 0.25rem', fontWeight: 700, color: '#555', fontSize: '0.8rem', textTransform: 'uppercase' }}>{label}</p>
-      <p style={{ margin: '0 0 0.15rem' }}>{nome} — <a href={`mailto:${email}`} style={{ color: '#E8562A', textDecoration: 'none' }}>{email}</a></p>
+      <p style={{ margin: '0 0 0.15rem' }}>{nome} — <a href={`mailto:${email}`} style={{ color: '#4834D4', textDecoration: 'none' }}>{email}</a></p>
       {telefono && <p style={{ margin: '0 0 0.15rem', color: '#666' }}>📱 {telefono}</p>}
       {cf && <p style={{ margin: '0 0 0.15rem', color: '#666' }}>CF: {cf}</p>}
       {indirizzo && <p style={{ margin: 0, color: '#666' }}>🏠 {indirizzo}</p>}
@@ -1535,7 +1535,7 @@ function Overlay({ children, onClose, zIndex = 1000 }: { children: React.ReactNo
 function ModalHeader({ title, onClose }: { title: string; onClose: () => void }) {
   return (
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-      <h2 style={{ margin: 0, color: '#E8562A', fontSize: '1.2rem', fontWeight: 800 }}>{title}</h2>
+      <h2 style={{ margin: 0, color: '#4834D4', fontSize: '1.2rem', fontWeight: 800 }}>{title}</h2>
       <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#aaa', lineHeight: 1 }}>×</button>
     </div>
   )
@@ -1544,10 +1544,10 @@ function ModalHeader({ title, onClose }: { title: string; onClose: () => void })
 function ModalActions({ onCancel, loading, submitLabel }: { onCancel: () => void; loading: boolean; submitLabel: string }) {
   return (
     <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem' }}>
-      <button type="button" onClick={onCancel} style={{ flex: 1, padding: '0.75rem', border: '2px solid #FFD4B3', borderRadius: '10px', background: 'white', color: '#666', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
+      <button type="button" onClick={onCancel} style={{ flex: 1, padding: '0.75rem', border: '2px solid #DDD6FE', borderRadius: '10px', background: 'white', color: '#666', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}>
         Annulla
       </button>
-      <button type="submit" disabled={loading} style={{ flex: 2, padding: '0.75rem', background: loading ? '#FFB8A0' : '#E8562A', border: 'none', borderRadius: '10px', color: 'white', fontSize: '0.875rem', fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
+      <button type="submit" disabled={loading} style={{ flex: 2, padding: '0.75rem', background: loading ? '#C4B5FD' : '#4834D4', border: 'none', borderRadius: '10px', color: 'white', fontSize: '0.875rem', fontWeight: 700, cursor: loading ? 'not-allowed' : 'pointer', fontFamily: 'inherit' }}>
         {loading ? 'Salvataggio...' : submitLabel}
       </button>
     </div>
@@ -1579,8 +1579,8 @@ function ErrorBox({ children }: { children: React.ReactNode }) {
 }
 
 const secondaryBtn: React.CSSProperties = {
-  padding: '0.5rem 1rem', background: 'none', border: '2px solid #FFD4B3',
-  borderRadius: '8px', color: '#E8562A', fontSize: '0.8rem', fontWeight: 600,
+  padding: '0.5rem 1rem', background: 'none', border: '2px solid #DDD6FE',
+  borderRadius: '8px', color: '#4834D4', fontSize: '0.8rem', fontWeight: 600,
   cursor: 'pointer', fontFamily: 'inherit', marginBottom: '0.5rem',
 }
 

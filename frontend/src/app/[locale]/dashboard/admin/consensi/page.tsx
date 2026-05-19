@@ -223,7 +223,7 @@ export default function AdminConsensiPage() {
   if (loading) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', background: '#FFF8F4' }}>
-        <p style={{ color: '#E8562A', fontWeight: 600 }}>Caricamento...</p>
+        <p style={{ color: '#4834D4', fontWeight: 600 }}>Caricamento...</p>
       </div>
     )
   }
@@ -237,7 +237,7 @@ export default function AdminConsensiPage() {
     <div style={{ minHeight: '100vh', background: '#FFF8F4' }}>
 
       {/* Header */}
-      <div style={{ background: 'linear-gradient(135deg, #FF9A3C 0%, #E8562A 100%)', padding: '1.5rem 1.5rem 2rem', color: 'white' }}>
+      <div style={{ background: 'linear-gradient(135deg, #6C5CE7 0%, #4834D4 100%)', padding: '1.5rem 1.5rem 2rem', color: 'white' }}>
         <div style={{ maxWidth: 'min(1080px, 96vw)', margin: '0 auto' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.875rem' }}>
             <button onClick={() => router.push(`/${locale}/dashboard/admin`)} style={backBtn}>← Dashboard</button>
@@ -265,7 +265,7 @@ export default function AdminConsensiPage() {
           <input
             type="search" placeholder="🔍 Cerca bambino..."
             value={search} onChange={e => setSearch(e.target.value)}
-            style={{ width: '100%', padding: '0.625rem 0.875rem', border: '2px solid #FFD4B3', borderRadius: '10px', fontSize: '0.875rem', outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' }}
+            style={{ width: '100%', padding: '0.625rem 0.875rem', border: '2px solid #DDD6FE', borderRadius: '10px', fontSize: '0.875rem', outline: 'none', fontFamily: 'inherit', boxSizing: 'border-box' }}
           />
         </div>
 
@@ -312,7 +312,7 @@ export default function AdminConsensiPage() {
               <div style={{ textAlign: 'right' }}>
                 <button
                   onClick={() => { setSelected(b); setActionError('') }}
-                  style={{ padding: '0.4rem 0.875rem', background: '#E8562A', color: 'white', border: 'none', borderRadius: '8px', fontSize: '0.775rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
+                  style={{ padding: '0.4rem 0.875rem', background: '#4834D4', color: 'white', border: 'none', borderRadius: '8px', fontSize: '0.775rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
                 >
                   Gestisci
                 </button>
@@ -331,7 +331,7 @@ export default function AdminConsensiPage() {
           <div style={{ background: 'white', borderRadius: '20px', padding: '2rem', width: '100%', maxWidth: '560px', maxHeight: '90vh', overflowY: 'auto' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.25rem' }}>
               <div>
-                <h2 style={{ margin: 0, color: '#E8562A', fontSize: '1.2rem', fontWeight: 800 }}>
+                <h2 style={{ margin: 0, color: '#4834D4', fontSize: '1.2rem', fontWeight: 800 }}>
                   📷 {selected.nome} {selected.cognome}
                 </h2>
                 {!selected.ha_famiglia && (
@@ -404,7 +404,7 @@ export default function AdminConsensiPage() {
                     <button
                       onClick={() => creaConsenso(selected.id, f.key)}
                       disabled={actionLoading}
-                      style={{ padding: '0.5rem 1rem', background: '#FF9A3C', color: 'white', border: 'none', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
+                      style={{ padding: '0.5rem 1rem', background: '#6C5CE7', color: 'white', border: 'none', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
                     >
                       + Crea registro consenso
                     </button>
@@ -460,7 +460,7 @@ export default function AdminConsensiPage() {
                 <button
                   onClick={() => downloadPdf(selected.id, `${selected.nome} ${selected.cognome}`)}
                   disabled={actionLoading}
-                  style={{ padding: '0.4rem 0.875rem', border: '2px solid #FFD4B3', borderRadius: '8px', background: 'white', color: '#E8562A', fontSize: '0.775rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
+                  style={{ padding: '0.4rem 0.875rem', border: '2px solid #DDD6FE', borderRadius: '8px', background: 'white', color: '#4834D4', fontSize: '0.775rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit' }}
                 >
                   📄 Scarica PDF
                 </button>
