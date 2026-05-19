@@ -885,8 +885,18 @@ Prossimo task: HTTPS + Nginx (in attesa dominio) oppure 2FA
 - `frontend/src/components/UserChip.tsx`: link "🔐 Sicurezza"
 
 ## Ultimo Aggiornamento
-Data: 14 maggio 2026
-Completato: Export GDPR (Art. 20 — Diritto alla portabilità) — PDF bambino con anagrafica, consensi, presenze, diario, pasti
+Data: 19 maggio 2026
+Completato: Security review + fix critici
+
+### Security fix (19 maggio 2026)
+- `DJANGO_DEBUG=False` impostato sul server di produzione (era True — esponeva stack trace)
+- `Django>=5.2.8` in requirements.txt (fix 4 CVE attive su Django 5.0.14)
+- `transaction.atomic` aggiunto a `iscrizioni/views.approva()` — evita bambini orfani se Famiglia.create() fallisce; refactored in `_approva_atomic()`
+- Portfolio genitore: rimosso fallback insicuro (mostrava media di tutti i bambini del gruppo se nessuna iscrizione presente) → ora restituisce `qs.none()`
+- Cookie JWT: `secure: false` hardcoded → `secure: process.env.NODE_ENV === 'production'` in `fetchBackend.ts` e `login/route.ts` (pronto per HTTPS)
+- Open redirect: `callbackUrl` ora blocca anche protocol-relative URLs (`//attacker.com`) con check aggiuntivo `!startsWith('//')`
+
+Prossimo task: HTTPS + Nginx (in attesa dominio)
 
 ### Export GDPR per bambino (14 maggio 2026) — branch feature/iscrizioni
 - Action `export_gdpr` su `BambinoViewSet`: `GET /api/v1/bambini/{id}/export-gdpr/`
