@@ -113,7 +113,11 @@ export default function GenitoreDashboard() {
     setReportLoading(true)
     try {
       const res = await fetch(`/api/bambini/${reportBambinoId}/report-mensile?anno=${reportAnno}&mese=${reportMese}`)
-      if (!res.ok) return
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        alert((err as Record<string, string>).detail ?? 'Errore durante la generazione del report. Riprova.')
+        return
+      }
       const blob = await res.blob()
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')

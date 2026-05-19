@@ -201,3 +201,6 @@ MEDIA_AUTO_DELETE_DAYS = config('MEDIA_AUTO_DELETE_DAYS', default=365, cast=int)
 MEDIA_PORTFOLIO_DELETE_DAYS = config('MEDIA_PORTFOLIO_DELETE_DAYS', default=1825, cast=int)
 # Retention log accessi GDPR: minimo 6 mesi, default 12 mesi
 LOG_ACCESSI_RETENTION_MONTHS = config('LOG_ACCESSI_RETENTION_MONTHS', default=12, cast=int)
+
+# URL pubblico del frontend (usato nelle email di sistema — NON da request.data)
+FRONTEND_URL = config('NEXTAUTH_URL', default='http://localhost:3000')

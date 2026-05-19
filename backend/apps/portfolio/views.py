@@ -48,6 +48,18 @@ class IscrizioneViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         qs = Iscrizione.objects.select_related('bambino', 'anno', 'gruppo')
+        user = self.request.user
+
+        # GDPR: il genitore vede solo le iscrizioni dei propri figli
+        if user.role == 'genitore':
+            from apps.children.models import Famiglia
+            bambini_ids = Famiglia.objects.filter(
+                Q(genitore1=user) | Q(genitore2=user)
+            ).values_list('bambino_id', flat=True)
+            qs = qs.filter(bambino_id__in=bambini_ids)
+        elif user.role == 'cuoca':
+            return qs.none()
+
         anno = self.request.query_params.get('anno')
         bambino = self.request.query_params.get('bambino')
         if anno:

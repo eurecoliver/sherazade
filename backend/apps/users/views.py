@@ -216,7 +216,8 @@ class PasswordResetRequestView(APIView):
         token = secrets.token_urlsafe(32)
         PasswordResetToken.objects.create(user=user, token=token)
 
-        frontend_url = request.data.get('frontend_url', '').rstrip('/')
+        from django.conf import settings
+        frontend_url = settings.FRONTEND_URL.rstrip('/')
         reset_url = f'{frontend_url}/it/reset-password/confirm?token={token}'
 
         threading.Thread(
