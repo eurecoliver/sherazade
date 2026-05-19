@@ -897,7 +897,36 @@ Prossimo task: HTTPS + Nginx (in attesa dominio) oppure 2FA
 
 ## Ultimo Aggiornamento
 Data: 19 maggio 2026
-Completato: Redesign UI "Clarity" — branch `feature/redesign-ui` ✅ pushato
+Completato: Security fix post code-review — 12 issue risolti (3🔴 + 5🟠 + 4🟡) su branch feature/redesign-ui
+
+### Security fix post code-review (19 maggio 2026) — branch feature/redesign-ui
+
+**🔴 Critici risolti:**
+- **Open redirect password reset**: `PasswordResetRequestView` leggeva `frontend_url` dal request body (phishing). Ora usa `settings.FRONTEND_URL` (da env `NEXTAUTH_URL`). Aggiunto `FRONTEND_URL` in `settings/base.py`.
+- **GDPR leak portfolio iscrizioni**: `IscrizioneViewSet.get_queryset()` non filtrava per ruolo — genitore vedeva le iscrizioni di tutti i bambini. Ora: genitore filtra per propri figli via Famiglia, cuoca vede `qs.none()`.
+- **IDOR `salva_giornata`**: Il permesso `presenze.scrivi` era condiviso tra `salva_giornata` (staff) e `comunica_assenza` (genitore). Ora `salva_giornata` ha permesso separato in `attendance/permissions.py` — solo ruoli staff.
+
+**🟠 Importanti risolti:**
+- `report_mensile`: try/except ValueError per anno/mese non validi + validazione range (1-12, anni ragionevoli)
+- `salva_giornata`: `str(e)` sostituito con `logging.getLogger` + messaggio generico 'Errore di salvataggio.'
+- `_approva_atomic` iscrizioni: g1/g2 `User.objects.get_or_create` spostati DENTRO `transaction.atomic()` — elimina utenti orfani se creazione Bambino/Famiglia fallisce
+- `insegnanti_giornata`: `email` insegnante esposta solo a ruoli manager (Admin/Direttrice/Coordinatrice) — non a cuoca o insegnante stessa
+- Frontend genitore `downloadReport`: da silent failure (`return`) ad `alert` con messaggio errore leggibile
+
+**🟡 Nit risolti:**
+- `colloqui/views.py`: `LogAccessoMixin` aggiunto a `SessioneColloquiViewSet` e `PrenotazioneColloquioViewSet` con `risorsa_nome = 'colloqui'`
+- `attendance/views.py` push notification URL: `/it/dashboard/staff/presenze` → `/dashboard/staff/presenze` (rimosso locale hardcoded)
+- `salva_giornata`: validazione ISO date con `date.fromisoformat()` prima dell'uso
+
+**File modificati:**
+- `backend/sherazade/settings/base.py`: aggiunto `FRONTEND_URL`
+- `backend/apps/users/views.py`: `frontend_url` da settings invece di request.data
+- `backend/apps/portfolio/views.py`: filtro ruolo in `IscrizioneViewSet.get_queryset()`
+- `backend/apps/attendance/permissions.py`: permesso separato `salva_giornata`
+- `backend/apps/attendance/views.py`: try/except report_mensile, logging salva_giornata, email condizionale insegnanti, URL push, validazione data
+- `backend/apps/iscrizioni/views.py`: transaction.atomic() wrapping completo
+- `backend/apps/colloqui/views.py`: LogAccessoMixin
+- `frontend/src/app/[locale]/dashboard/genitore/page.tsx`: alert errore downloadReport
 
 ### Redesign UI "Clarity" — branch feature/redesign-ui (19 maggio 2026) — COMPLETATO
 
