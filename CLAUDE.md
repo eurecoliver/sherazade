@@ -897,7 +897,30 @@ Prossimo task: HTTPS + Nginx (in attesa dominio) oppure 2FA
 
 ## Ultimo Aggiornamento
 Data: 19 maggio 2026
-Completato: Security review + fix critici
+Completato parzialmente: Redesign UI — branch `feature/redesign-ui`
+
+### Redesign UI "Clarity" — branch feature/redesign-ui (19 maggio 2026) — IN CORSO
+
+**Design system "Clarity"** ispirato a iOS Settings:
+- Sfondo `#F2F2F7` (iOS neutral gray)
+- Header sticky frosted glass (`rgba(242,242,247,0.88)`, `backdropFilter: blur(16px)`)
+- Card di benvenuto con gradiente + cerchi decorativi assoluti
+- Navigazione a gruppi con section label uppercase + card bianca con righe separate da `#F4F4F8`
+- Ogni riga: icona 40×40 tonda (`borderRadius: 11`) + label/sub + chevron `›`
+- Palette per ruolo: Admin=indigo `#4F46E5`, Staff=verde `#15803D`, Cuoca=arancione `#EA580C`, Genitore=sky `#0284C7`
+
+**File completati:**
+- ✅ `frontend/src/app/[locale]/dashboard/admin/page.tsx` — GROUPS array 5 sezioni, componente riscritto, `useTranslations` rimosso
+- ✅ `frontend/src/app/[locale]/dashboard/staff/page.tsx` — GROUPS array 3 sezioni, componente riscritto
+- ✅ `frontend/src/app/[locale]/dashboard/cuoca/page.tsx` — counter presenti + CTA pappe, componente riscritto
+
+**Da completare nel prossimo task:**
+- ❌ `frontend/src/app/[locale]/dashboard/genitore/page.tsx` — import `useTranslations` rimosso ma `NAV_ITEMS` → `GROUPS_G` + nuovo render ancora da fare
+- ❌ Commit + push branch `feature/redesign-ui`
+
+**Continuare da:** sostituire `const NAV_ITEMS = [` fino a fine file in `genitore/page.tsx` con il nuovo layout grouped (sky blue `#0284C7`, GROUPS_G con 3 sezioni: Comunicazione / La vita al nido / Gestione, figli come pill nella greeting card, sezioni Report+GDPR come righe espandibili in fondo)
+
+Precedente: Security review + fix critici
 
 ### Security fix (19 maggio 2026)
 - `DJANGO_DEBUG=False` impostato sul server di produzione (era True — esponeva stack trace)
