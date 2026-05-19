@@ -16,7 +16,12 @@ class PresenzaPermission(BasePermission):
         if not request.user.is_authenticated:
             return False
         action = getattr(view, 'action', None)
-        if action in ('comunica_assenza', 'salva_giornata', 'mio_figlio'):
+        if action == 'salva_giornata':
+            # Solo staff — il genitore NON deve poter modificare presenze altrui
+            return request.user.role in (
+                Role.ADMIN, Role.DIRETTRICE, Role.COORDINATRICE, Role.INSEGNANTE
+            )
+        if action in ('comunica_assenza', 'mio_figlio'):
             return check_permesso(request.user, 'presenze', 'scrivi')
         if action in ('presenti_oggi', 'giornata', 'non_arrivati', 'report_mensile'):
             return check_permesso(request.user, 'presenze', 'leggi')

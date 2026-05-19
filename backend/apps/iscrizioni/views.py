@@ -154,42 +154,42 @@ class RichiestaIscrizioneViewSet(viewsets.ModelViewSet):
         from apps.children.models import Bambino, Famiglia
         from django.db import IntegrityError
 
-        # Crea o recupera User genitore 1
-        g1, _ = User.objects.get_or_create(
-            email__iexact=richiesta.g1_email,
-            defaults={
-                'username': richiesta.g1_email,
-                'email': richiesta.g1_email,
-                'first_name': richiesta.g1_nome,
-                'last_name': richiesta.g1_cognome,
-                'role': Role.GENITORE,
-                'is_active': True,
-            },
-        )
-        if not g1.first_name:
-            g1.first_name = richiesta.g1_nome
-            g1.last_name = richiesta.g1_cognome
-            g1.save(update_fields=['first_name', 'last_name'])
-
-        # Crea o recupera User genitore 2 (se presente)
-        g2 = None
-        if richiesta.g2_email:
-            g2, _ = User.objects.get_or_create(
-                email__iexact=richiesta.g2_email,
-                defaults={
-                    'username': richiesta.g2_email,
-                    'email': richiesta.g2_email,
-                    'first_name': richiesta.g2_nome,
-                    'last_name': richiesta.g2_cognome,
-                    'role': Role.GENITORE,
-                    'is_active': True,
-                },
-            )
-
-        # Crea Bambino + Famiglia in transazione atomica
         cf = richiesta.bambino_codice_fiscale.strip().upper()
         try:
             with transaction.atomic():
+                # Crea o recupera User genitore 1 (dentro la transazione)
+                g1, _ = User.objects.get_or_create(
+                    email__iexact=richiesta.g1_email,
+                    defaults={
+                        'username': richiesta.g1_email,
+                        'email': richiesta.g1_email,
+                        'first_name': richiesta.g1_nome,
+                        'last_name': richiesta.g1_cognome,
+                        'role': Role.GENITORE,
+                        'is_active': True,
+                    },
+                )
+                if not g1.first_name:
+                    g1.first_name = richiesta.g1_nome
+                    g1.last_name = richiesta.g1_cognome
+                    g1.save(update_fields=['first_name', 'last_name'])
+
+                # Crea o recupera User genitore 2 (se presente, dentro la transazione)
+                g2 = None
+                if richiesta.g2_email:
+                    g2, _ = User.objects.get_or_create(
+                        email__iexact=richiesta.g2_email,
+                        defaults={
+                            'username': richiesta.g2_email,
+                            'email': richiesta.g2_email,
+                            'first_name': richiesta.g2_nome,
+                            'last_name': richiesta.g2_cognome,
+                            'role': Role.GENITORE,
+                            'is_active': True,
+                        },
+                    )
+
+                # Crea Bambino + Famiglia
                 bambino = Bambino.objects.create(
                     nome=richiesta.bambino_nome,
                     cognome=richiesta.bambino_cognome,

@@ -9,6 +9,7 @@ from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
+from apps.audit.mixin import LogAccessoMixin
 from apps.config.permessi import check_permesso
 from apps.users.models import Role
 from .models import SessioneColloqui, PrenotazioneColloquio
@@ -18,7 +19,8 @@ from .serializers import SessioneColloquiSerializer, PrenotazioneColloquioSerial
 GENITORE = Role.GENITORE
 
 
-class SessioneColloquiViewSet(viewsets.ModelViewSet):
+class SessioneColloquiViewSet(LogAccessoMixin, viewsets.ModelViewSet):
+    risorsa_nome = 'colloqui'
     permission_classes = [IsAuthenticated, ColloquiPermission]
     serializer_class = SessioneColloquiSerializer
 
@@ -130,7 +132,8 @@ class SessioneColloquiViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
 
-class PrenotazioneColloquioViewSet(viewsets.ModelViewSet):
+class PrenotazioneColloquioViewSet(LogAccessoMixin, viewsets.ModelViewSet):
+    risorsa_nome = 'colloqui'
     permission_classes = [IsAuthenticated, PrenotazionePermission]
     serializer_class = PrenotazioneColloquioSerializer
     http_method_names = ['get', 'post', 'delete', 'head', 'options']

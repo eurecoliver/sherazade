@@ -123,6 +123,13 @@ class PresenzaViewSet(LogAccessoMixin, viewsets.ModelViewSet):
         Body: { data: "YYYY-MM-DD", presenze: [ { bambino, presente, ora_arrivo, motivo_assenza, note }, ... ] }
         """
         data_str = request.data.get('data', str(date.today()))
+        try:
+            date.fromisoformat(data_str)
+        except (ValueError, TypeError):
+            return Response(
+                {'detail': 'Data non valida. Formato atteso: YYYY-MM-DD.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         presenze_data = request.data.get('presenze', [])
         if not isinstance(presenze_data, list):
             return Response(
@@ -156,7 +163,11 @@ class PresenzaViewSet(LogAccessoMixin, viewsets.ModelViewSet):
                     obj.save()  # triggera _calcola_ritardi()
                 saved.append(obj.id)
             except Exception as e:
-                errors.append({'bambino': bambino_id, 'errore': str(e)})
+                import logging
+                logging.getLogger(__name__).error(
+                    'salva_giornata errore bambino %s: %s', bambino_id, e
+                )
+                errors.append({'bambino': bambino_id, 'errore': 'Errore di salvataggio.'})
 
         return Response({'salvati': len(saved), 'errori': errors})
 
@@ -212,8 +223,19 @@ class PresenzaViewSet(LogAccessoMixin, viewsets.ModelViewSet):
             return Response({'detail': 'Non autorizzato.'}, status=status.HTTP_403_FORBIDDEN)
 
         oggi = date.today()
-        anno = int(request.query_params.get('anno', oggi.year))
-        mese = int(request.query_params.get('mese', oggi.month))
+        try:
+            anno = int(request.query_params.get('anno', oggi.year))
+            mese = int(request.query_params.get('mese', oggi.month))
+        except (ValueError, TypeError):
+            return Response(
+                {'detail': 'Parametri anno/mese non validi.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if not (1 <= mese <= 12) or anno < 2020 or anno > oggi.year + 1:
+            return Response(
+                {'detail': 'Parametri anno/mese fuori range.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         gruppo = request.query_params.get('gruppo', '')
         sezione = request.query_params.get('sezione', '')
 
@@ -279,19 +301,23 @@ class PresenzaViewSet(LogAccessoMixin, viewsets.ModelViewSet):
         }
 
         result = []
+        is_manager = role in (Role.ADMIN, Role.DIRETTRICE, Role.COORDINATRICE)
         for user in insegnanti_qs:
             presenza = presenze.get(user.pk)
             stato = 'nessuno'
             if presenza:
                 stato = 'uscita_registrata' if presenza.ora_uscita else 'entrata_registrata'
-            result.append({
+            entry = {
                 'insegnante_id': user.pk,
                 'nome': user.first_name,
                 'cognome': user.last_name,
-                'email': user.email,
                 'stato': stato,
                 'presenza': PresenzaInsegnanteSerializer(presenza).data if presenza else None,
-            })
+            }
+            # Email esposta solo a ruoli manager, non alla cuoca o all'insegnante stessa
+            if is_manager:
+                entry['email'] = user.email
+            result.append(entry)
 
         return Response({'data': data_str, 'insegnanti': result})
 
@@ -661,7 +687,7 @@ class PresenzaViewSet(LogAccessoMixin, viewsets.ModelViewSet):
                     staff_ids,
                     title=f'QR Check-in — {bambino.nome} {verbo}',
                     body=f'{bambino.nome} {bambino.cognome} {verbo} alle {orario}',
-                    url='/it/dashboard/staff/presenze',
+                    url='/dashboard/staff/presenze',
                 )
             except Exception:
                 pass
