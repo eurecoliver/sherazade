@@ -19,6 +19,22 @@ from .serializers import (
 )
 
 
+ALLOWED_MEDIA_MIME = {
+    'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+    'video/mp4', 'video/quicktime', 'video/x-msvideo', 'video/webm',
+}
+
+
+def _valida_mime_media(file):
+    """Lancia ValidationError se il tipo MIME non è tra quelli ammessi per media GDPR."""
+    from rest_framework.exceptions import ValidationError
+    ct = getattr(file, 'content_type', None)
+    if ct and ct not in ALLOWED_MEDIA_MIME:
+        raise ValidationError(
+            {'file': f'Tipo di file non consentito: {ct}. Sono ammessi solo immagini (jpeg/png/gif/webp) e video (mp4/mov/avi/webm).'}
+        )
+
+
 def _bambino_ha_consenso_media(bambino):
     """
     Controlla che il bambino abbia consenso attivo per uso_interno E genitori_diretti.
@@ -337,6 +353,7 @@ class MediaDiarioViewSet(LogAccessoMixin, viewsets.ModelViewSet):
             from rest_framework.exceptions import PermissionDenied
             raise PermissionDenied(f'Impossibile caricare media: {msg}')
 
+        _valida_mime_media(serializer.validated_data.get('file'))
         serializer.save(caricato_da=self.request.user)
 
 

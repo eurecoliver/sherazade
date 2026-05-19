@@ -116,6 +116,17 @@ class MediaPortfolioViewSet(LogAccessoMixin, viewsets.ModelViewSet):
         return qs.order_by('data', 'caricato_at')
 
     def perform_create(self, serializer):
+        from rest_framework.exceptions import ValidationError
+        ALLOWED = {
+            'image/jpeg', 'image/png', 'image/gif', 'image/webp',
+            'video/mp4', 'video/quicktime', 'video/x-msvideo', 'video/webm',
+        }
+        file = serializer.validated_data.get('file')
+        ct = getattr(file, 'content_type', None)
+        if ct and ct not in ALLOWED:
+            raise ValidationError(
+                {'file': f'Tipo di file non consentito: {ct}. Sono ammessi solo immagini e video.'}
+            )
         media = serializer.save(autore=self.request.user)
         t = threading.Thread(target=_genera_thumbnail_bg, args=(media.pk,), daemon=True)
         t.start()

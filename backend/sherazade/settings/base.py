@@ -161,10 +161,13 @@ if USE_S3:
     # URL esterno di MinIO accessibile dal browser (es. http://159.69.9.230:9000)
     AWS_S3_ENDPOINT_URL_EXTERNAL = config('AWS_S3_ENDPOINT_URL_EXTERNAL', default='')
     AWS_S3_FILE_OVERWRITE = False
-    # public-read: le foto profilo (non sensibili) sono accessibili direttamente tramite URL
-    # I media GDPR-sensibili (diario) usano logica separata con accesso controllato
-    AWS_DEFAULT_ACL = 'public-read'
-    AWS_QUERYSTRING_AUTH = False  # nessun presigned URL — URL puliti per file pubblici
+    # Tutti i file privati: accesso tramite presigned URL con scadenza 1h
+    # NOTA: quando USE_S3=True, AWS_S3_ENDPOINT_URL deve essere l'URL esterno
+    # raggiungibile dal browser (es. http://159.69.9.230:9000), non quello interno Docker.
+    AWS_DEFAULT_ACL = 'private'
+    AWS_QUERYSTRING_AUTH = True   # presigned URL con scadenza
+    AWS_QUERYSTRING_EXPIRE = 3600  # 1 ora
+    AWS_S3_SIGNATURE_VERSION = 's3v4'
     AWS_S3_VERIFY = False
     STORAGES = {
         'default': {
