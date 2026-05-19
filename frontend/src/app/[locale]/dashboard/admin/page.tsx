@@ -71,7 +71,7 @@ export default function AdminDashboard() {
   if (!user) {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', background: '#F3F0FF' }}>
-        <p style={{ color: '#6C5CE7', fontWeight: 600 }}>{t('loading')}</p>
+        <p style={{ color: '#6C5CE7', fontWeight: 600 }}>Caricamento...</p>
       </div>
     )
   }
