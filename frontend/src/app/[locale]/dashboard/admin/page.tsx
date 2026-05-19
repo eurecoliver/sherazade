@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useTranslations, useLocale } from 'next-intl'
+import { useLocale } from 'next-intl'
 import { useRouter } from 'next/navigation'
 import UserChip from '@/components/UserChip'
 
@@ -11,6 +11,11 @@ interface User {
   first_name: string
   last_name: string
   role: string
+}
+
+const ROLE_LABEL: Record<string, string> = {
+  admin: 'Amministratore', direttrice: 'Direttrice', coordinatrice: 'Coordinatrice',
+  insegnante: 'Insegnante', cuoca: 'Cuoca', genitore: 'Genitore',
 }
 
 const NAV_ITEMS = [
@@ -35,7 +40,6 @@ const COLLOQUI_ITEM = { icon: '🤝', label: 'Colloqui', sub: 'Colloqui con i ge
 const ADMIN_ONLY = { icon: '👥', label: 'Utenti', sub: 'Gestione account', path: '/utenti', bg: '#EBF8FF', color: '#2B6CB0', border: '#90CDF4', risorsa: 'utenti' }
 
 export default function AdminDashboard() {
-  const t = useTranslations('Dashboard')
   const router = useRouter()
   const locale = useLocale()
   const [user, setUser] = useState<User | null>(null)
@@ -92,7 +96,7 @@ export default function AdminDashboard() {
                 Ciao, {user.first_name || user.email.split('@')[0]} 👋
               </h1>
               <p style={{ margin: '0.25rem 0 0', opacity: 0.85, fontSize: '0.875rem' }}>
-                {t(`roles.${user.role}` as Parameters<typeof t>[0])}
+                {ROLE_LABEL[user.role] ?? user.role}
               </p>
             </div>
             <UserChip onLogout={handleLogout} />
