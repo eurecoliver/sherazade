@@ -216,10 +216,21 @@ IMPORTANTE: Al termine di ogni task, prima di considerarlo completato, aggiorna 
 
 ### Da fare prima del go-live 🔴
 - HTTPS con Let's Encrypt + Nginx (richiede dominio definitivo)
+- Nginx reverse proxy per frontend (3000) e backend (8000) sulle porte 80/443
+- Certificato SSL con `certbot --nginx -d <dominio>`
+- Aggiornare `NEXTAUTH_URL=https://<dominio>` nel `.env` del server
+- Aggiornare `CORS_ALLOWED_ORIGINS` in `settings/production.py` con il dominio HTTPS
+- **MinIO presigned URL (M2)**: attivare `USE_S3=True` nel `.env` → impostare `AWS_S3_ENDPOINT_URL` con l'URL **esterno** raggiungibile dal browser (es. `https://media.<dominio>` oppure `https://<dominio>:9000`); i presigned URL generati useranno quell'host — senza questa impostazione, i link alle foto/video punterebbero all'hostname interno Docker `minio:9000` non raggiungibile
+- Configurare bucket MinIO con policy "private" (nessun accesso pubblico diretto)
+- Uptime Robot: aggiungere monitor su `https://<dominio>/api/v1/health/`
 
 ### Da fare post go-live 🟡
 - [x] Monitoring e alerting — `/api/v1/health/` endpoint (DB check), script monitor.sh (disco/RAM/container) cron ogni 10 min → `/var/log/sherazade_monitor.log`; Uptime Robot da configurare manualmente
 - Backup offsite (copia backup su storage esterno)
+- Cron jobs cleanup da configurare sul server (vedi sezione GDPR in Impostazioni):
+  - `0 2 * * * docker compose exec -T backend python manage.py cleanup_media_diario`
+  - `0 3 1 * * docker compose exec -T backend python manage.py cleanup_media_portfolio`
+  - `30 3 1 * * docker compose exec -T backend python manage.py cleanup_log_accessi`
 
 ### Presenze v2 — ritardi arrivo/uscita (2 aprile 2026)
 - `Presenza` model: aggiunti `minuti_ritardo_arrivo` e `minuti_ritardo_uscita` (IntegerField, null=True)
