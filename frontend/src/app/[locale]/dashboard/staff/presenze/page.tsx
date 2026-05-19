@@ -427,7 +427,7 @@ export default function StaffPresenzePage() {
     <div style={{ minHeight: '100vh', background: '#EAF4FF' }}>
 
       <div style={{ background: 'linear-gradient(135deg, #0984E3 0%, #0652DD 100%)', padding: '1.25rem 1.25rem 1.75rem', color: 'white' }}>
-        <div style={{ maxWidth: '720px', margin: '0 auto' }}>
+        <div style={{ maxWidth: 'min(720px, 96vw)', margin: '0 auto' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.875rem' }}>
             <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
               <button
@@ -482,7 +482,7 @@ export default function StaffPresenzePage() {
         </div>
       </div>
 
-      <div style={{ maxWidth: '720px', margin: '0 auto', padding: '1rem 1rem 4rem' }}>
+      <div style={{ maxWidth: 'min(720px, 96vw)', margin: '0 auto', padding: '1rem 1rem 4rem' }}>
 
         {activeTab === 'qr' && (
           <>

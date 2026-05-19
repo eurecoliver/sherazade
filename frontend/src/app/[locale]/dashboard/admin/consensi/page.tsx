@@ -250,7 +250,7 @@ export default function AdminConsensiPage() {
         </div>
       </div>
 
-      <div style={{ maxWidth: '960px', margin: '0 auto', padding: '1.5rem 1rem' }}>
+      <div style={{ maxWidth: 'min(960px, 96vw)', margin: '0 auto', padding: '1.5rem 1rem' }}>
 
         {/* Legenda */}
         <div style={{ background: 'white', borderRadius: '14px', padding: '1rem 1.25rem', marginBottom: '1.25rem', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', display: 'flex', gap: '1.5rem', flexWrap: 'wrap', fontSize: '0.825rem' }}>

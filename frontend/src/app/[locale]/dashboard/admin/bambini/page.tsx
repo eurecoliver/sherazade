@@ -776,7 +776,7 @@ export default function BambiniPage() {
         </div>
       </div>
 
-      <div style={{ maxWidth: '960px', margin: '0 auto', padding: '1.5rem 1rem' }}>
+      <div style={{ maxWidth: 'min(960px, 96vw)', margin: '0 auto', padding: '1.5rem 1rem' }}>
 
         {/* ── Filtri ────────────────────────────────────────────────────────── */}
         <div style={{

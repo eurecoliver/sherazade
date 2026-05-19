@@ -136,7 +136,7 @@ export default function AdminIscrizioniPage() {
     <div style={{ minHeight: '100vh', background: '#f4f1fb', fontFamily: 'system-ui, sans-serif' }}>
       {/* Header */}
       <div style={{ background: 'linear-gradient(135deg,#6C5CE7,#4834D4)', padding: '28px 24px 24px', color: '#fff' }}>
-        <div style={{ maxWidth: 960, margin: '0 auto' }}>
+        <div style={{ maxWidth: 'min(960px, 96vw)', margin: '0 auto' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
             <button onClick={() => router.push('/dashboard/admin')} style={{ background: 'rgba(255,255,255,0.15)', border: '1px solid rgba(255,255,255,0.3)', borderRadius: 20, padding: '6px 14px', color: '#fff', cursor: 'pointer', fontSize: 13 }}>← Dashboard</button>
           </div>
@@ -147,7 +147,7 @@ export default function AdminIscrizioniPage() {
         </div>
       </div>
 
-      <div style={{ maxWidth: 960, margin: '0 auto', padding: '20px 16px' }}>
+      <div style={{ maxWidth: 'min(960px, 96vw)', margin: '0 auto', padding: '20px 16px' }}>
         {/* Toolbar */}
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 20, alignItems: 'center' }}>
           <button onClick={() => setConfigOpen(true)} style={{ padding: '8px 16px', borderRadius: 8, border: '1.5px solid #c9b8e8', background: '#fff', color: '#5a3e8a', fontWeight: 600, cursor: 'pointer', fontSize: 13 }}>⚙️ Impostazioni</button>

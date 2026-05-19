@@ -805,7 +805,7 @@ export default function AdminPappePage() {
         </div>
       </div>
 
-      <div style={{ maxWidth: '960px', margin: '0 auto', padding: '1.5rem 1rem' }}>
+      <div style={{ maxWidth: 'min(960px, 96vw)', margin: '0 auto', padding: '1.5rem 1rem' }}>
         {/* Tabs */}
         <div style={{ display: 'flex', gap: '0.375rem', marginBottom: '1.5rem', background: 'white', borderRadius: '12px', padding: '0.375rem', boxShadow: '0 2px 8px rgba(108,92,231,0.08)' }}>
           {([

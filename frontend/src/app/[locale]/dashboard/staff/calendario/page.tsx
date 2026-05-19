@@ -225,10 +225,10 @@ export default function CalendarioStaff() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#F3F0FF' }}>
+    <div style={{ minHeight: '100vh', background: '#EBF4FF' }}>
 
       {/* Header */}
-      <div style={{ background: 'linear-gradient(135deg, #6C5CE7 0%, #4834D4 100%)', padding: '2rem 1.5rem 3rem', color: 'white' }}>
+      <div style={{ background: 'linear-gradient(135deg, #0984E3 0%, #0652DD 100%)', padding: '2rem 1.5rem 3rem', color: 'white' }}>
         <div style={{ maxWidth: 'min(960px, 96vw)', margin: '0 auto' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.875rem' }}>
             <button
@@ -256,7 +256,7 @@ export default function CalendarioStaff() {
               {canEdit && (
                 <button
                   onClick={() => apriCrea()}
-                  style={{ padding: '0.5rem 1rem', background: 'white', color: '#6C5CE7', border: 'none', borderRadius: '20px', fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}
+                  style={{ padding: '0.5rem 1rem', background: 'white', color: '#0984E3', border: 'none', borderRadius: '20px', fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}
                 >
                   + Nuovo evento
                 </button>
