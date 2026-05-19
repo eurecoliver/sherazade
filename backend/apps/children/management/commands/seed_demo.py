@@ -82,7 +82,7 @@ class Command(BaseCommand):
         gruppi = self._setup_gruppi()
         orari = self._setup_orari()
         bambini = self._crea_bambini(gruppi, orari, admin)
-        self._crea_presenze(bambini)
+        self._crea_presenze(bambini, admin)
         self._crea_diari(bambini, admin)
 
         self.stdout.write(self.style.SUCCESS(
@@ -245,7 +245,7 @@ class Command(BaseCommand):
         return u
 
     # ------------------------------------------------------------------
-    def _crea_presenze(self, bambini):
+    def _crea_presenze(self, bambini, admin):
         from apps.attendance.models import Presenza
 
         giorni = _giorni_lavorativi(10)
@@ -271,6 +271,7 @@ class Command(BaseCommand):
                         ora_arrivo=ora_arrivo,
                         motivo_assenza=motivo,
                         assenza_comunicata=not presente,
+                        registrato_da=admin,
                     )
                 )
                 count += 1
