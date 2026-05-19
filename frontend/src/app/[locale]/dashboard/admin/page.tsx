@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useLocale } from 'next-intl'
+import { useTranslations, useLocale } from 'next-intl'
 import { useRouter } from 'next/navigation'
 import UserChip from '@/components/UserChip'
 
@@ -13,66 +13,29 @@ interface User {
   role: string
 }
 
-// ── Design tokens ─────────────────────────────────────────────────────────
-const A       = '#4F46E5'      // indigo-600
-const A_DARK  = '#3730A3'      // indigo-800
-const A_LIGHT = '#EEF2FF'      // indigo-50
-const BG      = '#F2F2F7'      // iOS neutral
-const CARD    = '#FFFFFF'
-const T1      = '#1C1C1E'
-const T2      = '#6B7280'
-const TSEC    = '#8E8E93'
-const CHEV    = '#C7C7CC'
-const SEP     = '#F4F4F8'
-
-type Item = { icon: string; label: string; sub: string; path: string; risorsa: string | null }
-
-const GROUPS: { label: string; items: Item[] }[] = [
-  {
-    label: 'Studenti e famiglie',
-    items: [
-      { icon: '👶', label: 'Bambini',    sub: 'Anagrafica e profili',          path: '/bambini',      risorsa: 'bambini'     },
-      { icon: '👨‍👩‍👧', label: 'Genitori',   sub: 'Account e famiglie',            path: '/genitori',     risorsa: 'bambini'     },
-      { icon: '📋', label: 'Iscrizioni', sub: 'Richieste di ammissione',        path: '/iscrizioni',   risorsa: 'iscrizioni'  },
-      { icon: '📷', label: 'Consensi',   sub: 'Autorizzazioni fotografiche',    path: '/consensi',     risorsa: 'consensi'    },
-    ],
-  },
-  {
-    label: 'Operatività giornaliera',
-    items: [
-      { icon: '✅', label: 'Presenze',   sub: 'Registro, report e QR check-in', path: '/presenze',    risorsa: 'presenze'    },
-      { icon: '🥣', label: 'Pappe',      sub: 'Menu e ciclo settimanale',        path: '/pappe',       risorsa: 'pappe'       },
-    ],
-  },
-  {
-    label: 'Comunicazione',
-    items: [
-      { icon: '📢', label: 'Circolari',  sub: 'Comunicazioni alle famiglie',    path: '/circolari',     risorsa: 'circolari'  },
-      { icon: '📝', label: 'Agenda',     sub: 'Note condivise del turno',       path: '__agenda__',     risorsa: 'agenda'     },
-      { icon: '📅', label: 'Calendario', sub: 'Eventi e chiusure scolastiche',  path: '__calendario__', risorsa: 'calendario' },
-      { icon: '🤝', label: 'Colloqui',   sub: 'Appuntamenti con i genitori',    path: '__colloqui__',   risorsa: 'colloqui'   },
-    ],
-  },
-  {
-    label: 'Report e documenti',
-    items: [
-      { icon: '📊', label: 'Statistiche',  sub: 'Trend presenze e grafici',    path: '/statistiche',  risorsa: 'presenze'   },
-      { icon: '🧾', label: 'Fatture',      sub: 'Documenti di pagamento',      path: '/fatture',      risorsa: 'fatture'    },
-      { icon: '📸', label: 'Portfolio',    sub: 'Foto e video del gruppo',     path: '__portfolio__', risorsa: 'portfolio'  },
-      { icon: '📺', label: 'Bacheca Live', sub: 'Presenze in tempo reale',     path: '__bacheca__',   risorsa: 'presenze'   },
-    ],
-  },
-  {
-    label: 'Sistema',
-    items: [
-      { icon: '👥', label: 'Utenti',       sub: 'Account e permessi',          path: '/utenti',       risorsa: 'utenti'     },
-      { icon: '⚙️', label: 'Impostazioni', sub: 'Gruppi, orari e GDPR',        path: '/impostazioni', risorsa: null         },
-      { icon: '🔍', label: 'Log Accessi',  sub: 'Registro attività GDPR',      path: '/log-accessi',  risorsa: null         },
-    ],
-  },
+const NAV_ITEMS = [
+  { icon: '👶', label: 'Bambini',       sub: 'Anagrafica e famiglie',        path: '/bambini',      bg: '#F3F0FF', color: '#6C5CE7', border: '#D6CCFF', risorsa: 'bambini' },
+  { icon: '👨‍👩‍👧', label: 'Genitori',      sub: 'Gestione famiglie',            path: '/genitori',     bg: '#FDF0FF', color: '#9B59B6', border: '#E8BFFF', risorsa: 'bambini' },
+  { icon: '📷', label: 'Consensi',      sub: 'Autorizzazioni fotografiche',  path: '/consensi',     bg: '#FFF3EE', color: '#E17055', border: '#FFD4B3', risorsa: 'consensi' },
+  { icon: '✅', label: 'Presenze',      sub: 'Registro e report',           path: '/presenze',     bg: '#F0FFF4', color: '#38A169', border: '#9AE6B4', risorsa: 'presenze' },
+  { icon: '🍽️', label: 'Menu',          sub: 'Pappe e ciclo settimanale',   path: '/pappe',        bg: '#FFF9E6', color: '#E67E22', border: '#FED7AA', risorsa: 'pappe' },
+  { icon: '🧾', label: 'Fatture',       sub: 'Documenti di pagamento',      path: '/fatture',      bg: '#F0FFF4', color: '#276749', border: '#9AE6B4', risorsa: 'fatture' },
+  { icon: '📢', label: 'Circolari',     sub: 'Comunicazioni alle famiglie', path: '/circolari',    bg: '#FFF9E6', color: '#D35400', border: '#FAD7A0', risorsa: 'circolari' },
+  { icon: '⚙️', label: 'Impostazioni', sub: 'Gruppi e orari uscita',       path: '/impostazioni', bg: '#F3F0FF', color: '#6C5CE7', border: '#D6CCFF', risorsa: null },
 ]
 
+// Agenda e Calendario: path assoluti perché puntano alle pagine staff condivise
+const AGENDA_ITEM = { icon: '📝', label: 'Agenda', sub: 'Note condivise del turno', risorsa: 'agenda' }
+const CALENDARIO_ITEM = { icon: '📅', label: 'Calendario', sub: 'Eventi e chiusure scolastiche', risorsa: 'calendario' }
+const PORTFOLIO_ITEM = { icon: '📸', label: 'Portfolio', sub: 'Foto e video del gruppo', risorsa: 'portfolio' }
+const BACHECA_ITEM = { icon: '📺', label: 'Bacheca Live', sub: 'Presenze in tempo reale', risorsa: 'presenze' }
+const STATISTICHE_ITEM = { icon: '📊', label: 'Statistiche', sub: 'Trend presenze e grafici', risorsa: 'presenze' }
+const COLLOQUI_ITEM = { icon: '🤝', label: 'Colloqui', sub: 'Colloqui con i genitori', risorsa: 'colloqui' }
+
+const ADMIN_ONLY = { icon: '👥', label: 'Utenti', sub: 'Gestione account', path: '/utenti', bg: '#EBF8FF', color: '#2B6CB0', border: '#90CDF4', risorsa: 'utenti' }
+
 export default function AdminDashboard() {
+  const t = useTranslations('Dashboard')
   const router = useRouter()
   const locale = useLocale()
   const [user, setUser] = useState<User | null>(null)
@@ -91,8 +54,8 @@ export default function AdminDashboard() {
   }, [locale, router])
 
   const canSee = (risorsa: string | null) => {
-    if (risorsa === null) return true
-    if (!risorse) return true
+    if (risorsa === null) return true   // Impostazioni sempre visibili
+    if (!risorse) return true           // In attesa dati, mostra tutto
     return risorse.includes(risorsa)
   }
 
@@ -101,125 +64,178 @@ export default function AdminDashboard() {
     router.push(`/${locale}/login`)
   }
 
-  const navigate = (path: string) => {
-    const base = `/${locale}/dashboard`
-    const MAP: Record<string, string> = {
-      '__agenda__':     `${base}/staff/agenda`,
-      '__calendario__': `${base}/staff/calendario`,
-      '__portfolio__':  `${base}/staff/portfolio`,
-      '__bacheca__':    `/${locale}/bacheca-presenze`,
-      '__colloqui__':   `${base}/staff/colloqui`,
-    }
-    router.push(MAP[path] ?? `${base}/admin${path}`)
-  }
-
   if (!user) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', background: BG }}>
-        <p style={{ color: A, fontWeight: 600 }}>Caricamento…</p>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', background: '#F3F0FF' }}>
+        <p style={{ color: '#6C5CE7', fontWeight: 600 }}>{t('loading')}</p>
       </div>
     )
   }
 
-  const dateStr = new Date().toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long' })
+  const base = `/${locale}/dashboard/admin`
+  // "Utenti" è filtrato da canSee('utenti') come tutti gli altri item
+  const allItems = [...NAV_ITEMS.slice(0, 4), ADMIN_ONLY, ...NAV_ITEMS.slice(4)]
+  const items = allItems.filter(item => canSee(item.risorsa))
 
   return (
-    <div style={{ minHeight: '100vh', background: BG }}>
+    <div style={{ minHeight: '100vh', background: '#F3F0FF' }}>
 
-      {/* ── Sticky frosted header ──────────────────────────────────────────── */}
-      <header style={{
-        position: 'sticky', top: 0, zIndex: 100,
-        background: 'rgba(242,242,247,0.88)',
-        backdropFilter: 'blur(16px)',
-        WebkitBackdropFilter: 'blur(16px)',
-        borderBottom: '1px solid rgba(0,0,0,0.07)',
-        padding: '0.625rem 1.25rem',
-      }}>
-        <div style={{ maxWidth: 'min(720px, 96vw)', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem' }}>
-            <div style={{ width: 34, height: 34, borderRadius: 9, background: A_LIGHT, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem' }}>
-              🏫
-            </div>
-            <span style={{ fontWeight: 700, fontSize: '1.05rem', color: T1 }}>Sherazade</span>
-          </div>
-          <UserChip onLogout={handleLogout} />
-        </div>
-      </header>
-
-      <div style={{ maxWidth: 'min(720px, 96vw)', margin: '0 auto', padding: '1.25rem 1rem 4rem' }}>
-
-        {/* ── Greeting card ─────────────────────────────────────────────────── */}
-        <div style={{
-          background: `linear-gradient(135deg, ${A} 0%, ${A_DARK} 100%)`,
-          borderRadius: 20,
-          padding: '1.5rem 1.5rem 1.75rem',
-          color: 'white',
-          marginBottom: '1.75rem',
-          position: 'relative',
-          overflow: 'hidden',
-          boxShadow: '0 8px 32px rgba(79,70,229,0.28)',
-        }}>
-          <div style={{ position: 'absolute', right: -24, top: -24, width: 140, height: 140, borderRadius: '50%', background: 'rgba(255,255,255,0.07)', pointerEvents: 'none' }} />
-          <div style={{ position: 'absolute', right: 32, bottom: -38, width: 96, height: 96, borderRadius: '50%', background: 'rgba(255,255,255,0.05)', pointerEvents: 'none' }} />
-          <p style={{ margin: '0 0 0.3rem', fontSize: '0.7rem', fontWeight: 700, opacity: 0.6, textTransform: 'uppercase', letterSpacing: '0.12em', position: 'relative' }}>
-            Area Amministrazione
-          </p>
-          <h1 style={{ margin: '0 0 0.4rem', fontSize: 'clamp(1.5rem, 5vw, 2rem)', fontWeight: 800, letterSpacing: '-0.02em', position: 'relative' }}>
-            Ciao, {user.first_name || user.email.split('@')[0]}! 👋
-          </h1>
-          <p style={{ margin: 0, fontSize: '0.82rem', opacity: 0.68, position: 'relative' }}>
-            {dateStr.charAt(0).toUpperCase() + dateStr.slice(1)}
-          </p>
-        </div>
-
-        {/* ── Navigation groups ─────────────────────────────────────────────── */}
-        {GROUPS.map(group => {
-          const visible = group.items.filter(item => canSee(item.risorsa))
-          if (visible.length === 0) return null
-          return (
-            <div key={group.label} style={{ marginBottom: '1.25rem' }}>
-              <p style={{
-                margin: '0 0 0.4rem 0.375rem',
-                fontSize: '0.7rem', fontWeight: 700, color: TSEC,
-                textTransform: 'uppercase', letterSpacing: '0.07em',
-              }}>
-                {group.label}
+      {/* ── Header a gradiente ─────────────────────────────────────────────── */}
+      <div style={{ background: 'linear-gradient(135deg, #6C5CE7 0%, #4834D4 100%)', padding: '2rem 1.5rem 3rem', color: 'white' }}>
+        <div style={{ maxWidth: 'min(960px, 96vw)', margin: '0 auto' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1rem' }}>
+            <div>
+              <p style={{ margin: '0 0 0.25rem', fontSize: '0.85rem', fontWeight: 600, opacity: 0.75, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+                Portale Sherazade
               </p>
-              <div style={{ background: CARD, borderRadius: 16, overflow: 'hidden', boxShadow: '0 1px 4px rgba(0,0,0,0.06)' }}>
-                {visible.map((item, idx) => (
-                  <button
-                    key={item.path}
-                    onClick={() => navigate(item.path)}
-                    style={{
-                      width: '100%', background: 'none', border: 'none',
-                      padding: '0.85rem 1rem',
-                      display: 'flex', alignItems: 'center', gap: '0.875rem',
-                      cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left',
-                      borderBottom: idx < visible.length - 1 ? `1px solid ${SEP}` : 'none',
-                      transition: 'background 0.12s',
-                    }}
-                    onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = '#F9F9FB' }}
-                    onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'none' }}
-                  >
-                    <div style={{
-                      width: 40, height: 40, borderRadius: 11,
-                      background: A_LIGHT,
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      fontSize: '1.2rem', flexShrink: 0,
-                    }}>
-                      {item.icon}
-                    </div>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <p style={{ margin: 0, fontWeight: 600, fontSize: '0.9rem', color: T1 }}>{item.label}</p>
-                      <p style={{ margin: 0, fontSize: '0.75rem', color: T2, marginTop: '0.1rem' }}>{item.sub}</p>
-                    </div>
-                    <span style={{ color: CHEV, fontSize: '1.2rem', fontWeight: 400, flexShrink: 0, lineHeight: 1 }}>›</span>
-                  </button>
-                ))}
-              </div>
+              <h1 style={{ margin: 0, fontSize: 'clamp(1.5rem, 4vw, 2rem)', fontWeight: 800 }}>
+                Ciao, {user.first_name || user.email.split('@')[0]} 👋
+              </h1>
+              <p style={{ margin: '0.25rem 0 0', opacity: 0.85, fontSize: '0.875rem' }}>
+                {t(`roles.${user.role}` as Parameters<typeof t>[0])}
+              </p>
             </div>
-          )
-        })}
+            <UserChip onLogout={handleLogout} />
+          </div>
+        </div>
+      </div>
+
+      {/* ── Contenuto principale ───────────────────────────────────────────── */}
+      <div style={{ maxWidth: 'min(960px, 96vw)', margin: '-1.5rem auto 0', padding: '0 1rem 3rem', position: 'relative', zIndex: 1 }}>
+
+        {/* Griglia azioni */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(min(180px, 100%), 1fr))',
+          gap: '0.75rem',
+        }}>
+          {items.map(item => (
+            <button
+              key={item.path}
+              onClick={() => router.push(`${base}${item.path}`)}
+              style={{
+                padding: '1rem',
+                background: item.bg,
+                color: item.color,
+                border: `2px solid ${item.border}`,
+                borderRadius: '14px',
+                cursor: 'pointer',
+                fontFamily: 'inherit',
+                textAlign: 'left',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.75rem',
+              }}
+            >
+              <span style={{ fontSize: '1.4rem', flexShrink: 0 }}>{item.icon}</span>
+              <div>
+                <p style={{ margin: 0, fontWeight: 700, fontSize: '0.9rem' }}>{item.label}</p>
+                <p style={{ margin: 0, fontSize: '0.72rem', opacity: 0.75 }}>{item.sub}</p>
+              </div>
+            </button>
+          ))}
+          {/* Agenda — pagina condivisa con staff */}
+          {canSee(AGENDA_ITEM.risorsa) && (
+            <button
+              onClick={() => router.push(`/${locale}/dashboard/staff/agenda`)}
+              style={{ padding: '1rem', background: '#FDF2F8', color: '#9B59B6', border: '2px solid #E8BFFF', borderRadius: '14px', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '0.75rem' }}
+            >
+              <span style={{ fontSize: '1.4rem', flexShrink: 0 }}>{AGENDA_ITEM.icon}</span>
+              <div>
+                <p style={{ margin: 0, fontWeight: 700, fontSize: '0.9rem' }}>{AGENDA_ITEM.label}</p>
+                <p style={{ margin: 0, fontSize: '0.72rem', opacity: 0.75 }}>{AGENDA_ITEM.sub}</p>
+              </div>
+            </button>
+          )}
+          {/* Calendario — pagina condivisa con staff */}
+          {canSee(CALENDARIO_ITEM.risorsa) && (
+            <button
+              onClick={() => router.push(`/${locale}/dashboard/staff/calendario`)}
+              style={{ padding: '1rem', background: '#EBF8FF', color: '#2B6CB0', border: '2px solid #90CDF4', borderRadius: '14px', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '0.75rem' }}
+            >
+              <span style={{ fontSize: '1.4rem', flexShrink: 0 }}>{CALENDARIO_ITEM.icon}</span>
+              <div>
+                <p style={{ margin: 0, fontWeight: 700, fontSize: '0.9rem' }}>{CALENDARIO_ITEM.label}</p>
+                <p style={{ margin: 0, fontSize: '0.72rem', opacity: 0.75 }}>{CALENDARIO_ITEM.sub}</p>
+              </div>
+            </button>
+          )}
+          {/* Portfolio — pagina condivisa con staff */}
+          {canSee(PORTFOLIO_ITEM.risorsa) && (
+            <button
+              onClick={() => router.push(`/${locale}/dashboard/staff/portfolio`)}
+              style={{ padding: '1rem', background: '#FFF0F6', color: '#D63384', border: '2px solid #F5BFDF', borderRadius: '14px', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '0.75rem' }}
+            >
+              <span style={{ fontSize: '1.4rem', flexShrink: 0 }}>{PORTFOLIO_ITEM.icon}</span>
+              <div>
+                <p style={{ margin: 0, fontWeight: 700, fontSize: '0.9rem' }}>{PORTFOLIO_ITEM.label}</p>
+                <p style={{ margin: 0, fontSize: '0.72rem', opacity: 0.75 }}>{PORTFOLIO_ITEM.sub}</p>
+              </div>
+            </button>
+          )}
+          {canSee(BACHECA_ITEM.risorsa) && (
+            <button
+              onClick={() => router.push(`/${locale}/bacheca-presenze`)}
+              style={{ padding: '1rem', background: '#F0F4F8', color: '#2D3436', border: '2px solid #B2BEC3', borderRadius: '14px', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '0.75rem' }}
+            >
+              <span style={{ fontSize: '1.4rem', flexShrink: 0 }}>{BACHECA_ITEM.icon}</span>
+              <div>
+                <p style={{ margin: 0, fontWeight: 700, fontSize: '0.9rem' }}>{BACHECA_ITEM.label}</p>
+                <p style={{ margin: 0, fontSize: '0.72rem', opacity: 0.75 }}>{BACHECA_ITEM.sub}</p>
+              </div>
+            </button>
+          )}
+          {canSee(COLLOQUI_ITEM.risorsa) && (
+            <button
+              onClick={() => router.push(`/${locale}/dashboard/staff/colloqui`)}
+              style={{ padding: '1rem', background: '#F0FDFA', color: '#0D9488', border: '2px solid #99F6E4', borderRadius: '14px', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '0.75rem' }}
+            >
+              <span style={{ fontSize: '1.4rem', flexShrink: 0 }}>{COLLOQUI_ITEM.icon}</span>
+              <div>
+                <p style={{ margin: 0, fontWeight: 700, fontSize: '0.9rem' }}>{COLLOQUI_ITEM.label}</p>
+                <p style={{ margin: 0, fontSize: '0.72rem', opacity: 0.75 }}>{COLLOQUI_ITEM.sub}</p>
+              </div>
+            </button>
+          )}
+          {canSee(STATISTICHE_ITEM.risorsa) && (
+            <button
+              onClick={() => router.push(`${base}/statistiche`)}
+              style={{ padding: '1rem', background: '#EBF8FF', color: '#2B6CB0', border: '2px solid #90CDF4', borderRadius: '14px', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '0.75rem' }}
+            >
+              <span style={{ fontSize: '1.4rem', flexShrink: 0 }}>{STATISTICHE_ITEM.icon}</span>
+              <div>
+                <p style={{ margin: 0, fontWeight: 700, fontSize: '0.9rem' }}>{STATISTICHE_ITEM.label}</p>
+                <p style={{ margin: 0, fontSize: '0.72rem', opacity: 0.75 }}>{STATISTICHE_ITEM.sub}</p>
+              </div>
+            </button>
+          )}
+          {/* Iscrizioni */}
+          {canSee('iscrizioni') && (
+            <button
+              onClick={() => router.push(`${base}/iscrizioni`)}
+              style={{ padding: '1rem', background: '#FFF7ED', color: '#C05621', border: '2px solid #FBD38D', borderRadius: '14px', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '0.75rem' }}
+            >
+              <span style={{ fontSize: '1.4rem', flexShrink: 0 }}>📋</span>
+              <div>
+                <p style={{ margin: 0, fontWeight: 700, fontSize: '0.9rem' }}>Iscrizioni</p>
+                <p style={{ margin: 0, fontSize: '0.72rem', opacity: 0.75 }}>Moduli iscrizione online</p>
+              </div>
+            </button>
+          )}
+          {/* Log Accessi GDPR — solo admin */}
+          {user.role === 'admin' && (
+            <button
+              onClick={() => router.push(`${base}/log-accessi`)}
+              style={{ padding: '1rem', background: '#F0F4FF', color: '#4834D4', border: '2px solid #C7D2FE', borderRadius: '14px', cursor: 'pointer', fontFamily: 'inherit', textAlign: 'left', display: 'flex', alignItems: 'center', gap: '0.75rem' }}
+            >
+              <span style={{ fontSize: '1.4rem', flexShrink: 0 }}>🔍</span>
+              <div>
+                <p style={{ margin: 0, fontWeight: 700, fontSize: '0.9rem' }}>Log Accessi</p>
+                <p style={{ margin: 0, fontSize: '0.72rem', opacity: 0.75 }}>Audit GDPR dati minori</p>
+              </div>
+            </button>
+          )}
+        </div>
 
       </div>
     </div>
