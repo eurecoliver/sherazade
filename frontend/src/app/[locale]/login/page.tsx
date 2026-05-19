@@ -30,8 +30,8 @@ export default function LoginPage() {
   const locale = useLocale()
   const searchParams = useSearchParams()
   const rawCallback = searchParams.get('callbackUrl') ?? ''
-  // Accept only relative paths to prevent open-redirect and URL-growth loops
-  const callbackUrl = rawCallback.startsWith('/') ? rawCallback : ''
+  // Accept only relative paths; block protocol-relative URLs (e.g. //attacker.com)
+  const callbackUrl = rawCallback.startsWith('/') && !rawCallback.startsWith('//') ? rawCallback : ''
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')

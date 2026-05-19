@@ -1,6 +1,7 @@
 import threading
 from datetime import date
 
+from django.db import transaction
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -147,6 +148,12 @@ class RichiestaIscrizioneViewSet(viewsets.ModelViewSet):
         from apps.children.models import Bambino, Famiglia
         from django.db import IntegrityError
 
+        return self._approva_atomic(request, richiesta)
+
+    def _approva_atomic(self, request, richiesta):
+        from apps.children.models import Bambino, Famiglia
+        from django.db import IntegrityError
+
         # Crea o recupera User genitore 1
         g1, _ = User.objects.get_or_create(
             email__iexact=richiesta.g1_email,
@@ -179,38 +186,35 @@ class RichiestaIscrizioneViewSet(viewsets.ModelViewSet):
                 },
             )
 
-        # Crea Bambino
+        # Crea Bambino + Famiglia in transazione atomica
         cf = richiesta.bambino_codice_fiscale.strip().upper()
         try:
-            bambino = Bambino.objects.create(
-                nome=richiesta.bambino_nome,
-                cognome=richiesta.bambino_cognome,
-                data_nascita=richiesta.bambino_data_nascita,
-                codice_fiscale=cf if cf else '',
-                note_mediche=richiesta.bambino_note_mediche or '',
-                data_iscrizione=date.today(),
-                attivo=True,
-            )
+            with transaction.atomic():
+                bambino = Bambino.objects.create(
+                    nome=richiesta.bambino_nome,
+                    cognome=richiesta.bambino_cognome,
+                    data_nascita=richiesta.bambino_data_nascita,
+                    codice_fiscale=cf if cf else '',
+                    note_mediche=richiesta.bambino_note_mediche or '',
+                    data_iscrizione=date.today(),
+                    attivo=True,
+                )
+                Famiglia.objects.create(
+                    bambino=bambino,
+                    genitore1=g1,
+                    genitore2=g2,
+                    genitore1_codice_fiscale=richiesta.g1_codice_fiscale or '',
+                    genitore1_indirizzo=richiesta.g1_indirizzo or '',
+                    telefono_emergenza=richiesta.g1_telefono or '',
+                )
+                richiesta.stato = RichiestaIscrizione.Stato.APPROVATA
+                richiesta.bambino = bambino
+                richiesta.save(update_fields=['stato', 'bambino', 'aggiornato_at'])
         except IntegrityError:
             return Response(
                 {'detail': 'Esiste già un bambino con questo codice fiscale. Verifica l\'anagrafica e, se necessario, collega manualmente il bambino.'},
                 status=status.HTTP_409_CONFLICT,
             )
-
-        # Crea Famiglia
-        Famiglia.objects.create(
-            bambino=bambino,
-            genitore1=g1,
-            genitore2=g2,
-            genitore1_codice_fiscale=richiesta.g1_codice_fiscale or '',
-            genitore1_indirizzo=richiesta.g1_indirizzo or '',
-            telefono_emergenza=richiesta.g1_telefono or '',
-        )
-
-        # Aggiorna richiesta
-        richiesta.stato = RichiestaIscrizione.Stato.APPROVATA
-        richiesta.bambino = bambino
-        richiesta.save(update_fields=['stato', 'bambino', 'aggiornato_at'])
 
         return Response(
             RichiestaIscrizioneSerializer(richiesta).data,

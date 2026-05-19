@@ -92,14 +92,6 @@ class MediaPortfolioViewSet(LogAccessoMixin, viewsets.ModelViewSet):
                         pairs.add((iscr.anno_id, iscr.gruppo_id))
 
                 if not pairs:
-                    # Fallback: usa il gruppo corrente del bambino per tutti gli anni
-                    tutti_anni = list(AnnoScolastico.objects.values_list('id', flat=True))
-                    for bambino in bambini_list:
-                        if bambino.gruppo_id:
-                            for anno_id in tutti_anni:
-                                pairs.add((anno_id, bambino.gruppo_id))
-
-                if not pairs:
                     return qs.none()
 
                 q = Q()
