@@ -60,6 +60,7 @@ class ConfigurazioneIscrizioniViewSet(viewsets.ViewSet):
 
 
 class RichiestaIscrizioneViewSet(viewsets.ModelViewSet):
+    pagination_class = None
 
     def get_permissions(self):
         if self.action == 'create':

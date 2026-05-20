@@ -78,7 +78,10 @@ export default function AdminIscrizioniPage() {
 
   const loadRichieste = async () => {
     const res = await fetch('/api/iscrizioni/richieste')
-    if (res.ok) setRichieste(await res.json())
+    if (res.ok) {
+      const data = await res.json()
+      setRichieste(Array.isArray(data) ? data : (data.results ?? []))
+    }
   }
 
   const visible = tab === 'tutte' ? richieste : richieste.filter(r => r.stato === tab)
