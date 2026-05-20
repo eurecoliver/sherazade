@@ -899,7 +899,7 @@ Prossimo task: HTTPS + Nginx (in attesa dominio) oppure 2FA
 Data: 19 maggio 2026 (aggiornato)
 Completato: Fix iscrizioni + redesign modal bambini — branch feature/iscrizioni-fixes
 
-### Fix iscrizioni e redesign modal bambini (19 maggio 2026) — branch feature/iscrizioni-fixes
+### Fix i scrizioni e redesign modal bambini (19 maggio 2026) — branch feature/iscrizioni-fixes
 
 **Fix backend:**
 - `apps/iscrizioni/views.py`: `_approva_atomic()` — sostituita `User.objects.get_or_create(email__iexact=...)` con pattern manuale `try: User.objects.get(email__iexact=...) / except User.DoesNotExist: User(...)`. Motivo: Django fonde i lookup key nei create params e restituisce utenti esistenti senza garantire `role=GENITORE`. Il nuovo pattern: se utente esiste, aggiorna nome se assente; se non esiste, crea con `role=GENITORE` e `set_unusable_password()`. Tutto dentro `transaction.atomic()`.

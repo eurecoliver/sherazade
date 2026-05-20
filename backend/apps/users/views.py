@@ -138,7 +138,17 @@ class UserAdminViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         qs = User.objects.all()
         role = self.request.query_params.get('role')
-        if role:
+        if role == 'genitore':
+            # Include sia utenti con role=genitore sia chi è linkato come genitore1/2 in Famiglia
+            from django.db.models import Q
+            from apps.children.models import Famiglia
+            linked_ids = set(Famiglia.objects.values_list('genitore1_id', flat=True))
+            linked_ids |= set(
+                Famiglia.objects.filter(genitore2__isnull=False)
+                .values_list('genitore2_id', flat=True)
+            )
+            qs = User.objects.filter(Q(role='genitore') | Q(id__in=linked_ids))
+        elif role:
             qs = qs.filter(role=role)
         attivo = self.request.query_params.get('attivo')
         if attivo is not None:

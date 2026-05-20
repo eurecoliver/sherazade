@@ -16,8 +16,7 @@ class RichiestaIscrizioneSerializer(serializers.ModelSerializer):
     class Meta:
         model = RichiestaIscrizione
         fields = '__all__'
-        read_only_fields = ['stato', 'assegnato_a', 'bambino', 'ip_address',
-                            'creato_at', 'aggiornato_at']
+        read_only_fields = ['bambino', 'ip_address', 'creato_at', 'aggiornato_at']
 
     def get_assegnato_a_nome(self, obj):
         if obj.assegnato_a:

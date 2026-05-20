@@ -162,7 +162,7 @@ export default function GenitoriPage() {
     setError('')
     try {
       const [gRes, fRes, bRes] = await Promise.all([
-        fetch('/api/utenti?role=genitore&ordering=last_name'),
+        fetch('/api/utenti?role=genitore&ordering=last_name&page_size=200'),
         fetch('/api/famiglie'),
         fetch('/api/bambini?page_size=200'),
       ])
