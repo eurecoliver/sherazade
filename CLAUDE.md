@@ -896,6 +896,31 @@ Prossimo task: HTTPS + Nginx (in attesa dominio) oppure 2FA
 - `frontend/src/components/UserChip.tsx`: link "🔐 Sicurezza"
 
 ## Ultimo Aggiornamento
+Data: 19 maggio 2026 (aggiornato)
+Completato: Fix iscrizioni + redesign modal bambini — branch feature/iscrizioni-fixes
+
+### Fix iscrizioni e redesign modal bambini (19 maggio 2026) — branch feature/iscrizioni-fixes
+
+**Fix backend:**
+- `apps/iscrizioni/views.py`: `_approva_atomic()` — sostituita `User.objects.get_or_create(email__iexact=...)` con pattern manuale `try: User.objects.get(email__iexact=...) / except User.DoesNotExist: User(...)`. Motivo: Django fonde i lookup key nei create params e restituisce utenti esistenti senza garantire `role=GENITORE`. Il nuovo pattern: se utente esiste, aggiorna nome se assente; se non esiste, crea con `role=GENITORE` e `set_unusable_password()`. Tutto dentro `transaction.atomic()`.
+
+**Fix frontend iscrizioni:**
+- `dashboard/admin/iscrizioni/page.tsx`: rimossa condizione esterna `{selected.stato !== 'approvata' && (...)}` che nascondeva tutti i pulsanti cambio-stato. Ora ogni pulsante ha la propria condizione indipendente: "Lista d'attesa" (se non già lista_attesa), "Rifiuta" (se non già rifiutata), "In attesa" (se non già in_attesa). Solo "✅ Approva & crea bambino" rimane gated da `stato !== 'approvata' && !bambino`.
+
+**Redesign modal bambini:**
+- `dashboard/admin/bambini/page.tsx`: modal dettaglio completamente ristrutturato con tab di navigazione di primo livello:
+  - **Tab "👶 Dati"**: note mediche (se presenti), info card (CF, iscrizione, medico, tel emergenza), report picker toggleable, action buttons (Modifica, Disattiva/Riattiva, Report, GDPR, Elimina)
+  - **Tab "👨‍👩‍👧 Famiglia"**: logica if/else — mostra form-edit uno alla volta; `GenitoreCard` component per G1/G2; empty state se nessuna famiglia; card dati famiglia; pulsanti modifica/rimuovi
+  - **Tab "🚗 Deleghe"**: lista deleghe + form aggiunta toggle
+- Nuovo sub-component `GenitoreCard`: label, nome, email (mailto), telefono, CF (monospace), pulsanti "✏️ Modifica" e "Scollega"
+- State rinominato da `detailTab: 'genitore1'|'genitore2'` a `detailSection: 'anagrafica'|'famiglia'|'deleghe'`
+
+**File modificati:**
+- `backend/apps/iscrizioni/views.py`
+- `frontend/src/app/[locale]/dashboard/admin/iscrizioni/page.tsx`
+- `frontend/src/app/[locale]/dashboard/admin/bambini/page.tsx`
+
+## Ultimo Aggiornamento (precedente)
 Data: 19 maggio 2026
 Completato: Security fix post code-review — 12 issue risolti (3🔴 + 5🟠 + 4🟡) su branch feature/redesign-ui
 
