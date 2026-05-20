@@ -233,22 +233,21 @@ export default function AdminIscrizioniPage() {
             </div>
 
             {/* Azioni cambio stato */}
-            {selected.stato !== 'approvata' && (
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 20 }}>
-                {selected.stato !== 'approvata' && !selected.bambino && (
-                  <button onClick={() => approva(selected.id)} disabled={saving} style={{ padding: '8px 14px', borderRadius: 8, border: 'none', background: '#00b894', color: '#fff', fontWeight: 700, cursor: 'pointer', fontSize: 13 }}>✅ Approva &amp; crea bambino</button>
-                )}
-                {selected.stato !== 'lista_attesa' && (
-                  <button onClick={() => patch(selected.id, { stato: 'lista_attesa' })} style={{ padding: '8px 14px', borderRadius: 8, border: '1px solid #0984e3', background: '#fff', color: '#0984e3', fontWeight: 600, cursor: 'pointer', fontSize: 13 }}>📋 Lista d&apos;attesa</button>
-                )}
-                {selected.stato !== 'rifiutata' && (
-                  <button onClick={() => { if (confirm('Rifiutare questa richiesta?')) patch(selected.id, { stato: 'rifiutata' }) }} style={{ padding: '8px 14px', borderRadius: 8, border: '1px solid #d63031', background: '#fff', color: '#d63031', fontWeight: 600, cursor: 'pointer', fontSize: 13 }}>❌ Rifiuta</button>
-                )}
-                {selected.stato !== 'in_attesa' && (
-                  <button onClick={() => patch(selected.id, { stato: 'in_attesa' })} style={{ padding: '8px 14px', borderRadius: 8, border: '1px solid #f39c12', background: '#fff', color: '#f39c12', fontWeight: 600, cursor: 'pointer', fontSize: 13 }}>⏳ In attesa</button>
-                )}
-              </div>
-            )}
+            {/* Azioni cambio stato */}
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 20 }}>
+              {selected.stato !== 'approvata' && !selected.bambino && (
+                <button onClick={() => approva(selected.id)} disabled={saving} style={{ padding: '8px 14px', borderRadius: 8, border: 'none', background: '#00b894', color: '#fff', fontWeight: 700, cursor: 'pointer', fontSize: 13 }}>✅ Approva &amp; crea bambino</button>
+              )}
+              {selected.stato !== 'lista_attesa' && (
+                <button onClick={() => patch(selected.id, { stato: 'lista_attesa' })} style={{ padding: '8px 14px', borderRadius: 8, border: '1px solid #0984e3', background: '#fff', color: '#0984e3', fontWeight: 600, cursor: 'pointer', fontSize: 13 }}>📋 Lista d&apos;attesa</button>
+              )}
+              {selected.stato !== 'rifiutata' && (
+                <button onClick={() => { if (confirm('Rifiutare questa richiesta?')) patch(selected.id, { stato: 'rifiutata' }) }} style={{ padding: '8px 14px', borderRadius: 8, border: '1px solid #d63031', background: '#fff', color: '#d63031', fontWeight: 600, cursor: 'pointer', fontSize: 13 }}>❌ Rifiuta</button>
+              )}
+              {selected.stato !== 'in_attesa' && (
+                <button onClick={() => patch(selected.id, { stato: 'in_attesa' })} style={{ padding: '8px 14px', borderRadius: 8, border: '1px solid #f39c12', background: '#fff', color: '#f39c12', fontWeight: 600, cursor: 'pointer', fontSize: 13 }}>⏳ In attesa</button>
+              )}
+            </div>
 
             <Section title="👶 Bambino">
               <Row label="Nome completo" value={`${selected.bambino_nome} ${selected.bambino_cognome}`} />
