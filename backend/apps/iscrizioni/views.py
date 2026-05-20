@@ -1,7 +1,7 @@
 import threading
 from datetime import date
 
-from django.db import transaction
+from django.db import transaction, IntegrityError
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -127,10 +127,16 @@ class RichiestaIscrizioneViewSet(viewsets.ModelViewSet):
         instance = self.get_object()
         allowed = {'stato', 'note_admin', 'assegnato_a'}
         data = {k: v for k, v in request.data.items() if k in allowed}
+        # Blocca l'impostazione diretta di 'approvata' — usare l'action /approva/ dedicata
+        if data.get('stato') == RichiestaIscrizione.Stato.APPROVATA:
+            return Response(
+                {'detail': 'Usa il pulsante "Approva" per approvare una richiesta (crea bambino e famiglia).'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         s = RichiestaIscrizioneSerializer(instance, data=data, partial=True)
         s.is_valid(raise_exception=True)
         s.save()
-        return Response(RichiestaIscrizioneSerializer(instance).data)
+        return Response(s.data)
 
     @action(detail=True, methods=['post'], url_path='approva')
     def approva(self, request, pk=None):
@@ -147,13 +153,11 @@ class RichiestaIscrizioneViewSet(viewsets.ModelViewSet):
             return Response({'detail': 'Richiesta già approvata.'}, status=status.HTTP_400_BAD_REQUEST)
 
         from apps.children.models import Bambino, Famiglia
-        from django.db import IntegrityError
 
         return self._approva_atomic(request, richiesta)
 
     def _approva_atomic(self, request, richiesta):
         from apps.children.models import Bambino, Famiglia
-        from django.db import IntegrityError
 
         cf = richiesta.bambino_codice_fiscale.strip().upper()
         try:

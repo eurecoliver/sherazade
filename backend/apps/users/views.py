@@ -142,11 +142,11 @@ class UserAdminViewSet(viewsets.ModelViewSet):
             # Include sia utenti con role=genitore sia chi è linkato come genitore1/2 in Famiglia
             from django.db.models import Q
             from apps.children.models import Famiglia
-            linked_ids = set(Famiglia.objects.values_list('genitore1_id', flat=True))
-            linked_ids |= set(
-                Famiglia.objects.filter(genitore2__isnull=False)
-                .values_list('genitore2_id', flat=True)
-            )
+            linked_ids = set()
+            for g1_id, g2_id in Famiglia.objects.values_list('genitore1_id', 'genitore2_id'):
+                linked_ids.add(g1_id)
+                if g2_id:
+                    linked_ids.add(g2_id)
             qs = User.objects.filter(Q(role='genitore') | Q(id__in=linked_ids))
         elif role:
             qs = qs.filter(role=role)
