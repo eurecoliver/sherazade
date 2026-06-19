@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { fetchBackend, COOKIE_OPTIONS } from '@/lib/fetchBackend'
 
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
   try {
     const { res } = await fetchBackend(request, `/api/v1/auth/utenti/${params.id}/`, { cache: 'no-store' } as RequestInit)

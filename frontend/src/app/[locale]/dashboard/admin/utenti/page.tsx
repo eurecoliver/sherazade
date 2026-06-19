@@ -46,6 +46,10 @@ export default function UtentiPage() {
   const [loading, setLoading] = useState(true)
   const [filterRole, setFilterRole] = useState('')
   const [search, setSearch] = useState('')
+  const [page, setPage] = useState(1)
+  const [totalCount, setTotalCount] = useState(0)
+  const [hasNext, setHasNext] = useState(false)
+  const [hasPrevious, setHasPrevious] = useState(false)
   const [showModal, setShowModal] = useState(false)
   const [editingId, setEditingId] = useState<number | null>(null)
   const [form, setForm] = useState({ ...EMPTY_FORM })
@@ -53,7 +57,7 @@ export default function UtentiPage() {
   const [error, setError] = useState('')
 
   const fetchRuoli = useCallback(async () => {
-    const res = await fetch('/api/config/ruoli')
+    const res = await fetch('/api/config/ruoli', { cache: 'no-store' })
     if (res.ok) {
       const data = await res.json()
       setRuoli(Array.isArray(data) ? data : data.results ?? [])
@@ -63,15 +67,28 @@ export default function UtentiPage() {
   const fetchUtenti = useCallback(async () => {
     setLoading(true)
     const params = new URLSearchParams()
+    params.set('page_size', '20')
+    params.set('ordering', '-id')
+    params.set('page', String(page))
     if (filterRole) params.set('role', filterRole)
     if (search) params.set('search', search)
-    const res = await fetch(`/api/utenti?${params}`)
+    const res = await fetch(`/api/utenti?${params}`, { cache: 'no-store' })
     if (res.ok) {
       const data = await res.json()
-      setUtenti(Array.isArray(data) ? data : data.results ?? [])
+      if (Array.isArray(data)) {
+        setUtenti(data)
+        setTotalCount(data.length)
+        setHasNext(false)
+        setHasPrevious(false)
+      } else {
+        setUtenti(data.results ?? [])
+        setTotalCount(typeof data.count === 'number' ? data.count : (data.results ?? []).length)
+        setHasNext(Boolean(data.next))
+        setHasPrevious(Boolean(data.previous))
+      }
     }
     setLoading(false)
-  }, [filterRole, search])
+  }, [filterRole, search, page])
 
   useEffect(() => {
     fetch('/api/auth/me')
@@ -79,8 +96,12 @@ export default function UtentiPage() {
       .then(me => { setCurrentRole(me.role ?? '') })
       .catch(err => console.warn('[utenti] /api/auth/me fallito:', err))
   }, [])
+  useEffect(() => { setPage(1) }, [filterRole, search])
   useEffect(() => { fetchRuoli() }, [fetchRuoli])
   useEffect(() => { fetchUtenti() }, [fetchUtenti])
+
+  const pageSize = 20
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize))
 
   const nomeRuolo = (codice: string) =>
     ruoli.find(r => r.codice === codice)?.nome ?? codice
@@ -145,6 +166,26 @@ export default function UtentiPage() {
       body: JSON.stringify({ is_active: !u.is_active }),
     })
     if (res.ok) fetchUtenti()
+  }
+
+  const deleteUtente = async (u: Utente) => {
+    const label = (u.first_name || u.username || 'questo utente').trim()
+    if (!confirm(`Vuoi eliminare definitivamente ${label}?`)) return
+
+    const res = await fetch(`/api/utenti/${u.id}`, { method: 'DELETE' })
+    if (res.status === 204 || res.ok) {
+      fetchUtenti()
+      return
+    }
+
+    let message = 'Impossibile eliminare utente.'
+    try {
+      const data = await res.json()
+      message = fmtErrors(data)
+    } catch {
+      // usa messaggio fallback
+    }
+    alert(message)
   }
 
   // Raggruppa utenti per ruolo
@@ -216,42 +257,66 @@ export default function UtentiPage() {
         {loading ? (
           <div style={{ textAlign: 'center', padding: '3rem', color: '#6C5CE7' }}>Caricamento...</div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-            {/* Sezioni per ruoli noti (in ordine dal DB) */}
-            {ruoli.map(ruolo => {
-              const list = grouped[ruolo.codice]
-              if (!list || list.length === 0) return null
-              return (
-                <div key={ruolo.codice} style={{ background: 'white', borderRadius: '16px', padding: '1.25rem', boxShadow: '0 2px 12px rgba(108,92,231,0.08)' }}>
-                  <h3 style={{ margin: '0 0 1rem', color: '#6C5CE7', fontSize: '0.95rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                    {ruolo.nome} ({list.length})
-                  </h3>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                    {list.map(u => <UtenteRow key={u.id} u={u} currentRole={currentRole} onEdit={openEdit} onToggle={toggleAttivo} />)}
+          <>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              {/* Sezioni per ruoli noti (in ordine dal DB) */}
+              {ruoli.map(ruolo => {
+                const list = grouped[ruolo.codice]
+                if (!list || list.length === 0) return null
+                return (
+                  <div key={ruolo.codice} style={{ background: 'white', borderRadius: '16px', padding: '1.25rem', boxShadow: '0 2px 12px rgba(108,92,231,0.08)' }}>
+                    <h3 style={{ margin: '0 0 1rem', color: '#6C5CE7', fontSize: '0.95rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      {ruolo.nome} ({list.length})
+                    </h3>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                      {list.map(u => <UtenteRow key={u.id} u={u} currentRole={currentRole} onEdit={openEdit} onToggle={toggleAttivo} onDelete={deleteUtente} />)}
+                    </div>
                   </div>
-                </div>
-              )
-            })}
-            {/* Sezioni per ruoli sconosciuti (legacy/rimossi) */}
-            {ruoliSconosciuti.map(codice => {
-              const list = grouped[codice]
-              return (
-                <div key={codice} style={{ background: 'white', borderRadius: '16px', padding: '1.25rem', boxShadow: '0 2px 12px rgba(108,92,231,0.08)', borderLeft: '4px solid #FED7D7' }}>
-                  <h3 style={{ margin: '0 0 1rem', color: '#E53E3E', fontSize: '0.95rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                    {codice} — ruolo rimosso ({list.length})
-                  </h3>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-                    {list.map(u => <UtenteRow key={u.id} u={u} currentRole={currentRole} onEdit={openEdit} onToggle={toggleAttivo} />)}
+                )
+              })}
+              {/* Sezioni per ruoli sconosciuti (legacy/rimossi) */}
+              {ruoliSconosciuti.map(codice => {
+                const list = grouped[codice]
+                return (
+                  <div key={codice} style={{ background: 'white', borderRadius: '16px', padding: '1.25rem', boxShadow: '0 2px 12px rgba(108,92,231,0.08)', borderLeft: '4px solid #FED7D7' }}>
+                    <h3 style={{ margin: '0 0 1rem', color: '#E53E3E', fontSize: '0.95rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      {codice} — ruolo rimosso ({list.length})
+                    </h3>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                      {list.map(u => <UtenteRow key={u.id} u={u} currentRole={currentRole} onEdit={openEdit} onToggle={toggleAttivo} onDelete={deleteUtente} />)}
+                    </div>
                   </div>
+                )
+              })}
+              {utenti.length === 0 && (
+                <div style={{ textAlign: 'center', padding: '3rem', color: '#999' }}>
+                  Nessun utente trovato.
                 </div>
-              )
-            })}
-            {utenti.length === 0 && (
-              <div style={{ textAlign: 'center', padding: '3rem', color: '#999' }}>
-                Nessun utente trovato.
+              )}
+            </div>
+
+            <div style={{ marginTop: '1.25rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', flexWrap: 'wrap' }}>
+              <div style={{ color: '#666', fontSize: '0.85rem' }}>
+                Pagina {page} di {totalPages} • Totale utenti: {totalCount}
               </div>
-            )}
-          </div>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <button
+                  onClick={() => setPage(p => Math.max(1, p - 1))}
+                  disabled={!hasPrevious}
+                  style={{ padding: '0.5rem 0.9rem', borderRadius: '8px', border: '1px solid #D6CCFF', background: hasPrevious ? 'white' : '#F5F5F5', color: hasPrevious ? '#6C5CE7' : '#AAA', fontWeight: 600, cursor: hasPrevious ? 'pointer' : 'default', fontFamily: 'inherit' }}
+                >
+                  ← Precedente
+                </button>
+                <button
+                  onClick={() => setPage(p => p + 1)}
+                  disabled={!hasNext}
+                  style={{ padding: '0.5rem 0.9rem', borderRadius: '8px', border: '1px solid #D6CCFF', background: hasNext ? 'white' : '#F5F5F5', color: hasNext ? '#6C5CE7' : '#AAA', fontWeight: 600, cursor: hasNext ? 'pointer' : 'default', fontFamily: 'inherit' }}
+                >
+                  Successiva →
+                </button>
+              </div>
+            </div>
+          </>
         )}
       </div>
 
@@ -349,10 +414,11 @@ export default function UtentiPage() {
   )
 }
 
-function UtenteRow({ u, currentRole, onEdit, onToggle }: { u: Utente; currentRole: string; onEdit: (u: Utente) => void; onToggle: (u: Utente) => void }) {
+function UtenteRow({ u, currentRole, onEdit, onToggle, onDelete }: { u: Utente; currentRole: string; onEdit: (u: Utente) => void; onToggle: (u: Utente) => void; onDelete: (u: Utente) => void }) {
   // Un utente admin può essere modificato solo da un altro admin
   const isAdminTarget = u.role === 'admin'
   const canModify = !isAdminTarget || currentRole === 'admin'
+  const canDelete = currentRole === 'admin'
 
   return (
     <div style={{
@@ -387,6 +453,14 @@ function UtenteRow({ u, currentRole, onEdit, onToggle }: { u: Utente; currentRol
           >
             {u.is_active ? 'Disabilita' : 'Riabilita'}
           </button>
+          {canDelete && (
+            <button
+              onClick={() => onDelete(u)}
+              style={{ padding: '0.4rem 0.8rem', background: '#FFF1F2', color: '#BE123C', border: '1px solid #FBCFE8', borderRadius: '8px', fontSize: '0.8rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}
+            >
+              Elimina
+            </button>
+          )}
         </>
       )}
     </div>

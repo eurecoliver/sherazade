@@ -132,8 +132,8 @@ class UserAdminViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated, UtentePermission]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['username', 'email', 'first_name', 'last_name']
-    ordering_fields = ['last_name', 'first_name', 'role', 'email']
-    ordering = ['last_name', 'first_name']
+    ordering_fields = ['id', 'last_name', 'first_name', 'role', 'email']
+    ordering = ['-id']
 
     def get_queryset(self):
         qs = User.objects.all()

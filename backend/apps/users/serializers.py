@@ -21,6 +21,15 @@ class UserAdminSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id']
 
+    def validate_email(self, value):
+        email = (value or '').strip().lower()
+        qs = User.objects.filter(email__iexact=email)
+        if self.instance:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise serializers.ValidationError('Esiste gia un utente con questa email.')
+        return email
+
     def create(self, validated_data):
         password = validated_data.pop('password', None)
         user = User(**validated_data)

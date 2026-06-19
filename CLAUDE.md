@@ -1223,3 +1223,27 @@ Prossimo task: feature/export-gdpr — export dati GDPR per bambino/genitore
 - `frontend/src/app/[locale]/dashboard/staff/calendario/page.tsx`
 - `frontend/src/app/[locale]/dashboard/admin/circolari/page.tsx`
 - `frontend/src/app/[locale]/dashboard/cuoca/pappe/page.tsx`
+
+## Ultimo Aggiornamento
+Data: 19 giugno 2026
+Completato: Fix visibilita elenco utenti + hardening email duplicate (branch `fix/utenti-list-dup-email`)
+
+### Fix creazione/lista utenti (19 giugno 2026)
+- `UserAdminSerializer`: aggiunta validazione email case-insensitive con errore esplicito se gia presente (`Esiste gia un utente con questa email.`), e normalizzazione email in lowercase.
+- API Next.js utenti (`/api/utenti` e `/api/utenti/[id]`): disabilitata cache route con `dynamic = 'force-dynamic'` e `revalidate = 0` per evitare risposte stantie.
+- Frontend admin utenti: fetch di ruoli e utenti con `cache: 'no-store'`.
+- Frontend admin genitori: fetch di utenti/famiglie/bambini con `cache: 'no-store'`.
+- Root cause individuata: endpoint utenti paginato (20 record default DRF) senza paginazione UI in `dashboard/admin/utenti`, quindi i nuovi utenti potevano non apparire nella prima pagina.
+- Fix visibilita lista: `UserAdminViewSet` ora ordina di default per `-id` (nuovi prima) e accetta ordering per `id`; frontend `dashboard/admin/utenti` invia query paginata con `page`, `page_size=20` e `ordering=-id`.
+- Fix paginazione UI: `dashboard/admin/utenti` ora usa paginazione reale (`page`, `page_size=20`, `hasNext/hasPrevious`) con controlli "Precedente/Successiva", reset automatico a pagina 1 quando cambiano filtri/ricerca, e conteggio totale utenti.
+- Fix delete utenti da UI: in `dashboard/admin/utenti` aggiunto pulsante "Elimina" per admin con conferma e chiamata `DELETE /api/utenti/{id}`; gestione errore API mostrata a schermo.
+
+**File modificati:**
+- `backend/apps/users/serializers.py`
+- `backend/apps/users/views.py`
+- `frontend/src/app/api/utenti/route.ts`
+- `frontend/src/app/api/utenti/[id]/route.ts`
+- `frontend/src/app/[locale]/dashboard/admin/utenti/page.tsx`
+- `frontend/src/app/[locale]/dashboard/admin/genitori/page.tsx`
+
+Prossimo task: verifica manuale su creazione utente con email gia esistente + refresh elenco in dashboard admin/genitori.

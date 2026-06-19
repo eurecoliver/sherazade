@@ -162,9 +162,9 @@ export default function GenitoriPage() {
     setError('')
     try {
       const [gRes, fRes, bRes] = await Promise.all([
-        fetch('/api/utenti?role=genitore&ordering=last_name&page_size=200'),
-        fetch('/api/famiglie'),
-        fetch('/api/bambini?page_size=200'),
+        fetch('/api/utenti?role=genitore&ordering=last_name&page_size=200', { cache: 'no-store' }),
+        fetch('/api/famiglie', { cache: 'no-store' }),
+        fetch('/api/bambini?page_size=200', { cache: 'no-store' }),
       ])
       if (gRes.status === 401) { router.push(`/${locale}/login`); return }
 
