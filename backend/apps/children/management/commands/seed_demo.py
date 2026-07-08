@@ -123,9 +123,13 @@ class Command(BaseCommand):
     def _setup_gruppi(self):
         from apps.config.models import Gruppo
         defaults = [
-            ('Gialli', '#FDCB6E', 1),
-            ('Rossi',  '#E17055', 2),
-            ('Blu',    '#0984E3', 3),
+            ('PICCOLISSIMI', '#FF9AA2', 1),
+            ('PICCOLI',      '#FFB347', 2),
+            ('PICCOLI MEDI', '#FDFD96', 3),
+            ('MEDI',         '#77DD77', 4),
+            ('MEDI GRANDI',  '#84B6F4', 5),
+            ('GRANDI',       '#B39EB5', 6),
+            ('PONTE',        '#FF6961', 7),
         ]
         gruppi = []
         for nome, colore, ordine in defaults:
@@ -164,18 +168,30 @@ class Command(BaseCommand):
 
         bambini_data = [
             # (nome, cognome, sesso, data_nascita, gruppo_idx, orario_idx, allergia?)
-            ('Sofia',     'Rossi',     'F', date(2021, 3, 12), 0, 1, None),
-            ('Luca',      'Ferrari',   'M', date(2020, 7, 5),  0, 2, 'Latte'),
-            ('Giulia',    'Esposito',  'F', date(2021, 11, 20),0, 0, None),
-            ('Marco',     'Romano',    'M', date(2020, 2, 14), 1, 2, None),
-            ('Martina',   'Colombo',   'F', date(2021, 6, 3),  1, 1, 'Uova'),
-            ('Andrea',    'Ricci',     'M', date(2020, 9, 18), 1, 2, None),
-            ('Alice',     'Marino',    'F', date(2021, 4, 27), 2, 1, 'Arachidi'),
-            ('Lorenzo',   'Bruno',     'M', date(2020, 12, 1), 2, 2, None),
-            ('Chiara',    'Greco',     'F', date(2021, 8, 15), 2, 0, None),
-            ('Davide',    'De Luca',   'M', date(2020, 5, 9),  0, 2, None),
-            ('Valentina', 'Conti',     'F', date(2021, 1, 22), 1, 1, None),
-            ('Matteo',    'Costa',     'M', date(2020, 10, 30),2, 2, 'Glutine'),
+            # Indici: 0=PICCOLISSIMI,1=PICCOLI,2=PICCOLI MEDI,3=MEDI,4=MEDI GRANDI,5=GRANDI,6=PONTE
+            # PICCOLI MEDI (2) — 12-18 mesi, nati ~2025
+            ('Giada',     'Ferrara',   'F', date(2025, 2, 18), 2, 0, None),
+            ('Mattia',    'Lombardi',  'M', date(2025, 5, 7),  2, 0, None),
+            # MEDI (3) — 18-24 mesi, nati ~2024
+            ('Chloe',     'Gallo',     'F', date(2024, 8, 22), 3, 0, None),
+            ('Edoardo',   'Vitale',    'M', date(2024, 11, 3), 3, 0, 'Latte'),
+            # MEDI GRANDI (4) — 2-3 anni, nati ~2023
+            ('Irene',     'Montanari', 'F', date(2023, 4, 14), 4, 1, None),
+            ('Simone',    'Pellegrini','M', date(2023, 9, 25), 4, 1, 'Uova'),
+            # GRANDI (5) — 4-5 anni, nati ~2021
+            ('Sofia',     'Rossi',     'F', date(2021, 3, 12), 5, 1, None),
+            ('Giulia',    'Esposito',  'F', date(2021, 11, 20),5, 2, None),
+            ('Martina',   'Colombo',   'F', date(2021, 6, 3),  5, 1, None),
+            ('Alice',     'Marino',    'F', date(2021, 4, 27), 5, 1, 'Arachidi'),
+            ('Valentina', 'Conti',     'F', date(2021, 1, 22), 5, 1, None),
+            # PONTE (6) — 5-6 anni, nati ~2020
+            ('Luca',      'Ferrari',   'M', date(2020, 7, 5),  6, 2, None),
+            ('Marco',     'Romano',    'M', date(2020, 2, 14), 6, 2, None),
+            ('Andrea',    'Ricci',     'M', date(2020, 9, 18), 6, 2, None),
+            ('Davide',    'De Luca',   'M', date(2020, 5, 9),  6, 2, None),
+            ('Lorenzo',   'Bruno',     'M', date(2020, 12, 1), 6, 2, None),
+            ('Chiara',    'Greco',     'F', date(2021, 8, 15), 6, 0, None),
+            ('Matteo',    'Costa',     'M', date(2020, 10, 30),6, 2, 'Glutine'),
         ]
 
         bambini = []
@@ -358,21 +374,22 @@ class Command(BaseCommand):
 
         # ---- dati bambini tester ----
         # (nome, cognome, sesso, data_nascita, gruppo_idx, orario_idx, allergia, cf_suffix, g1, g2_o_None)
+        # Indici gruppi: 0=PICCOLISSIMI,1=PICCOLI,2=PICCOLI MEDI,3=MEDI,4=MEDI GRANDI,5=GRANDI,6=PONTE
         bianchi_data = [
-            ('Emma',   'Bianchi', 'F', date(2021,  4, 10), 0, 2, None,    'BNCEMM00', t1, t2),
-            ('Thomas', 'Bianchi', 'M', date(2022,  1, 25), 0, 1, 'Latte', 'BNCTMS00', t1, t2),
-            ('Noemi',  'Bianchi', 'F', date(2020, 11,  8), 1, 2, None,    'BNCNMM00', t1, t2),
+            ('Emma',   'Bianchi', 'F', date(2021,  4, 10), 5, 2, None,    'BNCEMM00', t1, t2),  # GRANDI
+            ('Thomas', 'Bianchi', 'M', date(2022,  1, 25), 4, 1, 'Latte', 'BNCTMS00', t1, t2),  # MEDI GRANDI
+            ('Noemi',  'Bianchi', 'F', date(2020, 11,  8), 6, 2, None,    'BNCNMM00', t1, t2),  # PONTE
         ]
         verdi_data = [
-            ('Diego',  'Verdi',   'M', date(2021,  7, 14), 1, 1, None,         'VRDDGO00', t3, None),
-            ('Aria',   'Verdi',   'F', date(2022,  3, 22), 0, 0, 'Frutta secca','VRDARA00', t3, None),
-            ('Zoe',    'Verdi',   'F', date(2020,  9,  5), 2, 2, None,         'VRDZOE00', t3, None),
-            ('Leo',    'Verdi',   'M', date(2021, 12, 18), 2, 1, None,         'VRDLEO00', t3, None),
+            ('Diego',  'Verdi',   'M', date(2021,  7, 14), 5, 1, None,         'VRDDGO00', t3, None),  # GRANDI
+            ('Aria',   'Verdi',   'F', date(2022,  3, 22), 4, 0, 'Frutta secca','VRDARA00', t3, None),  # MEDI GRANDI
+            ('Zoe',    'Verdi',   'F', date(2020,  9,  5), 6, 2, None,         'VRDZOE00', t3, None),  # PONTE
+            ('Leo',    'Verdi',   'M', date(2021, 12, 18), 4, 1, None,         'VRDLEO00', t3, None),  # MEDI GRANDI
         ]
         russo_data = [
-            ('Ginevra',  'Russo', 'F', date(2021,  5, 30), 2, 2, None,    'RSSGNV00', t4, t5),
-            ('Federico', 'Russo', 'M', date(2022,  2, 12), 0, 1, None,    'RSSFDR00', t4, t5),
-            ('Beatrice', 'Russo', 'F', date(2020,  8, 24), 1, 0, 'Uova',  'RSSBTR00', t4, t5),
+            ('Ginevra',  'Russo', 'F', date(2021,  5, 30), 5, 2, None,    'RSSGNV00', t4, t5),  # GRANDI
+            ('Federico', 'Russo', 'M', date(2022,  2, 12), 4, 1, None,    'RSSFDR00', t4, t5),  # MEDI GRANDI
+            ('Beatrice', 'Russo', 'F', date(2020,  8, 24), 6, 0, 'Uova',  'RSSBTR00', t4, t5),  # PONTE
         ]
 
         all_data = bianchi_data + verdi_data + russo_data

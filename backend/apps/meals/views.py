@@ -359,6 +359,8 @@ class PiattoViewSet(viewsets.ModelViewSet):
         assegnazioni = (
             PiattoAssegnazione.objects
             .filter(gruppi__id=gruppo_id, piatto__attivo=True)
+            .filter(Q(piatto__data_inizio__isnull=True) | Q(piatto__data_inizio__lte=data))
+            .filter(Q(piatto__data_fine__isnull=True) | Q(piatto__data_fine__gte=data))
             .select_related('piatto')
             .prefetch_related('gruppi')
         )
@@ -442,6 +444,8 @@ class PiattoViewSet(viewsets.ModelViewSet):
             assegnazioni = (
                 PiattoAssegnazione.objects
                 .filter(gruppi__id=gruppo_id, piatto__attivo=True)
+                .filter(Q(piatto__data_inizio__isnull=True) | Q(piatto__data_inizio__lte=data))
+                .filter(Q(piatto__data_fine__isnull=True) | Q(piatto__data_fine__gte=data))
                 .select_related('piatto')
             )
             ciclo: dict = {}

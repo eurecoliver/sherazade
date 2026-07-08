@@ -161,6 +161,14 @@ class Piatto(models.Model):
     tipo = models.CharField(max_length=12, choices=Tipo.choices)
     note = models.TextField(blank=True)
     attivo = models.BooleanField(default=True)
+    data_inizio = models.DateField(
+        null=True, blank=True,
+        help_text='Dal (incluso). Vuoto = nessun limite. Es. 01/04 per menu estivo.',
+    )
+    data_fine = models.DateField(
+        null=True, blank=True,
+        help_text='Al (incluso). Vuoto = nessun limite. Es. 31/10 per menu estivo.',
+    )
     creato_da = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.PROTECT,
