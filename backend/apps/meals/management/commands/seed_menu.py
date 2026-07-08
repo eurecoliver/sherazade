@@ -437,6 +437,12 @@ class Command(BaseCommand):
             ConfigMenuCiclo.objects.all().delete()
             self.stdout.write(self.style.WARNING("  Cancellati SostituzionePiatto, PiattoAssegnazione, Piatto, ConfigMenuCiclo"))
 
+        # --- Recupero utente admin ---
+        admin = User.objects.filter(role="admin").first()
+        if not admin:
+            self.stdout.write(self.style.ERROR("❌  Nessun utente admin trovato. Esegui prima seed_demo."))
+            return
+
         # --- ConfigMenuCiclo ---
         # Lunedì 2 giugno 2026 = settimana di riferimento per il ciclo
         ciclo, created = ConfigMenuCiclo.objects.get_or_create(
@@ -451,12 +457,6 @@ class Command(BaseCommand):
             ciclo.aggiornato_da = admin
             ciclo.save()
         self.stdout.write(f"📅  ConfigMenuCiclo: data_inizio_ciclo = {ciclo.data_inizio_ciclo}")
-
-        # --- Recupero utente admin ---
-        admin = User.objects.filter(role="admin").first()
-        if not admin:
-            self.stdout.write(self.style.ERROR("❌  Nessun utente admin trovato. Esegui prima seed_demo."))
-            return
 
         # --- Recupero gruppi ---
         gruppi_nido = list(Gruppo.objects.filter(nome__in=["PICCOLISSIMI", "PICCOLI"]).order_by("ordine"))
