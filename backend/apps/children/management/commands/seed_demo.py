@@ -85,9 +85,21 @@ class Command(BaseCommand):
         self._crea_presenze(bambini, admin)
         self._crea_diari(bambini, admin)
 
+        tester_bambini = self._crea_tester_famiglie(gruppi, orari, admin)
+        self._crea_presenze(tester_bambini, admin)
+        self._crea_diari(tester_bambini, admin)
+
         self.stdout.write(self.style.SUCCESS(
-            f'\n✅ Seed completato: {len(bambini)} bambini, famiglie, consensi, presenze e diari creati.'
+            f'\n✅ Seed completato: {len(bambini) + len(tester_bambini)} bambini totali '
+            f'({len(bambini)} demo + {len(tester_bambini)} tester), '
+            f'famiglie, consensi, presenze e diari creati.'
         ))
+        self.stdout.write(self.style.MIGRATE_HEADING('\n📋 Account tester genitore:'))
+        self.stdout.write('  tester1@demo.sherazade.it / Demo1234!  — Famiglia Bianchi (3 figli)')
+        self.stdout.write('  tester2@demo.sherazade.it / Demo1234!  — Famiglia Bianchi (stesso genitore2)')
+        self.stdout.write('  tester3@demo.sherazade.it / Demo1234!  — Famiglia Verdi (4 figli, genitore singolo)')
+        self.stdout.write('  tester4@demo.sherazade.it / Demo1234!  — Famiglia Russo (3 figli)')
+        self.stdout.write('  tester5@demo.sherazade.it / Demo1234!  — Famiglia Russo (stesso genitore2)')
 
     # ------------------------------------------------------------------
     def _clear(self):
@@ -105,7 +117,7 @@ class Command(BaseCommand):
         Famiglia.objects.filter(bambino__note_mediche__startswith='[DEMO]').delete()
         Bambino.objects.filter(note_mediche__startswith='[DEMO]').delete()
         User.objects.filter(email__endswith='@demo.sherazade.it').delete()
-        self.stdout.write('🗑️  Dati demo precedenti rimossi.')
+        self.stdout.write('🗑️  Dati demo e tester precedenti rimossi.')
 
     # ------------------------------------------------------------------
     def _setup_gruppi(self):
@@ -303,3 +315,126 @@ class Command(BaseCommand):
                 count += 1
 
         self.stdout.write(f'  Diari creati: {count} record su {len(giorni)} giorni')
+
+    # ------------------------------------------------------------------
+    def _crea_tester_famiglie(self, gruppi, orari, admin):
+        """
+        Crea 5 account tester genitore con bambini associati:
+          - tester1 + tester2 (Famiglia Bianchi): 3 figli — coppia
+          - tester3 (Famiglia Verdi): 4 figli — genitore singolo
+          - tester4 + tester5 (Famiglia Russo): 3 figli — coppia
+        Ogni tester vede almeno 3 bambini nel portale genitore.
+        """
+        from apps.children.models import Bambino, Famiglia, DelegaRitiro
+        from apps.consents.models import ConsensoFotografico
+        from apps.meals.models import AllergiaIntolleranza
+
+        now = timezone.now()
+
+        # ---- account tester ----
+        def _tester(n, nome, cognome):
+            email = f'tester{n}@demo.sherazade.it'
+            u, created = User.objects.get_or_create(
+                email=email,
+                defaults=dict(
+                    username=email,
+                    first_name=nome,
+                    last_name=cognome,
+                    role='genitore',
+                    is_active=True,
+                )
+            )
+            if created:
+                u.set_password('Demo1234!')
+                u.save()
+                self.stdout.write(f'  Tester creato: {email}')
+            return u
+
+        t1 = _tester(1, 'Maria',    'Bianchi')
+        t2 = _tester(2, 'Carlo',    'Bianchi')
+        t3 = _tester(3, 'Alessia',  'Verdi')
+        t4 = _tester(4, 'Roberto',  'Russo')
+        t5 = _tester(5, 'Claudia',  'Russo')
+
+        # ---- dati bambini tester ----
+        # (nome, cognome, sesso, data_nascita, gruppo_idx, orario_idx, allergia, cf_suffix, g1, g2_o_None)
+        bianchi_data = [
+            ('Emma',   'Bianchi', 'F', date(2021,  4, 10), 0, 2, None,    'BNCEMM00', t1, t2),
+            ('Thomas', 'Bianchi', 'M', date(2022,  1, 25), 0, 1, 'Latte', 'BNCTMS00', t1, t2),
+            ('Noemi',  'Bianchi', 'F', date(2020, 11,  8), 1, 2, None,    'BNCNMM00', t1, t2),
+        ]
+        verdi_data = [
+            ('Diego',  'Verdi',   'M', date(2021,  7, 14), 1, 1, None,         'VRDDGO00', t3, None),
+            ('Aria',   'Verdi',   'F', date(2022,  3, 22), 0, 0, 'Frutta secca','VRDARA00', t3, None),
+            ('Zoe',    'Verdi',   'F', date(2020,  9,  5), 2, 2, None,         'VRDZOE00', t3, None),
+            ('Leo',    'Verdi',   'M', date(2021, 12, 18), 2, 1, None,         'VRDLEO00', t3, None),
+        ]
+        russo_data = [
+            ('Ginevra',  'Russo', 'F', date(2021,  5, 30), 2, 2, None,    'RSSGNV00', t4, t5),
+            ('Federico', 'Russo', 'M', date(2022,  2, 12), 0, 1, None,    'RSSFDR00', t4, t5),
+            ('Beatrice', 'Russo', 'F', date(2020,  8, 24), 1, 0, 'Uova',  'RSSBTR00', t4, t5),
+        ]
+
+        all_data = bianchi_data + verdi_data + russo_data
+        bambini = []
+        idx_offset = 100  # offset CF per non collidere con bambini demo (che usano 0-11)
+
+        for idx, (nome, cognome, sesso, dnascita, g_idx, o_idx, allergia, cf_base, g1, g2) in enumerate(all_data):
+            cf = f'TST{cf_base}{idx_offset + idx:03d}'[:16].ljust(16, 'X')
+
+            b, created = Bambino.objects.get_or_create(
+                codice_fiscale=cf,
+                defaults=dict(
+                    nome=nome,
+                    cognome=cognome,
+                    data_nascita=dnascita,
+                    gruppo=gruppi[g_idx],
+                    orario_uscita=orari[o_idx],
+                    data_iscrizione=date(2024, 9, 1),
+                    attivo=True,
+                    note_mediche='[DEMO] Dato tester per test.',
+                )
+            )
+            if not created:
+                bambini.append(b)
+                continue
+
+            # Famiglia
+            famiglia_kwargs = dict(
+                bambino=b,
+                genitore1=g1,
+                telefono_emergenza=f'34{idx + 10}1234567',
+                indirizzo=f'Via Nazionale {20 + idx}, 00185 Roma',
+            )
+            if g2:
+                famiglia_kwargs['genitore2'] = g2
+            Famiglia.objects.create(**famiglia_kwargs)
+
+            # Consensi fotografici completi
+            for finalita in ['uso_interno', 'genitori_diretti', 'newsletter_scolastica']:
+                ConsensoFotografico.objects.get_or_create(
+                    bambino=b, finalita=finalita,
+                    defaults=dict(
+                        consenso_genitore1=True,
+                        consenso_genitore2=bool(g2),
+                        data_consenso_genitore1=now,
+                        data_consenso_genitore2=now if g2 else None,
+                    )
+                )
+
+            # Allergia se prevista
+            if allergia:
+                gravita = 'grave' if allergia == 'Frutta secca' else 'moderata'
+                AllergiaIntolleranza.objects.get_or_create(
+                    bambino=b, descrizione=allergia,
+                    defaults=dict(tipo='allergia', gravita=gravita, attivo=True)
+                )
+
+            bambini.append(b)
+            g2_label = g2.get_full_name() if g2 else 'genitore singolo'
+            self.stdout.write(
+                f'  Bambino tester: {nome} {cognome} ({gruppi[g_idx].nome}) — '
+                f'{g1.get_full_name()} + {g2_label}'
+            )
+
+        return bambini
