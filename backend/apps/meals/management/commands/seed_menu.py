@@ -438,13 +438,17 @@ class Command(BaseCommand):
             self.stdout.write(self.style.WARNING("  Cancellati SostituzionePiatto, PiattoAssegnazione, Piatto, ConfigMenuCiclo"))
 
         # --- ConfigMenuCiclo ---
-        # Lunedì 1 giugno 2026 = settimana di riferimento per il ciclo
+        # Lunedì 2 giugno 2026 = settimana di riferimento per il ciclo
         ciclo, created = ConfigMenuCiclo.objects.get_or_create(
             pk=1,
-            defaults={"data_inizio_ciclo": date(2026, 6, 2)},  # lunedì 2 giugno 2026
+            defaults={
+                "data_inizio_ciclo": date(2026, 6, 2),
+                "aggiornato_da": admin,
+            },
         )
         if not created:
             ciclo.data_inizio_ciclo = date(2026, 6, 2)
+            ciclo.aggiornato_da = admin
             ciclo.save()
         self.stdout.write(f"📅  ConfigMenuCiclo: data_inizio_ciclo = {ciclo.data_inizio_ciclo}")
 
