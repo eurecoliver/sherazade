@@ -514,6 +514,7 @@ class Command(BaseCommand):
                     "attivo": True,
                     "data_inizio": None,
                     "data_fine": None,
+                    "creato_da": admin,
                 },
             )
             if created:
@@ -557,7 +558,7 @@ class Command(BaseCommand):
                 descrizione=descrizione,
                 data_inizio=data_inizio,
                 data_fine=data_fine,
-                defaults={"attivo": True},
+                defaults={"attivo": True, "creato_da": admin},
             )
             if p_created:
                 piatti_creati += 1
