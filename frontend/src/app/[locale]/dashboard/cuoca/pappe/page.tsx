@@ -23,6 +23,20 @@ interface Allergia {
   note_mediche: string
 }
 
+interface PiattoAlternativo {
+  id: number
+  descrizione: string
+  tipo: string
+  tipo_label: string
+}
+
+interface PreferenzaMenu {
+  tipo: string
+  tipo_label: string
+  descrizione: string
+  piatti_alternativi: PiattoAlternativo[]
+}
+
 interface BambinoAllergie {
   id: number
   nome: string
@@ -30,7 +44,14 @@ interface BambinoAllergie {
   sezione: string
   allergie: Allergia[]
   ha_allergie_gravi: boolean
-  preferenza_menu: { tipo: string; tipo_label: string; descrizione: string } | null
+  preferenza_menu: PreferenzaMenu | null
+}
+
+function prefTooltip(pref: PreferenzaMenu | null): string {
+  if (!pref) return ''
+  const base = pref.descrizione || pref.tipo_label
+  if (!pref.piatti_alternativi?.length) return base
+  return `${base} — Alternative: ${pref.piatti_alternativi.map(p => p.descrizione).join(', ')}`
 }
 
 interface PiattoMenu {
@@ -358,7 +379,7 @@ export default function CuocaPappePage() {
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
                       <p style={{ margin: 0, fontWeight: 700 }}>{b.nome} {b.cognome}</p>
                       {b.preferenza_menu && (
-                        <span title={b.preferenza_menu.descrizione || b.preferenza_menu.tipo_label}
+                        <span title={prefTooltip(b.preferenza_menu)}
                           style={{ background: 'rgba(255,255,255,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.4)', borderRadius: '4px', padding: '1px 6px', fontSize: '0.65rem', fontWeight: 700 }}>
                           {b.preferenza_menu.tipo === 'monopiatto' ? '🍽️ MONO' : '🍀 DIFF'}
                         </span>
@@ -370,6 +391,15 @@ export default function CuocaPappePage() {
                         {a.note_mediche && <span style={{ opacity: 0.85 }}> · {a.note_mediche}</span>}
                       </p>
                     ))}
+                    {!!b.preferenza_menu?.piatti_alternativi?.length && (
+                      <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap', marginTop: '0.35rem' }}>
+                        {b.preferenza_menu.piatti_alternativi.map(p => (
+                          <span key={p.id} style={{ background: 'rgba(255,255,255,0.18)', border: '1px solid rgba(255,255,255,0.35)', borderRadius: '6px', padding: '0.15rem 0.5rem', fontSize: '0.75rem', fontWeight: 600 }}>
+                            🍽️ {p.descrizione}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -392,7 +422,7 @@ export default function CuocaPappePage() {
                           {b.nome} {b.cognome}
                         </p>
                         {b.preferenza_menu && (
-                          <span title={b.preferenza_menu.descrizione || b.preferenza_menu.tipo_label}
+                          <span title={prefTooltip(b.preferenza_menu)}
                             style={{ background: b.preferenza_menu.tipo === 'monopiatto' ? '#EDE9FE' : '#FFF3CD', color: b.preferenza_menu.tipo === 'monopiatto' ? '#6C5CE7' : '#856404', border: `1px solid ${b.preferenza_menu.tipo === 'monopiatto' ? '#C4B5FD' : '#FFECB5'}`, borderRadius: '4px', padding: '1px 6px', fontSize: '0.65rem', fontWeight: 700 }}>
                             {b.preferenza_menu.tipo === 'monopiatto' ? '🍽️ MONO' : '🍀 DIFF'}
                           </span>
@@ -408,6 +438,15 @@ export default function CuocaPappePage() {
                           )
                         })}
                       </div>
+                      {!!b.preferenza_menu?.piatti_alternativi?.length && (
+                        <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap', marginTop: '0.35rem' }}>
+                          {b.preferenza_menu.piatti_alternativi.map(p => (
+                            <span key={p.id} style={{ background: '#F3F0FF', color: '#6C5CE7', border: '1px solid #E0D6FF', borderRadius: '6px', padding: '0.15rem 0.5rem', fontSize: '0.75rem', fontWeight: 600 }}>
+                              🍽️ {p.descrizione}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
                 ))}
@@ -425,7 +464,7 @@ export default function CuocaPappePage() {
                     <span key={b.id} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', background: '#EAFAF1', color: '#00897B', padding: '0.3rem 0.75rem', borderRadius: '8px', fontSize: '0.82rem', fontWeight: 600 }}>
                       {b.nome} {b.cognome}
                       {b.preferenza_menu && (
-                        <span title={b.preferenza_menu.descrizione || b.preferenza_menu.tipo_label}
+                        <span title={prefTooltip(b.preferenza_menu)}
                           style={{ background: b.preferenza_menu.tipo === 'monopiatto' ? '#EDE9FE' : '#FFF3CD', color: b.preferenza_menu.tipo === 'monopiatto' ? '#6C5CE7' : '#856404', borderRadius: '3px', padding: '0px 4px', fontSize: '0.6rem', fontWeight: 700 }}>
                           {b.preferenza_menu.tipo === 'monopiatto' ? 'MONO' : 'DIFF'}
                         </span>
