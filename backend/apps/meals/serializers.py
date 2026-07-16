@@ -53,6 +53,7 @@ QUANTITA_FIELDS = (
 class RegistroPastoSerializer(serializers.ModelSerializer):
     bambino_nome = serializers.SerializerMethodField()
     compilato_da_nome = serializers.SerializerMethodField()
+    piatti_serviti_dettaglio = serializers.SerializerMethodField()
 
     class Meta:
         model = RegistroPasto
@@ -61,6 +62,7 @@ class RegistroPastoSerializer(serializers.ModelSerializer):
             *QUANTITA_FIELDS,
             'note_pasto',
             'tipo_menu',
+            'piatti_serviti', 'piatti_serviti_dettaglio',
             'compilato_da', 'compilato_da_nome',
             'creato_at', 'aggiornato_at',
         )
@@ -72,6 +74,12 @@ class RegistroPastoSerializer(serializers.ModelSerializer):
     def get_compilato_da_nome(self, obj):
         return obj.compilato_da.get_full_name() or obj.compilato_da.email
 
+    def get_piatti_serviti_dettaglio(self, obj):
+        return [
+            {'id': p.id, 'descrizione': p.descrizione, 'tipo': p.tipo}
+            for p in obj.piatti_serviti.all()
+        ]
+
 
 class RegistroPastoWriteSerializer(serializers.ModelSerializer):
     class Meta:
@@ -81,6 +89,7 @@ class RegistroPastoWriteSerializer(serializers.ModelSerializer):
             *QUANTITA_FIELDS,
             'note_pasto',
             'tipo_menu',
+            'piatti_serviti',
         )
 
 
@@ -140,6 +149,7 @@ class SostituzionePiattoSerializer(serializers.ModelSerializer):
 class PreferenzaMenuBambinoSerializer(serializers.ModelSerializer):
     tipo_label = serializers.CharField(source='get_tipo_display', read_only=True)
     bambino_nome = serializers.SerializerMethodField()
+    piatti_alternativi_dettaglio = serializers.SerializerMethodField()
 
     class Meta:
         model = PreferenzaMenuBambino
@@ -147,6 +157,7 @@ class PreferenzaMenuBambinoSerializer(serializers.ModelSerializer):
             'id', 'bambino', 'bambino_nome',
             'tipo', 'tipo_label',
             'descrizione',
+            'piatti_alternativi', 'piatti_alternativi_dettaglio',
             'attivo',
             'creato_il', 'aggiornato_il',
         )
@@ -155,3 +166,9 @@ class PreferenzaMenuBambinoSerializer(serializers.ModelSerializer):
     def get_bambino_nome(self, obj):
         b = obj.bambino
         return f'{b.cognome} {b.nome}'
+
+    def get_piatti_alternativi_dettaglio(self, obj):
+        return [
+            {'id': p.id, 'descrizione': p.descrizione, 'tipo': p.tipo, 'tipo_label': p.get_tipo_display()}
+            for p in obj.piatti_alternativi.all()
+        ]

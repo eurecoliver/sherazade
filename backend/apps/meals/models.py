@@ -87,7 +87,13 @@ class PreferenzaMenuBambino(models.Model):
     descrizione = models.CharField(
         max_length=200,
         blank=True,
-        help_text='Es. "pastina al burro", "menu divezzi", "senza carne".',
+        help_text='Nota aggiuntiva facoltativa. Es. "senza sale", "attenzione soffocamento".',
+    )
+    piatti_alternativi = models.ManyToManyField(
+        'Piatto',
+        blank=True,
+        related_name='preferenze_bambini',
+        help_text='Piatti alternativi tra cui il personale sceglie quale è stato servito, giorno per giorno.',
     )
     attivo = models.BooleanField(default=True)
     creato_da = models.ForeignKey(
@@ -134,6 +140,12 @@ class RegistroPasto(models.Model):
         blank=True,
         default='',
         help_text='Override giornaliero del tipo menu. Vuoto = usa preferenza permanente del bambino.',
+    )
+    piatti_serviti = models.ManyToManyField(
+        'Piatto',
+        blank=True,
+        related_name='registri_serviti',
+        help_text='Piatti alternativi effettivamente serviti oggi (menu personalizzato), scelti tra quelli del bambino.',
     )
     compilato_da = models.ForeignKey(
         settings.AUTH_USER_MODEL,

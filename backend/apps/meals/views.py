@@ -10,6 +10,21 @@ from rest_framework.response import Response
 from apps.children.models import Bambino
 from apps.users.models import Role
 from apps.audit.mixin import LogAccessoMixin
+
+
+def _pref_menu_dict(pref):
+    if not pref:
+        return None
+    return {
+        'id': pref.id,
+        'tipo': pref.tipo,
+        'tipo_label': pref.get_tipo_display(),
+        'descrizione': pref.descrizione,
+        'piatti_alternativi': [
+            {'id': p.id, 'descrizione': p.descrizione, 'tipo': p.tipo, 'tipo_label': p.get_tipo_display()}
+            for p in pref.piatti_alternativi.all()
+        ],
+    }
 from .models import (
     AllergiaIntolleranza, MenuGiornaliero, RegistroPasto,
     ConfigMenuCiclo, Piatto, PiattoAssegnazione, SostituzionePiatto,
@@ -58,7 +73,8 @@ class AllergiaIntolleranzaViewSet(LogAccessoMixin, viewsets.ModelViewSet):
                 Prefetch(
                     'allergie',
                     queryset=AllergiaIntolleranza.objects.filter(attivo=True).order_by('-gravita'),
-                )
+                ),
+                'preferenza_menu__piatti_alternativi',
             )
             .order_by('gruppo__ordine', 'cognome', 'nome')
         )
@@ -84,11 +100,7 @@ class AllergiaIntolleranzaViewSet(LogAccessoMixin, viewsets.ModelViewSet):
                         AllergiaIntolleranza.Gravita.ANAFILASSI,
                     ) for a in allergie
                 ),
-                'preferenza_menu': {
-                    'tipo': pref.tipo,
-                    'tipo_label': pref.get_tipo_display(),
-                    'descrizione': pref.descrizione,
-                } if pref else None,
+                'preferenza_menu': _pref_menu_dict(pref),
             })
 
         return Response(result)
@@ -165,7 +177,8 @@ class RegistroPastoViewSet(LogAccessoMixin, viewsets.ModelViewSet):
                 Prefetch(
                     'allergie',
                     queryset=AllergiaIntolleranza.objects.filter(attivo=True).order_by('-gravita'),
-                )
+                ),
+                'preferenza_menu__piatti_alternativi',
             )
             .order_by('gruppo__ordine', 'cognome', 'nome')
         )
@@ -174,7 +187,9 @@ class RegistroPastoViewSet(LogAccessoMixin, viewsets.ModelViewSet):
 
         registri = {
             r.bambino_id: r
-            for r in RegistroPasto.objects.filter(data=data_str).select_related('compilato_da')
+            for r in RegistroPasto.objects.filter(data=data_str)
+            .select_related('compilato_da')
+            .prefetch_related('piatti_serviti')
         }
 
         result = []
@@ -200,11 +215,7 @@ class RegistroPastoViewSet(LogAccessoMixin, viewsets.ModelViewSet):
                             AllergiaIntolleranza.Gravita.ANAFILASSI,
                         ) for a in allergie
                     ),
-                    'preferenza_menu': {
-                        'tipo': pref.tipo,
-                        'tipo_label': pref.get_tipo_display(),
-                        'descrizione': pref.descrizione,
-                    } if pref else None,
+                    'preferenza_menu': _pref_menu_dict(pref),
                 },
                 'registro': RegistroPastoSerializer(registro).data if registro else None,
             })
@@ -233,12 +244,15 @@ class RegistroPastoViewSet(LogAccessoMixin, viewsets.ModelViewSet):
             defaults['note_pasto'] = item.get('note_pasto', '')
             defaults['tipo_menu'] = item.get('tipo_menu', '')
             defaults['compilato_da'] = request.user
+            piatti_serviti_ids = item.get('piatti_serviti')
             try:
                 obj, _ = RegistroPasto.objects.update_or_create(
                     bambino_id=bambino_id,
                     data=data_str,
                     defaults=defaults,
                 )
+                if piatti_serviti_ids is not None:
+                    obj.piatti_serviti.set(piatti_serviti_ids)
                 saved.append(obj.id)
             except Exception as e:
                 errors.append({'bambino': bambino_id, 'errore': str(e)})

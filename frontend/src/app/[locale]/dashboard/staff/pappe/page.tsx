@@ -15,10 +15,19 @@ interface Allergia {
   gravita_label: string
 }
 
+interface PiattoRef {
+  id: number
+  descrizione: string
+  tipo: string
+  tipo_label?: string
+}
+
 interface PreferenzaMenu {
+  id: number
   tipo: string
   tipo_label: string
   descrizione: string
+  piatti_alternativi: PiattoRef[]
 }
 
 interface BambinoInfo {
@@ -44,6 +53,8 @@ interface RegistroPasto {
   merenda_quantita: string
   note_pasto: string
   tipo_menu: string
+  piatti_serviti: number[]
+  piatti_serviti_dettaglio: PiattoRef[]
 }
 
 interface GiornataEntry {
@@ -101,12 +112,31 @@ const TIPO_COLOR: Record<string, string> = {
   frutta: '#00CEC9', merenda: '#A29BFE',
 }
 
-function emptyForm(): Record<string, string> {
+interface PastoForm {
+  colazione_quantita: string
+  primo_quantita: string
+  secondo_quantita: string
+  monopiatto_quantita: string
+  contorno_quantita: string
+  pane_quantita: string
+  frutta_quantita: string
+  merenda_quantita: string
+  note_pasto: string
+  tipo_menu: string
+  piatti_serviti: number[]
+}
+
+function emptyForm(): PastoForm {
   return {
     colazione_quantita: '', primo_quantita: '', secondo_quantita: '',
     monopiatto_quantita: '', contorno_quantita: '', pane_quantita: '',
     frutta_quantita: '', merenda_quantita: '', note_pasto: '', tipo_menu: '',
+    piatti_serviti: [],
   }
+}
+
+function formStr(form: PastoForm, key: string): string {
+  return (form as unknown as Record<string, string>)[key] ?? ''
 }
 
 function todayISO() {
@@ -175,18 +205,23 @@ export default function StaffPappePage() {
   const [selectedGruppo, setSelectedGruppo] = useState<number | null>(null)
   const [entries, setEntries] = useState<GiornataEntry[]>([])
   const [menu, setMenu] = useState<MenuGiorno | null>(null)
-  const [forms, setForms] = useState<Record<number, Record<string, string>>>({})
+  const [forms, setForms] = useState<Record<number, PastoForm>>({})
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
   const [error, setError] = useState('')
   const [userRole, setUserRole] = useState('')
+  const [catalogoPiatti, setCatalogoPiatti] = useState<PiattoRef[]>([])
+  const [gestioneBambino, setGestioneBambino] = useState<BambinoInfo | null>(null)
+  const [gestioneForm, setGestioneForm] = useState<{ tipo: string; descrizione: string; piatti: number[] }>({ tipo: 'differente', descrizione: '', piatti: [] })
+  const [gestioneSaving, setGestioneSaving] = useState(false)
+  const [gestioneError, setGestioneError] = useState('')
 
   useEffect(() => {
     fetch('/api/auth/me').then(r => r.json()).then(d => { if (d?.role) setUserRole(d.role) }).catch(() => {})
   }, [])
 
-  // Carica gruppi una volta sola
+  // Carica gruppi e catalogo piatti una volta sola
   useEffect(() => {
     fetch('/api/config/gruppi')
       .then(r => r.json())
@@ -195,6 +230,10 @@ export default function StaffPappePage() {
         setGruppi(list)
         if (list.length > 0) setSelectedGruppo(list[0].id)
       })
+    fetch('/api/pappe/piatti')
+      .then(r => r.json())
+      .then(d => setCatalogoPiatti((d.results ?? d) as PiattoRef[]))
+      .catch(() => {})
   }, [])
 
   const fetchGiornata = useCallback(async () => {
@@ -217,7 +256,7 @@ export default function StaffPappePage() {
         setMenu(null)
       }
 
-      const newForms: Record<number, Record<string, string>> = {}
+      const newForms: Record<number, PastoForm> = {}
       for (const e of giornata) {
         newForms[e.bambino.id] = e.registro ? {
           colazione_quantita: e.registro.colazione_quantita,
@@ -230,6 +269,7 @@ export default function StaffPappePage() {
           merenda_quantita: e.registro.merenda_quantita,
           note_pasto: e.registro.note_pasto,
           tipo_menu: e.registro.tipo_menu ?? '',
+          piatti_serviti: e.registro.piatti_serviti ?? (e.registro.piatti_serviti_dettaglio ?? []).map(p => p.id),
         } : emptyForm()
       }
       setForms(newForms)
@@ -245,7 +285,68 @@ export default function StaffPappePage() {
   }, [fetchGiornata, selectedGruppo])
 
   const handleFieldChange = (bambinoId: number, field: string, value: string) => {
-    setForms(prev => ({ ...prev, [bambinoId]: { ...prev[bambinoId], [field]: value } }))
+    setForms(prev => ({ ...prev, [bambinoId]: { ...(prev[bambinoId] ?? emptyForm()), [field]: value } as PastoForm }))
+  }
+
+  const togglePiattoServito = (bambinoId: number, piattoId: number) => {
+    setForms(prev => {
+      const current = prev[bambinoId] ?? emptyForm()
+      const has = current.piatti_serviti.includes(piattoId)
+      const piatti_serviti = has ? current.piatti_serviti.filter(id => id !== piattoId) : [...current.piatti_serviti, piattoId]
+      return { ...prev, [bambinoId]: { ...current, piatti_serviti } }
+    })
+  }
+
+  const apriGestionePreferenza = (bambino: BambinoInfo) => {
+    setGestioneBambino(bambino)
+    setGestioneError('')
+    setGestioneForm(bambino.preferenza_menu ? {
+      tipo: bambino.preferenza_menu.tipo,
+      descrizione: bambino.preferenza_menu.descrizione,
+      piatti: bambino.preferenza_menu.piatti_alternativi.map(p => p.id),
+    } : { tipo: 'differente', descrizione: '', piatti: [] })
+  }
+
+  const salvaGestionePreferenza = async () => {
+    if (!gestioneBambino) return
+    setGestioneSaving(true); setGestioneError('')
+    try {
+      const existingId = gestioneBambino.preferenza_menu?.id
+      const payload = {
+        bambino: gestioneBambino.id,
+        tipo: gestioneForm.tipo,
+        descrizione: gestioneForm.descrizione,
+        piatti_alternativi: gestioneForm.piatti,
+        attivo: true,
+      }
+      const res = await fetch(existingId ? `/api/pappe/preferenze-menu/${existingId}` : '/api/pappe/preferenze-menu', {
+        method: existingId ? 'PATCH' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      if (!res.ok) { const d = await res.json().catch(() => ({})); setGestioneError(d.detail || JSON.stringify(d) || 'Errore di salvataggio.'); return }
+      setGestioneBambino(null)
+      await fetchGiornata()
+    } catch {
+      setGestioneError('Errore di rete.')
+    } finally {
+      setGestioneSaving(false)
+    }
+  }
+
+  const eliminaGestionePreferenza = async () => {
+    if (!gestioneBambino?.preferenza_menu?.id) return
+    setGestioneSaving(true); setGestioneError('')
+    try {
+      const res = await fetch(`/api/pappe/preferenze-menu/${gestioneBambino.preferenza_menu.id}`, { method: 'DELETE' })
+      if (!res.ok && res.status !== 204) { setGestioneError('Errore durante l\'eliminazione.'); return }
+      setGestioneBambino(null)
+      await fetchGiornata()
+    } catch {
+      setGestioneError('Errore di rete.')
+    } finally {
+      setGestioneSaving(false)
+    }
   }
 
   const handleSalva = async () => {
@@ -389,6 +490,10 @@ export default function StaffPappePage() {
                               <option value="monopiatto">Oggi: monopiatto</option>
                               <option value="differente">Oggi: menu diff.</option>
                             </select>
+                            <button onClick={() => apriGestionePreferenza(bambino)} title="Gestisci menu personalizzato"
+                              style={{ background: '#F0F6FF', border: '1px solid #BDE0FF', borderRadius: '5px', padding: '1px 5px', fontSize: '0.7rem', cursor: 'pointer', lineHeight: 1.4 }}>
+                              ⚙️
+                            </button>
                           </div>
                           {bambino.allergie.length > 0 && (
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.2rem', marginTop: '0.2rem' }}>
@@ -415,12 +520,12 @@ export default function StaffPappePage() {
                           return (
                             <td key={p.key} style={{ padding: '0.3rem 0.25rem', textAlign: 'center', background: cellBg }}>
                               <select
-                                value={(form[p.key] ?? '')}
+                                value={formStr(form, p.key)}
                                 onChange={e => handleFieldChange(bambino.id, p.key, e.target.value)}
                                 style={{
                                   padding: '0.3rem 0.1rem', border: `1.5px solid ${cellBg ? '#D4B8FF' : '#E8F4FD'}`, borderRadius: '7px',
                                   fontSize: '0.75rem', fontFamily: 'inherit', width: 66, textAlign: 'center',
-                                  background: QUANTITA_BG[form[p.key]] ?? (cellBg || 'white'),
+                                  background: QUANTITA_BG[formStr(form, p.key)] ?? (cellBg || 'white'),
                                   opacity: isMonopiatto && (tipoPortata === 'primo' || tipoPortata === 'secondo') ? 0.45 : 1,
                                 }}
                               >
@@ -431,8 +536,27 @@ export default function StaffPappePage() {
                         })}
 
                         <td style={{ padding: '0.3rem 0.5rem' }}>
+                          {tipoEffettivo !== 'standard' && (bambino.preferenza_menu?.piatti_alternativi.length ?? 0) > 0 && (
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.2rem', marginBottom: '0.3rem' }}>
+                              {bambino.preferenza_menu!.piatti_alternativi.map(p => {
+                                const selezionato = form.piatti_serviti.includes(p.id)
+                                return (
+                                  <button key={p.id} type="button" onClick={() => togglePiattoServito(bambino.id, p.id)}
+                                    title={p.tipo_label}
+                                    style={{
+                                      background: selezionato ? (TIPO_COLOR[p.tipo] ?? '#6C5CE7') : 'white',
+                                      color: selezionato ? 'white' : '#555',
+                                      border: `1.3px solid ${TIPO_COLOR[p.tipo] ?? '#6C5CE7'}`,
+                                      borderRadius: '6px', padding: '2px 6px', fontSize: '0.68rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+                                    }}>
+                                    {selezionato ? '✓ ' : ''}{p.descrizione}
+                                  </button>
+                                )
+                              })}
+                            </div>
+                          )}
                           <input type="text" value={form.note_pasto ?? ''} onChange={e => handleFieldChange(bambino.id, 'note_pasto', e.target.value)}
-                            placeholder="note..." style={{ padding: '0.3rem 0.5rem', border: '1.5px solid #E8F4FD', borderRadius: '7px', fontSize: '0.8rem', fontFamily: 'inherit', width: '100%', boxSizing: 'border-box' }} />
+                            placeholder="note aggiuntive..." style={{ padding: '0.3rem 0.5rem', border: '1.5px solid #E8F4FD', borderRadius: '7px', fontSize: '0.8rem', fontFamily: 'inherit', width: '100%', boxSizing: 'border-box' }} />
                         </td>
                       </tr>
                     )
@@ -448,6 +572,90 @@ export default function StaffPappePage() {
           </>
         )}
       </div>
+
+      {/* Modal gestione menu personalizzato */}
+      {gestioneBambino && (
+        <div onClick={() => setGestioneBambino(null)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem' }}>
+          <div onClick={e => e.stopPropagation()}
+            style={{ background: 'white', borderRadius: '16px', padding: '1.25rem', width: 'min(480px, 96vw)', maxHeight: '85vh', overflowY: 'auto' }}>
+            <h3 style={{ margin: '0 0 0.25rem', fontSize: '1.05rem', fontWeight: 800, color: '#333' }}>
+              🍽️ Menu personalizzato — {gestioneBambino.nome} {gestioneBambino.cognome}
+            </h3>
+            <p style={{ margin: '0 0 0.875rem', fontSize: '0.8rem', color: '#888' }}>
+              Seleziona i piatti alternativi tra cui scegliere ogni giorno cosa è stato servito.
+            </p>
+
+            <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#555', marginBottom: '0.25rem' }}>Tipo</label>
+            <select value={gestioneForm.tipo} onChange={e => setGestioneForm(f => ({ ...f, tipo: e.target.value }))}
+              style={{ padding: '0.4rem 0.625rem', border: '1.5px solid #C4B5FD', borderRadius: '8px', fontSize: '0.85rem', fontFamily: 'inherit', background: 'white', marginBottom: '0.75rem' }}>
+              <option value="monopiatto">🍽️ Monopiatto</option>
+              <option value="differente">🍀 Menu differente</option>
+            </select>
+
+            <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#555', marginBottom: '0.4rem' }}>Piatti alternativi</label>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '0.75rem', maxHeight: 260, overflowY: 'auto', border: '1px solid #F0F0F0', borderRadius: '10px', padding: '0.625rem' }}>
+              {Object.entries(
+                catalogoPiatti.reduce((acc: Record<string, PiattoRef[]>, p) => {
+                  (acc[p.tipo] ??= []).push(p)
+                  return acc
+                }, {})
+              ).map(([tipo, list]) => (
+                <div key={tipo}>
+                  <p style={{ margin: '0 0 0.25rem', fontSize: '0.7rem', fontWeight: 800, color: TIPO_COLOR[tipo] ?? '#888', textTransform: 'uppercase' }}>
+                    {list[0]?.tipo_label ?? tipo}
+                  </p>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem' }}>
+                    {list.map(p => {
+                      const selezionato = gestioneForm.piatti.includes(p.id)
+                      return (
+                        <button key={p.id} type="button"
+                          onClick={() => setGestioneForm(f => ({
+                            ...f,
+                            piatti: selezionato ? f.piatti.filter(id => id !== p.id) : [...f.piatti, p.id],
+                          }))}
+                          style={{
+                            background: selezionato ? (TIPO_COLOR[tipo] ?? '#6C5CE7') : 'white',
+                            color: selezionato ? 'white' : '#555',
+                            border: `1.3px solid ${TIPO_COLOR[tipo] ?? '#6C5CE7'}`,
+                            borderRadius: '7px', padding: '3px 8px', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+                          }}>
+                          {selezionato ? '✓ ' : ''}{p.descrizione}
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              ))}
+              {catalogoPiatti.length === 0 && <p style={{ margin: 0, fontSize: '0.8rem', color: '#aaa' }}>Nessun piatto nel catalogo.</p>}
+            </div>
+
+            <label style={{ display: 'block', fontSize: '0.78rem', fontWeight: 700, color: '#555', marginBottom: '0.25rem' }}>Nota aggiuntiva (opzionale)</label>
+            <input type="text" value={gestioneForm.descrizione} onChange={e => setGestioneForm(f => ({ ...f, descrizione: e.target.value }))}
+              placeholder='es. "senza sale"'
+              style={{ width: '100%', padding: '0.4rem 0.625rem', border: '1.5px solid #C4B5FD', borderRadius: '8px', fontSize: '0.85rem', fontFamily: 'inherit', boxSizing: 'border-box', marginBottom: '0.75rem' }} />
+
+            {gestioneError && <p style={{ margin: '0 0 0.75rem', color: '#C0392B', fontSize: '0.8rem', fontWeight: 600 }}>{gestioneError}</p>}
+
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <button onClick={salvaGestionePreferenza} disabled={gestioneSaving}
+                style={{ padding: '0.5rem 1.125rem', background: '#6C5CE7', color: 'white', border: 'none', borderRadius: '8px', fontSize: '0.85rem', fontWeight: 700, cursor: gestioneSaving ? 'not-allowed' : 'pointer', fontFamily: 'inherit', opacity: gestioneSaving ? 0.7 : 1 }}>
+                {gestioneSaving ? '⏳...' : '✓ Salva'}
+              </button>
+              {gestioneBambino.preferenza_menu && (
+                <button onClick={eliminaGestionePreferenza} disabled={gestioneSaving}
+                  style={{ padding: '0.5rem 1rem', background: 'white', color: '#C0392B', border: '1.5px solid #FADBD8', borderRadius: '8px', fontSize: '0.85rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                  🗑 Elimina
+                </button>
+              )}
+              <button onClick={() => setGestioneBambino(null)}
+                style={{ padding: '0.5rem 1rem', background: 'white', color: '#888', border: '1.5px solid #DDD', borderRadius: '8px', fontSize: '0.85rem', cursor: 'pointer', fontFamily: 'inherit', marginLeft: 'auto' }}>
+                Annulla
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
