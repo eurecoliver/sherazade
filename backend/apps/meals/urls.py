@@ -7,6 +7,7 @@ from .views import (
     PiattoViewSet,
     PiattoAssegnazioneViewSet,
     SostituzionePiattoViewSet,
+    PreferenzaMenuBambinoViewSet,
 )
 
 router = DefaultRouter()
@@ -17,5 +18,6 @@ router.register(r'pappe/config', ConfigMenuCicloViewSet, basename='pappe-config'
 router.register(r'pappe/piatti', PiattoViewSet, basename='piatto')
 router.register(r'pappe/assegnazioni', PiattoAssegnazioneViewSet, basename='assegnazione')
 router.register(r'pappe/sostituzioni', SostituzionePiattoViewSet, basename='sostituzione')
+router.register(r'pappe/preferenze-menu', PreferenzaMenuBambinoViewSet, basename='preferenza-menu')
 
 urlpatterns = router.urls

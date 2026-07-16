@@ -30,6 +30,7 @@ interface BambinoAllergie {
   sezione: string
   allergie: Allergia[]
   ha_allergie_gravi: boolean
+  preferenza_menu: { tipo: string; tipo_label: string; descrizione: string } | null
 }
 
 interface PiattoMenu {
@@ -354,7 +355,15 @@ export default function CuocaPappePage() {
                 </p>
                 {gravi.map(b => (
                   <div key={b.id} style={{ background: 'rgba(255,255,255,0.12)', borderRadius: '8px', padding: '0.625rem 0.875rem', marginBottom: '0.5rem' }}>
-                    <p style={{ margin: '0 0 0.25rem', fontWeight: 700 }}>{b.nome} {b.cognome}</p>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
+                      <p style={{ margin: 0, fontWeight: 700 }}>{b.nome} {b.cognome}</p>
+                      {b.preferenza_menu && (
+                        <span title={b.preferenza_menu.descrizione || b.preferenza_menu.tipo_label}
+                          style={{ background: 'rgba(255,255,255,0.2)', color: 'white', border: '1px solid rgba(255,255,255,0.4)', borderRadius: '4px', padding: '1px 6px', fontSize: '0.65rem', fontWeight: 700 }}>
+                          {b.preferenza_menu.tipo === 'monopiatto' ? '🍽️ MONO' : '🍀 DIFF'}
+                        </span>
+                      )}
+                    </div>
                     {b.allergie.filter(a => a.gravita === 'grave' || a.gravita === 'anafilassi').map(a => (
                       <p key={a.id} style={{ margin: '0 0 0.2rem', fontSize: '0.875rem' }}>
                         ⚠️ {a.tipo_label}: <strong>{a.descrizione}</strong> — {a.gravita_label}
@@ -378,9 +387,17 @@ export default function CuocaPappePage() {
                       {b.nome.charAt(0)}{b.cognome.charAt(0)}
                     </div>
                     <div style={{ flex: 1 }}>
-                      <p style={{ margin: '0 0 0.3rem', fontWeight: 700, color: '#333', fontSize: '0.9rem' }}>
-                        {b.nome} {b.cognome}
-                      </p>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', marginBottom: '0.3rem' }}>
+                        <p style={{ margin: 0, fontWeight: 700, color: '#333', fontSize: '0.9rem' }}>
+                          {b.nome} {b.cognome}
+                        </p>
+                        {b.preferenza_menu && (
+                          <span title={b.preferenza_menu.descrizione || b.preferenza_menu.tipo_label}
+                            style={{ background: b.preferenza_menu.tipo === 'monopiatto' ? '#EDE9FE' : '#FFF3CD', color: b.preferenza_menu.tipo === 'monopiatto' ? '#6C5CE7' : '#856404', border: `1px solid ${b.preferenza_menu.tipo === 'monopiatto' ? '#C4B5FD' : '#FFECB5'}`, borderRadius: '4px', padding: '1px 6px', fontSize: '0.65rem', fontWeight: 700 }}>
+                            {b.preferenza_menu.tipo === 'monopiatto' ? '🍽️ MONO' : '🍀 DIFF'}
+                          </span>
+                        )}
+                      </div>
                       <div style={{ display: 'flex', gap: '0.375rem', flexWrap: 'wrap' }}>
                         {b.allergie.map(a => {
                           const cfg = GRAVITA_COLOR[a.gravita] ?? GRAVITA_COLOR.lieve
@@ -405,8 +422,14 @@ export default function CuocaPappePage() {
                 </p>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
                   {senzaAllergie.map(b => (
-                    <span key={b.id} style={{ background: '#EAFAF1', color: '#00897B', padding: '0.3rem 0.75rem', borderRadius: '8px', fontSize: '0.82rem', fontWeight: 600 }}>
+                    <span key={b.id} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', background: '#EAFAF1', color: '#00897B', padding: '0.3rem 0.75rem', borderRadius: '8px', fontSize: '0.82rem', fontWeight: 600 }}>
                       {b.nome} {b.cognome}
+                      {b.preferenza_menu && (
+                        <span title={b.preferenza_menu.descrizione || b.preferenza_menu.tipo_label}
+                          style={{ background: b.preferenza_menu.tipo === 'monopiatto' ? '#EDE9FE' : '#FFF3CD', color: b.preferenza_menu.tipo === 'monopiatto' ? '#6C5CE7' : '#856404', borderRadius: '3px', padding: '0px 4px', fontSize: '0.6rem', fontWeight: 700 }}>
+                          {b.preferenza_menu.tipo === 'monopiatto' ? 'MONO' : 'DIFF'}
+                        </span>
+                      )}
                     </span>
                   ))}
                 </div>

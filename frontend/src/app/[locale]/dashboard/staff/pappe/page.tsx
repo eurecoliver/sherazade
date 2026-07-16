@@ -15,6 +15,12 @@ interface Allergia {
   gravita_label: string
 }
 
+interface PreferenzaMenu {
+  tipo: string
+  tipo_label: string
+  descrizione: string
+}
+
 interface BambinoInfo {
   id: number
   nome: string
@@ -23,6 +29,7 @@ interface BambinoInfo {
   gruppo_id: number | null
   allergie: Allergia[]
   ha_allergie_gravi: boolean
+  preferenza_menu: PreferenzaMenu | null
 }
 
 interface RegistroPasto {
@@ -36,6 +43,7 @@ interface RegistroPasto {
   frutta_quantita: string
   merenda_quantita: string
   note_pasto: string
+  tipo_menu: string
 }
 
 interface GiornataEntry {
@@ -97,7 +105,7 @@ function emptyForm(): Record<string, string> {
   return {
     colazione_quantita: '', primo_quantita: '', secondo_quantita: '',
     monopiatto_quantita: '', contorno_quantita: '', pane_quantita: '',
-    frutta_quantita: '', merenda_quantita: '', note_pasto: '',
+    frutta_quantita: '', merenda_quantita: '', note_pasto: '', tipo_menu: '',
   }
 }
 
@@ -221,6 +229,7 @@ export default function StaffPappePage() {
           frutta_quantita: e.registro.frutta_quantita,
           merenda_quantita: e.registro.merenda_quantita,
           note_pasto: e.registro.note_pasto,
+          tipo_menu: e.registro.tipo_menu ?? '',
         } : emptyForm()
       }
       setForms(newForms)
@@ -351,12 +360,36 @@ export default function StaffPappePage() {
                   {entries.map(entry => {
                     const { bambino } = entry
                     const form = forms[bambino.id] ?? emptyForm()
+                    // Tipo menu effettivo: override giornaliero > preferenza permanente > standard
+                    const tipoEffettivo = form.tipo_menu || bambino.preferenza_menu?.tipo || 'standard'
+                    const isMonopiatto = tipoEffettivo === 'monopiatto'
+                    const isDifferente = tipoEffettivo === 'differente'
                     return (
                       <tr key={bambino.id} style={{ borderBottom: '1px solid #F0F6FF', background: bambino.ha_allergie_gravi ? '#FFF5F5' : 'white' }}>
                         <td style={{ padding: '0.5rem 0.875rem' }}>
                           <p style={{ margin: 0, fontWeight: 700, color: '#333', fontSize: '0.875rem' }}>
                             {bambino.nome} {bambino.cognome}
                           </p>
+                          {/* Badge preferenza permanente + override giornaliero */}
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem', marginTop: '0.25rem', alignItems: 'center' }}>
+                            {bambino.preferenza_menu && (
+                              <span title={bambino.preferenza_menu.descrizione || bambino.preferenza_menu.tipo_label}
+                                style={{ background: bambino.preferenza_menu.tipo === 'monopiatto' ? '#EDE9FE' : '#FFF3CD', color: bambino.preferenza_menu.tipo === 'monopiatto' ? '#6C5CE7' : '#856404', border: `1px solid ${bambino.preferenza_menu.tipo === 'monopiatto' ? '#C4B5FD' : '#FFECB5'}`, borderRadius: '5px', padding: '1px 6px', fontSize: '0.65rem', fontWeight: 700 }}>
+                                {bambino.preferenza_menu.tipo === 'monopiatto' ? '🍽️ MONO' : '🍀 DIFF'}
+                              </span>
+                            )}
+                            {/* Dropdown override giornaliero */}
+                            <select
+                              value={form.tipo_menu ?? ''}
+                              onChange={e => handleFieldChange(bambino.id, 'tipo_menu', e.target.value)}
+                              title="Override menu per oggi"
+                              style={{ padding: '1px 4px', border: `1.5px solid ${form.tipo_menu ? '#6C5CE7' : '#E8F4FD'}`, borderRadius: '5px', fontSize: '0.65rem', fontFamily: 'inherit', background: form.tipo_menu === 'monopiatto' ? '#EDE9FE' : form.tipo_menu === 'differente' ? '#FFF3CD' : 'white', color: form.tipo_menu ? '#333' : '#aaa', cursor: 'pointer' }}
+                            >
+                              <option value="">Oggi: standard</option>
+                              <option value="monopiatto">Oggi: monopiatto</option>
+                              <option value="differente">Oggi: menu diff.</option>
+                            </select>
+                          </div>
                           {bambino.allergie.length > 0 && (
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.2rem', marginTop: '0.2rem' }}>
                               {bambino.allergie.map(a => (
@@ -369,21 +402,33 @@ export default function StaffPappePage() {
                           )}
                         </td>
 
-                        {portateVisibili.map(p => (
-                          <td key={p.key} style={{ padding: '0.3rem 0.25rem', textAlign: 'center' }}>
-                            <select
-                              value={(form[p.key] ?? '')}
-                              onChange={e => handleFieldChange(bambino.id, p.key, e.target.value)}
-                              style={{
-                                padding: '0.3rem 0.1rem', border: '1.5px solid #E8F4FD', borderRadius: '7px',
-                                fontSize: '0.75rem', fontFamily: 'inherit', width: 66, textAlign: 'center',
-                                background: QUANTITA_BG[form[p.key]] ?? 'white',
-                              }}
-                            >
-                              {QUANTITA_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-                            </select>
-                          </td>
-                        ))}
+                        {portateVisibili.map(p => {
+                          const tipoPortata = p.key.replace('_quantita', '')
+                          // Evidenziazione celle in base al tipo menu
+                          let cellBg = ''
+                          if (isMonopiatto) {
+                            if (tipoPortata === 'monopiatto') cellBg = '#EDE9FE'
+                            else if (tipoPortata === 'primo' || tipoPortata === 'secondo') cellBg = '#F8F8F8'
+                          } else if (isDifferente) {
+                            if (['primo', 'secondo', 'monopiatto'].includes(tipoPortata)) cellBg = '#FFFBEB'
+                          }
+                          return (
+                            <td key={p.key} style={{ padding: '0.3rem 0.25rem', textAlign: 'center', background: cellBg }}>
+                              <select
+                                value={(form[p.key] ?? '')}
+                                onChange={e => handleFieldChange(bambino.id, p.key, e.target.value)}
+                                style={{
+                                  padding: '0.3rem 0.1rem', border: `1.5px solid ${cellBg ? '#D4B8FF' : '#E8F4FD'}`, borderRadius: '7px',
+                                  fontSize: '0.75rem', fontFamily: 'inherit', width: 66, textAlign: 'center',
+                                  background: QUANTITA_BG[form[p.key]] ?? (cellBg || 'white'),
+                                  opacity: isMonopiatto && (tipoPortata === 'primo' || tipoPortata === 'secondo') ? 0.45 : 1,
+                                }}
+                              >
+                                {QUANTITA_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                              </select>
+                            </td>
+                          )
+                        })}
 
                         <td style={{ padding: '0.3rem 0.5rem' }}>
                           <input type="text" value={form.note_pasto ?? ''} onChange={e => handleFieldChange(bambino.id, 'note_pasto', e.target.value)}

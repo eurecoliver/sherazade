@@ -104,3 +104,19 @@ class RegistroPastoPermission(BasePermission):
             except Exception:
                 return False
         return True
+
+
+class PreferenzaMenuPermission(BasePermission):
+    """
+    Solo Admin, Direttrice e Coordinatrice possono gestire le preferenze menu.
+    """
+
+    RUOLI_AMMESSI = (Role.ADMIN, Role.DIRETTRICE, Role.COORDINATRICE)
+
+    def has_permission(self, request, view):
+        if not request.user.is_authenticated:
+            return False
+        return request.user.role in self.RUOLI_AMMESSI
+
+    def has_object_permission(self, request, view, obj):
+        return request.user.role in self.RUOLI_AMMESSI

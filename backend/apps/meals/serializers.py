@@ -2,6 +2,7 @@ from rest_framework import serializers
 from .models import (
     AllergiaIntolleranza, MenuGiornaliero, RegistroPasto,
     ConfigMenuCiclo, Piatto, PiattoAssegnazione, SostituzionePiatto,
+    PreferenzaMenuBambino,
 )
 
 
@@ -59,6 +60,7 @@ class RegistroPastoSerializer(serializers.ModelSerializer):
             'id', 'bambino', 'bambino_nome', 'data',
             *QUANTITA_FIELDS,
             'note_pasto',
+            'tipo_menu',
             'compilato_da', 'compilato_da_nome',
             'creato_at', 'aggiornato_at',
         )
@@ -78,6 +80,7 @@ class RegistroPastoWriteSerializer(serializers.ModelSerializer):
             'id', 'bambino', 'data',
             *QUANTITA_FIELDS,
             'note_pasto',
+            'tipo_menu',
         )
 
 
@@ -132,3 +135,23 @@ class SostituzionePiattoSerializer(serializers.ModelSerializer):
 
     def get_gruppi_nomi(self, obj):
         return [g.nome for g in obj.gruppi.all()]
+
+
+class PreferenzaMenuBambinoSerializer(serializers.ModelSerializer):
+    tipo_label = serializers.CharField(source='get_tipo_display', read_only=True)
+    bambino_nome = serializers.SerializerMethodField()
+
+    class Meta:
+        model = PreferenzaMenuBambino
+        fields = (
+            'id', 'bambino', 'bambino_nome',
+            'tipo', 'tipo_label',
+            'descrizione',
+            'attivo',
+            'creato_il', 'aggiornato_il',
+        )
+        read_only_fields = ('creato_il', 'aggiornato_il')
+
+    def get_bambino_nome(self, obj):
+        b = obj.bambino
+        return f'{b.cognome} {b.nome}'
