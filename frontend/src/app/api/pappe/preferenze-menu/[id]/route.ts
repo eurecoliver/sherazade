@@ -18,7 +18,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
   const { res, newAccessToken } = await fetchBackend(
     request,
     `/api/v1/pappe/preferenze-menu/${params.id}/`,
-    { method: 'PATCH', body: JSON.stringify(body) },
+    { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) },
   )
   const data = await res.json()
   const response = NextResponse.json(data, { status: res.status })

@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
   const { res, newAccessToken } = await fetchBackend(
     request,
     '/api/v1/pappe/preferenze-menu/',
-    { method: 'POST', body: JSON.stringify(body) },
+    { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) },
   )
   const data = await res.json()
   const response = NextResponse.json(data, { status: res.status })
