@@ -71,7 +71,7 @@ class Command(BaseCommand):
 
             for fascia, nomi_gruppi, rules in [
                 ("NIDO",   NOMI_NIDO,   {"primo": (1, 1), "merenda": (1, 1), "secondo": (0, 1)}),
-                ("GRANDI", NOMI_GRANDI, {"primo": (1, 1), "merenda": (1, 1), "secondo": (0, 1), "monopiatto": (0, 1)}),
+                ("GRANDI", NOMI_GRANDI, {"primo": (0, 1), "merenda": (1, 1), "secondo": (0, 1), "monopiatto": (0, 1)}),
             ]:
                 gruppi = list(Gruppo.objects.filter(nome__in=nomi_gruppi))
                 gruppo_ids = [g.id for g in gruppi]
@@ -120,11 +120,15 @@ class Command(BaseCommand):
                                 msgs.append(f"{tipo}: {n} (max {max_n})")
                                 slot_ok = False
 
-                        # GRANDI: deve esserci almeno 1 tra secondo e monopiatto
+                        # GRANDI: almeno 1 tra secondo e monopiatto; primo obbligatorio solo senza monopiatto
                         if fascia == "GRANDI":
-                            n_secondi = len(trovati.get("secondo", [])) + len(trovati.get("monopiatto", []))
+                            n_mono = len(trovati.get("monopiatto", []))
+                            n_secondi = len(trovati.get("secondo", [])) + n_mono
                             if n_secondi < 1:
                                 msgs.append("secondo/monopiatto: 0 (min 1)")
+                                slot_ok = False
+                            if n_mono == 0 and len(trovati.get("primo", [])) == 0:
+                                msgs.append("primo: 0 (min 1 senza monopiatto)")
                                 slot_ok = False
 
                         GIORNI_NOMI = ["Lun", "Mar", "Mer", "Gio", "Ven"]
