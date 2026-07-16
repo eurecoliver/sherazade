@@ -58,6 +58,19 @@ interface Bambino {
   deleghe_ritiro: Delega[]
 }
 
+interface PiattoRef {
+  id: number
+  descrizione: string
+  tipo: string
+  tipo_label?: string
+}
+
+const TIPO_COLOR_MENU: Record<string, string> = {
+  colazione: '#F39C12', primo: '#E17055', secondo: '#D63031',
+  monopiatto: '#6C5CE7', contorno: '#00B894', pane: '#FDCB6E',
+  frutta: '#00CEC9', merenda: '#A29BFE',
+}
+
 interface Gruppo {
   id: number
   nome: string
@@ -201,6 +214,14 @@ export default function BambiniPage() {
   const [reportMese, setReportMese] = useState(new Date().getMonth() + 1)
   const [reportLoading, setReportLoading] = useState(false)
 
+  // Preferenza menu bambino
+  const [prefMenu, setPrefMenu] = useState<{ id: number; tipo: string; tipo_label: string; descrizione: string; piatti_alternativi_dettaglio: PiattoRef[] } | null>(null)
+  const [editingPref, setEditingPref] = useState(false)
+  const [prefForm, setPrefForm] = useState<{ tipo: string; descrizione: string; piatti: number[] }>({ tipo: 'monopiatto', descrizione: '', piatti: [] })
+  const [prefLoading, setPrefLoading] = useState(false)
+  const [prefError, setPrefError] = useState('')
+  const [catalogoPiatti, setCatalogoPiatti] = useState<PiattoRef[]>([])
+
 
   // Add delega form
   const [showDelForm, setShowDelForm] = useState(false)
@@ -220,7 +241,25 @@ export default function BambiniPage() {
     fetch('/api/utenti?role=genitore&ordering=last_name&page_size=500')
       .then(r => r.ok ? r.json() : { results: [] })
       .then(d => setGenitori(d.results ?? d))
+    fetch('/api/pappe/piatti')
+      .then(r => r.ok ? r.json() : [])
+      .then((d: unknown) => setCatalogoPiatti((Array.isArray(d) ? d : ((d as { results?: unknown[] }).results ?? [])) as PiattoRef[]))
+      .catch(() => {})
   }, [])
+
+  // Carica preferenza menu quando si apre un bambino
+  useEffect(() => {
+    if (!selected) { setPrefMenu(null); setEditingPref(false); setPrefError(''); return }
+    fetch(`/api/pappe/preferenze-menu?bambino=${selected.id}`)
+      .then(r => r.ok ? r.json() : [])
+      .then((d: unknown) => {
+        const arr = Array.isArray(d) ? d : ((d as { results?: unknown[] }).results ?? [])
+        const pref = (arr as { id: number; tipo: string; tipo_label: string; descrizione: string; piatti_alternativi_dettaglio: PiattoRef[] }[])[0] ?? null
+        setPrefMenu(pref)
+        if (pref) setPrefForm({ tipo: pref.tipo, descrizione: pref.descrizione, piatti: (pref.piatti_alternativi_dettaglio ?? []).map(p => p.id) })
+      })
+      .catch(() => {})
+  }, [selected])
 
   const refreshGenitori = () =>
     fetch('/api/utenti?role=genitore&ordering=last_name&page_size=500')
@@ -671,6 +710,34 @@ export default function BambiniPage() {
       setSelected(data)
       await fetchBambini()
     }
+  }
+
+  // ── Preferenza menu ─────────────────────────────────────────────────────────
+
+  const savePref = async () => {
+    if (!selected) return
+    setPrefLoading(true); setPrefError('')
+    try {
+      const payload = { bambino: selected.id, tipo: prefForm.tipo, descrizione: prefForm.descrizione, piatti_alternativi: prefForm.piatti, attivo: true }
+      const res = await fetch(
+        prefMenu ? `/api/pappe/preferenze-menu/${prefMenu.id}` : '/api/pappe/preferenze-menu',
+        { method: prefMenu ? 'PATCH' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) },
+      )
+      if (!res.ok) { const d = await res.json(); setPrefError(d.detail || JSON.stringify(d)); return }
+      const data = await res.json()
+      setPrefMenu(data)
+      setEditingPref(false)
+    } catch { setPrefError('Errore di rete.') }
+    finally { setPrefLoading(false) }
+  }
+
+  const deletePref = async () => {
+    if (!selected || !prefMenu) return
+    if (!confirm('Rimuovere la preferenza menu per questo bambino?')) return
+    setPrefLoading(true)
+    const res = await fetch(`/api/pappe/preferenze-menu/${prefMenu.id}`, { method: 'DELETE' })
+    if (res.ok || res.status === 204) { setPrefMenu(null); setEditingPref(false) }
+    setPrefLoading(false)
   }
 
   const handleDelete = async () => {
@@ -1141,6 +1208,107 @@ export default function BambiniPage() {
                 </button>
                 <button onClick={handleDelete}
                   style={{ ...secondaryBtn, marginBottom: 0, marginLeft: 'auto', color: '#C0392B', borderColor: '#FADBD8' }}>🗑 Elimina</button>
+              </div>
+
+              {/* ── Sezione Menu personalizzato ── */}
+              <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #F0F0F0' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                  <p style={{ margin: 0, fontWeight: 700, fontSize: '0.85rem', color: '#555' }}>🍽️ Menu personalizzato</p>
+                  {!editingPref && (
+                    <button onClick={() => { setEditingPref(true); setPrefForm(prefMenu ? { tipo: prefMenu.tipo, descrizione: prefMenu.descrizione, piatti: (prefMenu.piatti_alternativi_dettaglio ?? []).map(p => p.id) } : { tipo: 'monopiatto', descrizione: '', piatti: [] }) }}
+                      style={{ padding: '0.25rem 0.75rem', background: '#EDE9FE', color: '#6C5CE7', border: '1.5px solid #C4B5FD', borderRadius: '8px', fontSize: '0.78rem', fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit' }}>
+                      {prefMenu ? '✏️ Modifica' : '+ Aggiungi'}
+                    </button>
+                  )}
+                </div>
+
+                {!editingPref ? (
+                  prefMenu ? (
+                    <div style={{ background: prefMenu.tipo === 'monopiatto' ? '#EDE9FE' : '#FFF3CD', borderRadius: '10px', padding: '0.625rem 0.875rem' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        <span style={{ fontWeight: 700, color: prefMenu.tipo === 'monopiatto' ? '#6C5CE7' : '#856404', fontSize: '0.85rem' }}>
+                          {prefMenu.tipo === 'monopiatto' ? '🍽️ Monopiatto' : '🍀 Menu differente'}
+                        </span>
+                        <button onClick={deletePref} disabled={prefLoading}
+                          style={{ background: 'none', border: 'none', color: '#C0392B', cursor: 'pointer', fontSize: '1rem', padding: '0.2rem 0.4rem' }}>✕</button>
+                      </div>
+                      {(prefMenu.piatti_alternativi_dettaglio ?? []).length > 0 && (
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem', marginTop: '0.4rem' }}>
+                          {prefMenu.piatti_alternativi_dettaglio.map(p => (
+                            <span key={p.id} style={{ background: 'white', border: `1px solid ${TIPO_COLOR_MENU[p.tipo] ?? '#888'}`, color: TIPO_COLOR_MENU[p.tipo] ?? '#555', borderRadius: '6px', padding: '2px 7px', fontSize: '0.72rem', fontWeight: 600 }}>
+                              {p.descrizione}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      {prefMenu.descrizione && <p style={{ margin: '0.4rem 0 0', fontSize: '0.8rem', color: '#555' }}>{prefMenu.descrizione}</p>}
+                    </div>
+                  ) : (
+                    <p style={{ margin: 0, fontSize: '0.82rem', color: '#aaa', fontStyle: 'italic' }}>Nessuna preferenza — menu standard</p>
+                  )
+                ) : (
+                  <div style={{ background: '#F8F4FF', borderRadius: '10px', padding: '0.75rem' }}>
+                    <div style={{ marginBottom: '0.625rem' }}>
+                      <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#555', marginBottom: '0.25rem' }}>Tipo</label>
+                      <select value={prefForm.tipo} onChange={e => setPrefForm(p => ({ ...p, tipo: e.target.value }))}
+                        style={{ padding: '0.4rem 0.625rem', border: '1.5px solid #C4B5FD', borderRadius: '8px', fontSize: '0.85rem', fontFamily: 'inherit', background: 'white' }}>
+                        <option value="monopiatto">🍽️ Monopiatto</option>
+                        <option value="differente">🍀 Menu differente</option>
+                      </select>
+                    </div>
+
+                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#555', marginBottom: '0.3rem' }}>Piatti alternativi</label>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginBottom: '0.625rem', maxHeight: 220, overflowY: 'auto', border: '1px solid #E5DEFF', borderRadius: '8px', padding: '0.5rem', background: 'white' }}>
+                      {Object.entries(
+                        catalogoPiatti.reduce((acc: Record<string, PiattoRef[]>, p) => {
+                          (acc[p.tipo] ??= []).push(p)
+                          return acc
+                        }, {})
+                      ).map(([tipo, list]) => (
+                        <div key={tipo}>
+                          <p style={{ margin: '0 0 0.2rem', fontSize: '0.68rem', fontWeight: 800, color: TIPO_COLOR_MENU[tipo] ?? '#888', textTransform: 'uppercase' }}>
+                            {list[0]?.tipo_label ?? tipo}
+                          </p>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem' }}>
+                            {list.map(p => {
+                              const selezionato = prefForm.piatti.includes(p.id)
+                              return (
+                                <button key={p.id} type="button"
+                                  onClick={() => setPrefForm(f => ({ ...f, piatti: selezionato ? f.piatti.filter(id => id !== p.id) : [...f.piatti, p.id] }))}
+                                  style={{
+                                    background: selezionato ? (TIPO_COLOR_MENU[tipo] ?? '#6C5CE7') : 'white',
+                                    color: selezionato ? 'white' : '#555',
+                                    border: `1.3px solid ${TIPO_COLOR_MENU[tipo] ?? '#6C5CE7'}`,
+                                    borderRadius: '7px', padding: '3px 8px', fontSize: '0.72rem', fontWeight: 600, cursor: 'pointer', fontFamily: 'inherit',
+                                  }}>
+                                  {selezionato ? '✓ ' : ''}{p.descrizione}
+                                </button>
+                              )
+                            })}
+                          </div>
+                        </div>
+                      ))}
+                      {catalogoPiatti.length === 0 && <p style={{ margin: 0, fontSize: '0.78rem', color: '#aaa' }}>Nessun piatto nel catalogo.</p>}
+                    </div>
+
+                    <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 700, color: '#555', marginBottom: '0.25rem' }}>Nota aggiuntiva (opzionale)</label>
+                    <input type="text" value={prefForm.descrizione} onChange={e => setPrefForm(p => ({ ...p, descrizione: e.target.value }))}
+                      placeholder='es. "senza sale"'
+                      style={{ width: '100%', padding: '0.4rem 0.625rem', border: '1.5px solid #C4B5FD', borderRadius: '8px', fontSize: '0.85rem', fontFamily: 'inherit', boxSizing: 'border-box', marginBottom: '0.5rem' }} />
+
+                    {prefError && <p style={{ margin: '0 0 0.5rem', color: '#C0392B', fontSize: '0.8rem', fontWeight: 600 }}>{prefError}</p>}
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <button onClick={savePref} disabled={prefLoading}
+                        style={{ padding: '0.4rem 1rem', background: '#6C5CE7', color: 'white', border: 'none', borderRadius: '8px', fontSize: '0.82rem', fontWeight: 700, cursor: prefLoading ? 'not-allowed' : 'pointer', fontFamily: 'inherit', opacity: prefLoading ? 0.7 : 1 }}>
+                        {prefLoading ? '⏳...' : '✓ Salva'}
+                      </button>
+                      <button onClick={() => { setEditingPref(false); setPrefError('') }}
+                        style={{ padding: '0.4rem 0.875rem', background: 'white', color: '#888', border: '1.5px solid #DDD', borderRadius: '8px', fontSize: '0.82rem', cursor: 'pointer', fontFamily: 'inherit' }}>
+                        Annulla
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </>
           )}

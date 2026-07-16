@@ -1247,3 +1247,47 @@ Completato: Fix visibilita elenco utenti + hardening email duplicate (branch `fi
 - `frontend/src/app/[locale]/dashboard/admin/genitori/page.tsx`
 
 Prossimo task: verifica manuale su creazione utente con email gia esistente + refresh elenco in dashboard admin/genitori.
+
+## Ultimo Aggiornamento
+Data: 16 luglio 2026
+Completato: Menu personalizzato bambino (piatti alternativi al posto della nota libera) — branch `feature/menu-personalizzato-bambino` — DEPLOYATO
+
+### Menu personalizzato bambino (16 luglio 2026)
+- `Bambino`/`RegistroPasto` (app `meals`): aggiunti campi M2M `piatti_alternativi` (su `PreferenzaMenuBambino`) e `piatti_serviti` (su `RegistroPasto`) — sostituiscono la vecchia nota libera con una selezione strutturata dal catalogo `Piatto`
+- Migration `meals/0007_piatti_personalizzati.py`: entrambi i campi M2M `blank=True`, nessun impatto sui record esistenti
+- Serializers: esposizione dettagliata dei piatti alternativi/serviti (id, descrizione, tipo, tipo_label) nelle action `giornata`/`per_sezione`
+- Permessi: Insegnante aggiunta a `PreferenzaMenuPermission` (poteva già gestire pasti ma non le preferenze menu)
+- Frontend admin bambini: selettore piatti alternativi (chip dal catalogo) al posto del vecchio campo nota
+- Frontend staff pappe: selezione piatto servito oggi per bambino + modal "gestione preferenza" per configurare i piatti alternativi consentiti
+
+### Review pre-deploy + fix (16 luglio 2026)
+Eseguita `/review` (per convenzione `REVIEW.md`) sul commit della feature prima del deploy. Risultato: 0 🔴, 2 🟠, 2 🟡.
+- 🟠 **Fix**: `RegistroPastoViewSet.salva_sezione` non validava gli ID in `piatti_serviti` contro i piatti alternativi configurati per il bambino — ora viene precalcolata una mappa `{bambino_id: set(id_piatti_alternativi)}` con un'unica query `prefetch_related` prima del loop, e gli ID inviati dal client vengono filtrati su questa whitelist (niente N+1, niente associazioni arbitrarie)
+- 🟠 **Fix**: `staff/pappe/page.tsx` — fetch di `/api/pappe/piatti` non controllava `r.ok` prima del parsing JSON, rischio `TypeError` su `.reduce()` se la risposta non è 2xx (es. token scaduto). Allineato al pattern già usato in `admin/bambini/page.tsx`: `fetch(url).then(r => r.ok ? r.json() : [])` + `Array.isArray()` guard
+- 🟡 **Fix**: `_pref_menu_dict()` in `backend/apps/meals/views.py` era definita in mezzo al blocco import (violazione PEP8) — spostata dopo l'ultimo import
+- 🟡 **Non fixato (tech debt accettato)**: `formStr()` in `staff/pappe/page.tsx` usa un doppio type-cast (`as unknown as Record<string, string>`) per indicizzare `PastoForm` con chiave dinamica — a basso rischio, rimandato
+
+**File modificati (feature + review fix):**
+- `backend/apps/meals/models.py`
+- `backend/apps/meals/serializers.py`
+- `backend/apps/meals/permissions.py`
+- `backend/apps/meals/views.py`
+- `backend/apps/meals/migrations/0007_piatti_personalizzati.py`
+- `frontend/src/app/[locale]/dashboard/admin/bambini/page.tsx`
+- `frontend/src/app/[locale]/dashboard/staff/pappe/page.tsx`
+
+**Deploy:** eseguito su server produzione (branch `feature/menu-personalizzato-bambino`, commit `03b2237`) — `git pull` + rebuild Docker completato, tutti i container (`db`, `minio`, `backend`, `frontend`) healthy e avviati correttamente.
+
+### Frontend cuoca pappe — badge piatti alternativi (16 luglio 2026) — DEPLOYATO
+- Tipo `PreferenzaMenu` (frontend `cuoca/pappe/page.tsx`) esteso con `piatti_alternativi: PiattoAlternativo[]` — dato già esposto dal backend tramite `_pref_menu_dict()` nell'action `per_sezione`, nessuna modifica backend necessaria
+- Helper `prefTooltip()`: costruisce un tooltip con descrizione/tipo della preferenza + elenco piatti alternativi separati da virgola
+- Sezione "Allergie gravi/anafilassi" e sezione "Allergie moderate": aggiunta riga di chip visibili (🍽️ nome piatto) sotto le allergie, quando il bambino ha piatti alternativi configurati
+- Sezione "Nessuna allergia" (vista compatta a pill): tooltip arricchito con l'elenco piatti alternativi (nessuno spazio per chip aggiuntive in questa vista compatta)
+- Nessuna migrazione DB, nessuna modifica ai permessi
+
+**File modificati:**
+- `frontend/src/app/[locale]/dashboard/cuoca/pappe/page.tsx`
+
+**Deploy:** eseguito su server produzione (branch `feature/menu-personalizzato-bambino`, commit `c2a45c2`) — `git pull` + rebuild Docker completato, tutti i container healthy.
+
+Prossimo task: nessuno pianificato — in attesa di indicazioni per prossima feature.

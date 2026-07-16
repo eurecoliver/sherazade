@@ -13,8 +13,9 @@ from apps.audit.mixin import LogAccessoMixin
 from .models import (
     AllergiaIntolleranza, MenuGiornaliero, RegistroPasto,
     ConfigMenuCiclo, Piatto, PiattoAssegnazione, SostituzionePiatto,
+    PreferenzaMenuBambino,
 )
-from .permissions import AllergiaPermission, MenuPermission, RegistroPastoPermission
+from .permissions import AllergiaPermission, MenuPermission, RegistroPastoPermission, PreferenzaMenuPermission
 from .serializers import (
     AllergiaIntolleranzaSerializer,
     MenuGiornalieroSerializer,
@@ -24,7 +25,23 @@ from .serializers import (
     PiattoSerializer,
     PiattoAssegnazioneSerializer,
     SostituzionePiattoSerializer,
+    PreferenzaMenuBambinoSerializer,
 )
+
+
+def _pref_menu_dict(pref):
+    if not pref:
+        return None
+    return {
+        'id': pref.id,
+        'tipo': pref.tipo,
+        'tipo_label': pref.get_tipo_display(),
+        'descrizione': pref.descrizione,
+        'piatti_alternativi': [
+            {'id': p.id, 'descrizione': p.descrizione, 'tipo': p.tipo, 'tipo_label': p.get_tipo_display()}
+            for p in pref.piatti_alternativi.all()
+        ],
+    }
 
 
 class AllergiaIntolleranzaViewSet(LogAccessoMixin, viewsets.ModelViewSet):
@@ -51,12 +68,13 @@ class AllergiaIntolleranzaViewSet(LogAccessoMixin, viewsets.ModelViewSet):
         bambini_qs = (
             Bambino.objects
             .filter(attivo=True)
-            .select_related('gruppo')
+            .select_related('gruppo', 'preferenza_menu')
             .prefetch_related(
                 Prefetch(
                     'allergie',
                     queryset=AllergiaIntolleranza.objects.filter(attivo=True).order_by('-gravita'),
-                )
+                ),
+                'preferenza_menu__piatti_alternativi',
             )
             .order_by('gruppo__ordine', 'cognome', 'nome')
         )
@@ -66,6 +84,10 @@ class AllergiaIntolleranzaViewSet(LogAccessoMixin, viewsets.ModelViewSet):
         result = []
         for b in bambini_qs:
             allergie = b.allergie.all()
+            try:
+                pref = b.preferenza_menu if b.preferenza_menu.attivo else None
+            except PreferenzaMenuBambino.DoesNotExist:
+                pref = None
             result.append({
                 'id': b.id,
                 'nome': b.nome,
@@ -78,6 +100,7 @@ class AllergiaIntolleranzaViewSet(LogAccessoMixin, viewsets.ModelViewSet):
                         AllergiaIntolleranza.Gravita.ANAFILASSI,
                     ) for a in allergie
                 ),
+                'preferenza_menu': _pref_menu_dict(pref),
             })
 
         return Response(result)
@@ -149,12 +172,13 @@ class RegistroPastoViewSet(LogAccessoMixin, viewsets.ModelViewSet):
         bambini_qs = (
             Bambino.objects
             .filter(attivo=True)
-            .select_related('gruppo')
+            .select_related('gruppo', 'preferenza_menu')
             .prefetch_related(
                 Prefetch(
                     'allergie',
                     queryset=AllergiaIntolleranza.objects.filter(attivo=True).order_by('-gravita'),
-                )
+                ),
+                'preferenza_menu__piatti_alternativi',
             )
             .order_by('gruppo__ordine', 'cognome', 'nome')
         )
@@ -163,13 +187,20 @@ class RegistroPastoViewSet(LogAccessoMixin, viewsets.ModelViewSet):
 
         registri = {
             r.bambino_id: r
-            for r in RegistroPasto.objects.filter(data=data_str).select_related('compilato_da')
+            for r in RegistroPasto.objects.filter(data=data_str)
+            .select_related('compilato_da')
+            .prefetch_related('piatti_serviti')
         }
 
         result = []
         for b in bambini_qs:
             allergie = b.allergie.all()
             registro = registri.get(b.id)
+            # Preferenza menu permanente
+            try:
+                pref = b.preferenza_menu if b.preferenza_menu.attivo else None
+            except PreferenzaMenuBambino.DoesNotExist:
+                pref = None
             result.append({
                 'bambino': {
                     'id': b.id,
@@ -184,6 +215,7 @@ class RegistroPastoViewSet(LogAccessoMixin, viewsets.ModelViewSet):
                             AllergiaIntolleranza.Gravita.ANAFILASSI,
                         ) for a in allergie
                     ),
+                    'preferenza_menu': _pref_menu_dict(pref),
                 },
                 'registro': RegistroPastoSerializer(registro).data if registro else None,
             })
@@ -203,6 +235,11 @@ class RegistroPastoViewSet(LogAccessoMixin, viewsets.ModelViewSet):
             'frutta_quantita', 'merenda_quantita',
         )
 
+        bambino_ids_richiesti = [item.get('bambino') for item in pasti if item.get('bambino')]
+        piatti_validi_per_bambino = {}
+        for pref in PreferenzaMenuBambino.objects.filter(bambino_id__in=bambino_ids_richiesti).prefetch_related('piatti_alternativi'):
+            piatti_validi_per_bambino[pref.bambino_id] = set(pref.piatti_alternativi.values_list('id', flat=True))
+
         saved, errors = [], []
         for item in pasti:
             bambino_id = item.get('bambino')
@@ -210,13 +247,20 @@ class RegistroPastoViewSet(LogAccessoMixin, viewsets.ModelViewSet):
                 continue
             defaults = {campo: item.get(campo, '') for campo in CAMPI_QUANTITA}
             defaults['note_pasto'] = item.get('note_pasto', '')
+            defaults['tipo_menu'] = item.get('tipo_menu', '')
             defaults['compilato_da'] = request.user
+            piatti_serviti_ids = item.get('piatti_serviti')
+            if piatti_serviti_ids is not None:
+                ids_validi = piatti_validi_per_bambino.get(bambino_id, set())
+                piatti_serviti_ids = [i for i in piatti_serviti_ids if i in ids_validi]
             try:
                 obj, _ = RegistroPasto.objects.update_or_create(
                     bambino_id=bambino_id,
                     data=data_str,
                     defaults=defaults,
                 )
+                if piatti_serviti_ids is not None:
+                    obj.piatti_serviti.set(piatti_serviti_ids)
                 saved.append(obj.id)
             except Exception as e:
                 errors.append({'bambino': bambino_id, 'errore': str(e)})
@@ -582,3 +626,23 @@ class SostituzionePiattoViewSet(viewsets.ModelViewSet):
         if request.user.role not in (Role.ADMIN, Role.DIRETTRICE, Role.COORDINATRICE):
             return Response({'detail': 'Non autorizzato.'}, status=status.HTTP_403_FORBIDDEN)
         return super().destroy(request, *args, **kwargs)
+
+
+# ── Preferenze Menu per bambino ───────────────────────────────────────────────
+
+class PreferenzaMenuBambinoViewSet(viewsets.ModelViewSet):
+    """
+    CRUD preferenze menu permanenti per bambino.
+    Accessibile solo da Admin, Direttrice e Coordinatrice.
+    """
+    serializer_class = PreferenzaMenuBambinoSerializer
+    permission_classes = [IsAuthenticated, PreferenzaMenuPermission]
+
+    def get_queryset(self):
+        qs = PreferenzaMenuBambino.objects.select_related('bambino', 'creato_da')
+        if bambino_id := self.request.query_params.get('bambino'):
+            qs = qs.filter(bambino_id=bambino_id)
+        return qs.order_by('bambino__cognome', 'bambino__nome')
+
+    def perform_create(self, serializer):
+        serializer.save(creato_da=self.request.user)

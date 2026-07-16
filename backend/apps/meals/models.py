@@ -66,6 +66,52 @@ class MenuGiornaliero(models.Model):
         return f'Menu {self.data}{sezione_str}'
 
 
+class PreferenzaMenuBambino(models.Model):
+    """
+    Preferenza menu permanente per un bambino.
+    Indica che questo bambino riceve sempre un tipo di menu diverso dal gruppo
+    (monopiatto invece di primo+secondo, oppure menu completamente differente).
+    Può essere sovrascritta giornalmente tramite RegistroPasto.tipo_menu.
+    """
+
+    class Tipo(models.TextChoices):
+        MONOPIATTO = 'monopiatto', 'Monopiatto'
+        DIFFERENTE = 'differente', 'Menu differente'
+
+    bambino = models.OneToOneField(
+        'children.Bambino',
+        on_delete=models.CASCADE,
+        related_name='preferenza_menu',
+    )
+    tipo = models.CharField(max_length=12, choices=Tipo.choices)
+    descrizione = models.CharField(
+        max_length=200,
+        blank=True,
+        help_text='Nota aggiuntiva facoltativa. Es. "senza sale", "attenzione soffocamento".',
+    )
+    piatti_alternativi = models.ManyToManyField(
+        'Piatto',
+        blank=True,
+        related_name='preferenze_bambini',
+        help_text='Piatti alternativi tra cui il personale sceglie quale è stato servito, giorno per giorno.',
+    )
+    attivo = models.BooleanField(default=True)
+    creato_da = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.PROTECT,
+        related_name='preferenze_menu_create',
+    )
+    creato_il = models.DateTimeField(auto_now_add=True)
+    aggiornato_il = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Preferenza Menu Bambino'
+        verbose_name_plural = 'Preferenze Menu Bambini'
+
+    def __str__(self):
+        return f'{self.bambino} — {self.get_tipo_display()}'
+
+
 class RegistroPasto(models.Model):
 
     class Quantita(models.TextChoices):
@@ -89,6 +135,18 @@ class RegistroPasto(models.Model):
     frutta_quantita = models.CharField(max_length=6, choices=Quantita.choices, blank=True)
     merenda_quantita = models.CharField(max_length=6, choices=Quantita.choices, blank=True)
     note_pasto = models.TextField(blank=True)
+    tipo_menu = models.CharField(
+        max_length=12,
+        blank=True,
+        default='',
+        help_text='Override giornaliero del tipo menu. Vuoto = usa preferenza permanente del bambino.',
+    )
+    piatti_serviti = models.ManyToManyField(
+        'Piatto',
+        blank=True,
+        related_name='registri_serviti',
+        help_text='Piatti alternativi effettivamente serviti oggi (menu personalizzato), scelti tra quelli del bambino.',
+    )
     compilato_da = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.PROTECT,
