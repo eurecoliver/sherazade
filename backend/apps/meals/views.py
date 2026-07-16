@@ -309,6 +309,7 @@ class ConfigMenuCicloViewSet(viewsets.ViewSet):
 class PiattoViewSet(viewsets.ModelViewSet):
     serializer_class = PiattoSerializer
     permission_classes = [IsAuthenticated]
+    pagination_class = None
 
     def get_queryset(self):
         qs = Piatto.objects.all()
@@ -533,6 +534,7 @@ class PiattoViewSet(viewsets.ModelViewSet):
 class PiattoAssegnazioneViewSet(viewsets.ModelViewSet):
     serializer_class = PiattoAssegnazioneSerializer
     permission_classes = [IsAuthenticated]
+    pagination_class = None
 
     def get_queryset(self):
         qs = PiattoAssegnazione.objects.select_related('piatto').prefetch_related('gruppi')
