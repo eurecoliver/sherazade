@@ -231,8 +231,8 @@ export default function StaffPappePage() {
         if (list.length > 0) setSelectedGruppo(list[0].id)
       })
     fetch('/api/pappe/piatti')
-      .then(r => r.json())
-      .then(d => setCatalogoPiatti((d.results ?? d) as PiattoRef[]))
+      .then(r => r.ok ? r.json() : [])
+      .then((d: unknown) => setCatalogoPiatti((Array.isArray(d) ? d : ((d as { results?: unknown[] }).results ?? [])) as PiattoRef[]))
       .catch(() => {})
   }, [])
 

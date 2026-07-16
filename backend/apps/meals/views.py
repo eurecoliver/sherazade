@@ -10,21 +10,6 @@ from rest_framework.response import Response
 from apps.children.models import Bambino
 from apps.users.models import Role
 from apps.audit.mixin import LogAccessoMixin
-
-
-def _pref_menu_dict(pref):
-    if not pref:
-        return None
-    return {
-        'id': pref.id,
-        'tipo': pref.tipo,
-        'tipo_label': pref.get_tipo_display(),
-        'descrizione': pref.descrizione,
-        'piatti_alternativi': [
-            {'id': p.id, 'descrizione': p.descrizione, 'tipo': p.tipo, 'tipo_label': p.get_tipo_display()}
-            for p in pref.piatti_alternativi.all()
-        ],
-    }
 from .models import (
     AllergiaIntolleranza, MenuGiornaliero, RegistroPasto,
     ConfigMenuCiclo, Piatto, PiattoAssegnazione, SostituzionePiatto,
@@ -42,6 +27,21 @@ from .serializers import (
     SostituzionePiattoSerializer,
     PreferenzaMenuBambinoSerializer,
 )
+
+
+def _pref_menu_dict(pref):
+    if not pref:
+        return None
+    return {
+        'id': pref.id,
+        'tipo': pref.tipo,
+        'tipo_label': pref.get_tipo_display(),
+        'descrizione': pref.descrizione,
+        'piatti_alternativi': [
+            {'id': p.id, 'descrizione': p.descrizione, 'tipo': p.tipo, 'tipo_label': p.get_tipo_display()}
+            for p in pref.piatti_alternativi.all()
+        ],
+    }
 
 
 class AllergiaIntolleranzaViewSet(LogAccessoMixin, viewsets.ModelViewSet):
@@ -235,6 +235,11 @@ class RegistroPastoViewSet(LogAccessoMixin, viewsets.ModelViewSet):
             'frutta_quantita', 'merenda_quantita',
         )
 
+        bambino_ids_richiesti = [item.get('bambino') for item in pasti if item.get('bambino')]
+        piatti_validi_per_bambino = {}
+        for pref in PreferenzaMenuBambino.objects.filter(bambino_id__in=bambino_ids_richiesti).prefetch_related('piatti_alternativi'):
+            piatti_validi_per_bambino[pref.bambino_id] = set(pref.piatti_alternativi.values_list('id', flat=True))
+
         saved, errors = [], []
         for item in pasti:
             bambino_id = item.get('bambino')
@@ -245,6 +250,9 @@ class RegistroPastoViewSet(LogAccessoMixin, viewsets.ModelViewSet):
             defaults['tipo_menu'] = item.get('tipo_menu', '')
             defaults['compilato_da'] = request.user
             piatti_serviti_ids = item.get('piatti_serviti')
+            if piatti_serviti_ids is not None:
+                ids_validi = piatti_validi_per_bambino.get(bambino_id, set())
+                piatti_serviti_ids = [i for i in piatti_serviti_ids if i in ids_validi]
             try:
                 obj, _ = RegistroPasto.objects.update_or_create(
                     bambino_id=bambino_id,
