@@ -187,9 +187,12 @@ function TabConfig({ gruppi }: { gruppi: Gruppo[] }) {
 
 // ─── Tab: Piatti ──────────────────────────────────────────────────────────────
 
+const PAGE_SIZE = 25
+
 function TabPiatti() {
   const [piatti, setPiatti] = useState<Piatto[]>([])
   const [filtroTipo, setFiltroTipo] = useState('')
+  const [page, setPage] = useState(1)
   const [showForm, setShowForm] = useState(false)
   const [editId, setEditId] = useState<number | null>(null)
   const [form, setForm] = useState({ descrizione: '', tipo: 'primo', note: '' })
@@ -240,6 +243,16 @@ function TabPiatti() {
   const attivi = filtered.filter(p => p.attivo)
   const disattivati = filtered.filter(p => !p.attivo)
 
+  const totalPages = Math.max(1, Math.ceil(attivi.length / PAGE_SIZE))
+  const currentPage = Math.min(page, totalPages)
+  const paginatedAttivi = attivi.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
+
+  // Reset pagina quando cambia il filtro tipo
+  const handleFiltroTipo = (tipo: string) => {
+    setFiltroTipo(tipo)
+    setPage(1)
+  }
+
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
@@ -254,9 +267,9 @@ function TabPiatti() {
 
       {/* Filtro tipo */}
       <div style={{ display: 'flex', gap: '0.375rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
-        <button onClick={() => setFiltroTipo('')} style={filterChip(filtroTipo === '')}>Tutti</button>
+        <button onClick={() => handleFiltroTipo('')} style={filterChip(filtroTipo === '')}>Tutti</button>
         {TIPI_PIATTO.map(t => (
-          <button key={t.value} onClick={() => setFiltroTipo(t.value)} style={filterChip(filtroTipo === t.value, t.color)}>
+          <button key={t.value} onClick={() => handleFiltroTipo(t.value)} style={filterChip(filtroTipo === t.value, t.color)}>
             {t.label}
           </button>
         ))}
@@ -306,7 +319,7 @@ function TabPiatti() {
       {/* Lista piatti attivi */}
       {attivi.length === 0 && <p style={{ color: '#aaa', fontSize: '0.875rem' }}>Nessun piatto attivo per questo tipo.</p>}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '0.375rem' }}>
-        {attivi.map(p => (
+        {paginatedAttivi.map(p => (
           <div key={p.id} style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', background: 'white', borderRadius: '10px', padding: '0.625rem 0.875rem', border: '1.5px solid #E8E0FF' }}>
             <span style={{ background: `${tipoColor(p.tipo)}22`, color: tipoColor(p.tipo), border: `1px solid ${tipoColor(p.tipo)}55`, borderRadius: '6px', padding: '2px 8px', fontSize: '0.72rem', fontWeight: 700, whiteSpace: 'nowrap' }}>
               {p.tipo_label}
@@ -318,6 +331,30 @@ function TabPiatti() {
           </div>
         ))}
       </div>
+
+      {/* Paginazione */}
+      {totalPages > 1 && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', marginTop: '1rem', padding: '0.75rem 0' }}>
+          <button
+            onClick={() => setPage(p => Math.max(1, p - 1))}
+            disabled={currentPage === 1}
+            style={{ padding: '0.35rem 0.9rem', border: '1.5px solid #D6CCFF', borderRadius: '8px', background: currentPage === 1 ? '#F8F7FF' : 'white', color: currentPage === 1 ? '#bbb' : '#6C5CE7', cursor: currentPage === 1 ? 'default' : 'pointer', fontWeight: 600, fontSize: '0.85rem', fontFamily: 'inherit' }}
+          >
+            ← Prec
+          </button>
+          <span style={{ fontSize: '0.85rem', color: '#666', minWidth: '120px', textAlign: 'center' }}>
+            Pagina {currentPage} di {totalPages}
+            <span style={{ color: '#aaa', marginLeft: '0.4rem' }}>({attivi.length} piatti)</span>
+          </span>
+          <button
+            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+            disabled={currentPage === totalPages}
+            style={{ padding: '0.35rem 0.9rem', border: '1.5px solid #D6CCFF', borderRadius: '8px', background: currentPage === totalPages ? '#F8F7FF' : 'white', color: currentPage === totalPages ? '#bbb' : '#6C5CE7', cursor: currentPage === totalPages ? 'default' : 'pointer', fontWeight: 600, fontSize: '0.85rem', fontFamily: 'inherit' }}
+          >
+            Succ →
+          </button>
+        </div>
+      )}
 
       {/* Disattivati */}
       {disattivati.length > 0 && (

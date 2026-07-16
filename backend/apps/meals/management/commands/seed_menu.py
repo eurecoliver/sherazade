@@ -317,7 +317,7 @@ MENU_INVERNALE_GRANDI = {
              "contorno": "Patate al tegame",
              "merenda": "Focaccia rossa soffice"},
     # settimana 2
-    (2, 0): {"primo": "Timballo di pasta (mezze conchiglie rigate)",
+    (2, 0): {"monopiatto": "Timballo di pasta (mezze conchiglie rigate)",
              "contorno": "Zucca al tegame",
              "merenda": "Frullato di banana con latte"},
     (2, 1): {"primo": "Risotto con crema di piselli",
