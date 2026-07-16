@@ -1278,4 +1278,16 @@ Eseguita `/review` (per convenzione `REVIEW.md`) sul commit della feature prima 
 
 **Deploy:** eseguito su server produzione (branch `feature/menu-personalizzato-bambino`, commit `03b2237`) — `git pull` + rebuild Docker completato, tutti i container (`db`, `minio`, `backend`, `frontend`) healthy e avviati correttamente.
 
-Prossimo task: frontend cuoca pappe — mostrare i piatti alternativi nei badge del foglio pappe.
+### Frontend cuoca pappe — badge piatti alternativi (16 luglio 2026) — DEPLOYATO
+- Tipo `PreferenzaMenu` (frontend `cuoca/pappe/page.tsx`) esteso con `piatti_alternativi: PiattoAlternativo[]` — dato già esposto dal backend tramite `_pref_menu_dict()` nell'action `per_sezione`, nessuna modifica backend necessaria
+- Helper `prefTooltip()`: costruisce un tooltip con descrizione/tipo della preferenza + elenco piatti alternativi separati da virgola
+- Sezione "Allergie gravi/anafilassi" e sezione "Allergie moderate": aggiunta riga di chip visibili (🍽️ nome piatto) sotto le allergie, quando il bambino ha piatti alternativi configurati
+- Sezione "Nessuna allergia" (vista compatta a pill): tooltip arricchito con l'elenco piatti alternativi (nessuno spazio per chip aggiuntive in questa vista compatta)
+- Nessuna migrazione DB, nessuna modifica ai permessi
+
+**File modificati:**
+- `frontend/src/app/[locale]/dashboard/cuoca/pappe/page.tsx`
+
+**Deploy:** eseguito su server produzione (branch `feature/menu-personalizzato-bambino`, commit `c2a45c2`) — `git pull` + rebuild Docker completato, tutti i container healthy.
+
+Prossimo task: nessuno pianificato — in attesa di indicazioni per prossima feature.
